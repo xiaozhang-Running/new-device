@@ -1,0 +1,2 @@
+# new-device
+device-warehouse
