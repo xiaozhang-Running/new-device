@@ -78,36 +78,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // 设备采购入库管理
-        // GET: api/InOutbound/equipment-purchase-inbounds
-        [HttpGet("equipment-purchase-inbounds")]
-        public async Task<ActionResult<List<EquipmentPurchaseInboundDTO>>> GetEquipmentPurchaseInbounds()
-        {
-            try
-            {
-                var inbounds = await _inOutboundService.GetEquipmentPurchaseInboundsAsync();
-                return Ok(inbounds);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
 
-        // POST: api/InOutbound/equipment-purchase-inbounds
-        [HttpPost("equipment-purchase-inbounds")]
-        public async Task<ActionResult<EquipmentPurchaseInboundDTO>> CreateEquipmentPurchaseInbound([FromBody] EquipmentPurchaseInboundDTO dto)
-        {
-            try
-            {
-                var inbound = await _inOutboundService.CreateEquipmentPurchaseInboundAsync(dto);
-                return Ok(inbound);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
 
         // 原材料入库管理
         // GET: api/InOutbound/raw-material-inbounds
@@ -118,6 +89,159 @@ namespace DeviceWarehouseSystem.Controllers
             {
                 var inbounds = await _inOutboundService.GetRawMaterialInboundsAsync();
                 return Ok(inbounds);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/InOutbound/raw-material-inbounds
+        [HttpPost("raw-material-inbounds")]
+        public async Task<ActionResult<RawMaterialInboundDTO>> CreateRawMaterialInbound([FromBody] RawMaterialInboundDTO dto)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.CreateRawMaterialInboundAsync(dto);
+                return Ok(inbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/InOutbound/raw-material-inbounds/confirm
+        [HttpPost("raw-material-inbounds/confirm")]
+        public async Task<ActionResult<RawMaterialInboundDTO>> ConfirmRawMaterialInbound([FromBody] int id)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.ConfirmRawMaterialInboundAsync(id);
+                return Ok(inbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // DELETE: api/InOutbound/raw-material-inbounds/{id}
+        [HttpDelete("raw-material-inbounds/{id}")]
+        public async Task<ActionResult<bool>> DeleteRawMaterialInbound(int id)
+        {
+            try
+            {
+                await _inOutboundService.DeleteRawMaterialInboundAsync(id);
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // 专用设备采购入库管理
+        // GET: api/InOutbound/special-equipment-purchase-inbounds
+        [HttpGet("special-equipment-purchase-inbounds")]
+        public async Task<ActionResult<List<SpecialEquipmentPurchaseInboundDTO>>> GetSpecialEquipmentPurchaseInbounds()
+        {
+            try
+            {
+                var inbounds = await _inOutboundService.GetSpecialEquipmentPurchaseInboundsAsync();
+                return Ok(inbounds);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/InOutbound/special-equipment-purchase-inbounds
+        [HttpPost("special-equipment-purchase-inbounds")]
+        public async Task<ActionResult<SpecialEquipmentPurchaseInboundDTO>> CreateSpecialEquipmentPurchaseInbound([FromBody] SpecialEquipmentPurchaseInboundDTO dto)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.CreateSpecialEquipmentPurchaseInboundAsync(dto);
+                return Ok(inbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // 通用设备采购入库管理
+        // GET: api/InOutbound/general-equipment-purchase-inbounds
+        [HttpGet("general-equipment-purchase-inbounds")]
+        public async Task<ActionResult<List<GeneralEquipmentPurchaseInboundDTO>>> GetGeneralEquipmentPurchaseInbounds()
+        {
+            try
+            {
+                var inbounds = await _inOutboundService.GetGeneralEquipmentPurchaseInboundsAsync();
+                return Ok(inbounds);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/InOutbound/general-equipment-purchase-inbounds
+        [HttpPost("general-equipment-purchase-inbounds")]
+        public async Task<ActionResult<GeneralEquipmentPurchaseInboundDTO>> CreateGeneralEquipmentPurchaseInbound([FromBody] GeneralEquipmentPurchaseInboundDTO dto)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.CreateGeneralEquipmentPurchaseInboundAsync(dto);
+                return Ok(inbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // 耗材采购入库管理
+        // GET: api/InOutbound/consumable-purchase-inbounds
+        [HttpGet("consumable-purchase-inbounds")]
+        public async Task<ActionResult<List<ConsumablePurchaseInboundDTO>>> GetConsumablePurchaseInbounds()
+        {
+            try
+            {
+                var inbounds = await _inOutboundService.GetConsumablePurchaseInboundsAsync();
+                return Ok(inbounds);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/InOutbound/consumable-purchase-inbounds
+        [HttpPost("consumable-purchase-inbounds")]
+        public async Task<ActionResult<ConsumablePurchaseInboundDTO>> CreateConsumablePurchaseInbound([FromBody] ConsumablePurchaseInboundDTO dto)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.CreateConsumablePurchaseInboundAsync(dto);
+                return Ok(inbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/InOutbound/generate-device-code
+        [HttpGet("generate-device-code")]
+        public async Task<ActionResult<string>> GenerateDeviceCode(string deviceName, string brand, string model, int deviceType)
+        {
+            try
+            {
+                var deviceCode = await _inOutboundService.GenerateDeviceCodeAsync(deviceName, brand, model, deviceType);
+                return Ok(deviceCode);
             }
             catch (Exception ex)
             {

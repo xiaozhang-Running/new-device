@@ -11,51 +11,73 @@ const RawMaterialInboundList = () => {
   const [isViewModalVisible, setIsViewModalVisible] = useState(false)
   const [viewingInbound, setViewingInbound] = useState(null)
 
-  // 模拟数据获取
+  // 从API获取数据
   useEffect(() => {
-    // 模拟原材料数据
-    const mockRawMaterials = [
-      { id: 1, productName: '钢材', specification: 'Φ10mm', unit: '吨' },
-      { id: 2, productName: '铝材', specification: '1mm', unit: '吨' },
-      { id: 3, productName: '塑料', specification: '颗粒', unit: '千克' },
-      { id: 4, productName: '电线', specification: '2.5mm²', unit: '米' }
-    ]
-    setRawMaterials(mockRawMaterials)
-
-    // 模拟入库记录数据
-    const mockInbounds = [
-      {
-        id: 1,
-        inboundNumber: 'RM-IN-20260301',
-        inboundDate: '2026-03-01',
-        deliveryPerson: '张三',
-        company: '供应商A',
-        supplier: '供应商A',
-        operator: '李四',
-        status: '已完成',
-        remark: '常规采购',
-        rawMaterialInboundItems: [
-          { id: 1, rawMaterialId: 1, quantity: 10, specification: 'Φ10mm', remark: '' },
-          { id: 2, rawMaterialId: 2, quantity: 5, specification: '1mm', remark: '' }
+    const fetchRawMaterials = async () => {
+      try {
+        const response = await fetch('http://localhost:5054/api/RawMaterials')
+        if (response.ok) {
+          const data = await response.json()
+          setRawMaterials(data)
+        } else {
+          // 使用模拟数据作为后备
+          const mockRawMaterials = [
+            { id: 1, productName: '钢材', specification: 'Φ10mm', remainingQuantity: 50 },
+            { id: 2, productName: '铝材', specification: '1mm', remainingQuantity: 30 },
+            { id: 3, productName: '塑料', specification: '颗粒', remainingQuantity: 100 },
+            { id: 4, productName: '电线', specification: '2.5mm²', remainingQuantity: 200 }
+          ]
+          setRawMaterials(mockRawMaterials)
+          message.warning('使用模拟原材料数据')
+        }
+      } catch (error) {
+        // 使用模拟数据作为后备
+        const mockRawMaterials = [
+          { id: 1, productName: '钢材', specification: 'Φ10mm', remainingQuantity: 50 },
+          { id: 2, productName: '铝材', specification: '1mm', remainingQuantity: 30 },
+          { id: 3, productName: '塑料', specification: '颗粒', remainingQuantity: 100 },
+          { id: 4, productName: '电线', specification: '2.5mm²', remainingQuantity: 200 }
         ]
-      },
-      {
-        id: 2,
-        inboundNumber: 'RM-IN-20260302',
-        inboundDate: '2026-03-02',
-        deliveryPerson: '王五',
-        company: '供应商B',
-        supplier: '供应商B',
-        operator: '赵六',
-        status: '待处理',
-        remark: '紧急采购',
-        rawMaterialInboundItems: [
-          { id: 3, rawMaterialId: 3, quantity: 100, specification: '颗粒', remark: '' },
-          { id: 4, rawMaterialId: 4, quantity: 500, specification: '2.5mm²', remark: '' }
-        ]
+        setRawMaterials(mockRawMaterials)
+        message.warning('使用模拟原材料数据')
       }
-    ]
-    setInbounds(mockInbounds)
+    }
+
+    const fetchInbounds = async () => {
+      try {
+        const response = await fetch('http://localhost:5054/api/InOutbound/raw-material-inbounds')
+        if (response.ok) {
+          const data = await response.json()
+          // 转换数据格式以匹配前端组件的期望
+          const formattedInbounds = data.map(item => ({
+            id: item.id,
+            inboundNumber: item.inboundNumber,
+            inboundDate: new Date().toISOString().slice(0, 10), // 临时使用当前日期
+            deliveryPerson: '', // 后端DTO中没有该字段
+            company: item.supplier, // 使用supplier作为company
+            supplier: item.supplier,
+            operator: item.handler,
+            status: item.status,
+            remark: item.remark,
+            rawMaterialInboundItems: item.items.map(item => ({
+              id: item.id,
+              rawMaterialId: item.rawMaterialId,
+              quantity: item.quantity,
+              specification: '', // 后端DTO中没有该字段
+              remark: item.remark
+            }))
+          }))
+          setInbounds(formattedInbounds)
+        } else {
+          message.error('获取入库记录失败')
+        }
+      } catch (error) {
+        message.error('网络错误，请检查后端服务是否运行')
+      }
+    }
+
+    fetchRawMaterials()
+    fetchInbounds()
   }, [])
 
   const handleAdd = () => {
@@ -73,30 +95,98 @@ const RawMaterialInboundList = () => {
     setIsViewModalVisible(true)
   }
 
-  const handleDelete = (id) => {
-    // 模拟删除操作
-    setInbounds(inbounds.filter(item => item.id !== id))
-    message.success('删除成功')
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5054/api/InOutbound/raw-material-inbounds/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // 重新获取入库记录列表
+        await fetchInbounds()
+        message.success('删除成功')
+      } else {
+        message.error('删除失败')
+      }
+    } catch (error) {
+      message.error('网络错误，请检查后端服务是否运行')
+    }
   }
 
-  const handleSave = (data) => {
-    // 模拟保存操作
-    if (editingInbound) {
-      // 编辑
-      setInbounds(inbounds.map(item => 
-        item.id === editingInbound.id ? { ...item, ...data } : item
-      ))
-      message.success('编辑成功')
-    } else {
-      // 新增
-      const newInbound = {
-        id: Date.now(),
-        ...data
+  const handleSave = async (data) => {
+    try {
+      // 转换数据格式以匹配后端API的期望
+      const dto = {
+        supplier: data.supplier || data.company || '',
+        handler: data.operator,
+        warehouseKeeper: data.operator,
+        remark: data.remark,
+        items: data.rawMaterialInboundItems.map(item => ({
+          rawMaterialId: item.rawMaterialId,
+          quantity: item.quantity,
+          remark: item.remark
+        }))
       }
-      setInbounds([...inbounds, newInbound])
-      message.success('添加成功')
+
+      const response = await fetch('http://localhost:5054/api/InOutbound/raw-material-inbounds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(dto)
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        // 重新获取入库记录列表
+        await fetchInbounds()
+        message.success('添加成功')
+      } else {
+        message.error('添加失败')
+      }
+    } catch (error) {
+      message.error('网络错误，请检查后端服务是否运行')
+    } finally {
+      setIsModalVisible(false)
     }
-    setIsModalVisible(false)
+  }
+
+  // 确认入库操作
+  const handleConfirmInbound = async (inbound) => {
+    try {
+      message.loading('正在确认入库...')
+      
+      const response = await fetch('http://localhost:5054/api/InOutbound/raw-material-inbounds/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(inbound.id)
+      })
+
+      if (response.ok) {
+        // 重新获取入库记录列表
+        await fetchInbounds()
+        // 重新获取原材料列表以更新库存数量
+        const fetchRawMaterialsAgain = async () => {
+          try {
+            const response = await fetch('http://localhost:5054/api/RawMaterials')
+            if (response.ok) {
+              const data = await response.json()
+              setRawMaterials(data)
+            }
+          } catch (error) {
+            console.error('获取原材料数据失败:', error)
+          }
+        }
+        await fetchRawMaterialsAgain()
+        message.success('入库成功，数据已更新到仓库')
+      } else {
+        message.error('确认入库失败')
+      }
+    } catch (error) {
+      message.error('网络错误，请检查后端服务是否运行')
+    }
   }
 
   const getStatusColor = (status) => {
@@ -173,6 +263,15 @@ const RawMaterialInboundList = () => {
           >
             删除
           </Button>
+          {record.status === '待处理' && (
+            <Button 
+              type="primary" 
+              onClick={() => handleConfirmInbound(record)}
+              size="small"
+            >
+              确认入库
+            </Button>
+          )}
         </Space>
       )
     }
@@ -225,6 +324,7 @@ const RawMaterialInboundList = () => {
         onCancel={() => setIsModalVisible(false)}
         footer={null}
         width={1000}
+        key={rawMaterials.length} // 当rawMaterials更新时，强制重新渲染模态框
       >
         <RawMaterialInboundForm
           onSave={handleSave}

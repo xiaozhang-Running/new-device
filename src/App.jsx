@@ -31,65 +31,31 @@ import RawMaterialInboundList from './components/RawMaterialInboundList'
 import UserList from './components/UserList'
 import LogList from './components/LogList'
 import InventoryManagement from './components/InventoryManagement'
-import EquipmentPurchaseInbound from './components/EquipmentPurchaseInbound'
+import SpecialEquipmentPurchaseInbound from './components/SpecialEquipmentPurchaseInbound'
+import GeneralEquipmentPurchaseInbound from './components/GeneralEquipmentPurchaseInbound'
+import ConsumablePurchaseInbound from './components/ConsumablePurchaseInbound'
 import WarehouseSettings from './components/WarehouseSettings'
 import CompanySettings from './components/CompanySettings'
-import { userApi } from './services/api'
+import LoginForm from './components/LoginForm'
 
 const { Header, Sider, Content } = Layout
-
-// 模拟用户数据
-const mockUsers = [
-  { id: 1, username: 'admin', password: 'admin123', role: '系统管理员' },
-  { id: 2, username: 'warehouse', password: 'warehouse123', role: '仓库管理员' },
-  { id: 3, username: 'project', password: 'project123', role: '项目负责人' },
-  { id: 4, username: 'finance', password: 'finance123', role: '财务人员' }
-]
 
 function App() {
   const [user, setUser] = useState(null)
   const [loginVisible, setLoginVisible] = useState(true)
   const [selectedKey, setSelectedKey] = useState('dashboard')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
   const [scrapView, setScrapView] = useState('list') // 'list' or 'form'
 
   // 处理登录
-  const handleLogin = async () => {
-    setLoading(true)
-    try {
-      // 尝试使用API登录
-      const response = await userApi.login({ Username: username, Password: password })
-      setUser({
-        id: 1,
-        username: response.Username,
-        role: response.Role
-      })
-      setLoginVisible(false)
-      message.success('登录成功')
-    } catch (error) {
-      // 如果API登录失败，回退到模拟登录
-      console.warn('API登录失败，使用模拟登录:', error)
-      const foundUser = mockUsers.find(u => u.username === username && u.password === password)
-      if (foundUser) {
-        setUser(foundUser)
-        setLoginVisible(false)
-        message.success('登录成功')
-      } else {
-        message.error('用户名或密码错误')
-      }
-    } finally {
-      setLoading(false)
-    }
+  const handleLogin = (userData) => {
+    setUser(userData)
+    setLoginVisible(false)
   }
 
   // 处理登出
   const handleLogout = () => {
     setUser(null)
     setLoginVisible(true)
-    setUsername('')
-    setPassword('')
     message.success('登出成功')
   }
 
@@ -97,48 +63,6 @@ function App() {
   const handleMenuClick = (e) => {
     setSelectedKey(e.key)
   }
-
-  // 渲染登录表单
-  const renderLoginForm = () => (
-    <div className="login-container">
-      <div className="login-form">
-        <h2>设备仓库管理系统</h2>
-        <div className="form-group">
-          <label>用户名</label>
-          <input 
-            type="text" 
-            value={username} 
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="请输入用户名"
-          />
-        </div>
-        <div className="form-group">
-          <label>密码</label>
-          <input 
-            type="password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="请输入密码"
-          />
-        </div>
-        <Button 
-          type="primary" 
-          onClick={handleLogin} 
-          loading={loading}
-          style={{ width: '100%', marginTop: 20 }}
-        >
-          登录
-        </Button>
-        <div className="login-hint">
-          <p>测试账号：</p>
-          <p>系统管理员：admin / admin123</p>
-          <p>仓库管理员：warehouse / warehouse123</p>
-          <p>项目负责人：project / project123</p>
-          <p>财务人员：finance / finance123</p>
-        </div>
-      </div>
-    </div>
-  )
 
   // 渲染看板页面
   const renderDashboard = () => (
@@ -240,8 +164,12 @@ function App() {
         return <div className="page-content"><h2>入库管理</h2><p>入库管理功能正在开发中...</p></div>
       case 'project-inbound':
         return <ProjectInbound />
-      case 'equipment-purchase-inbound':
-        return <EquipmentPurchaseInbound />
+      case 'special-equipment-purchase-inbound':
+        return <SpecialEquipmentPurchaseInbound />
+      case 'general-equipment-purchase-inbound':
+        return <GeneralEquipmentPurchaseInbound />
+      case 'consumable-purchase-inbound':
+        return <ConsumablePurchaseInbound />
       case 'raw-material-inbound':
         return <RawMaterialInboundList />
       case 'warehouse-settings':
@@ -356,8 +284,16 @@ function App() {
                     label: '项目入库'
                   },
                   {
-                    key: 'equipment-purchase-inbound',
-                    label: '设备采购入库'
+                    key: 'special-equipment-purchase-inbound',
+                    label: '专用设备入库'
+                  },
+                  {
+                    key: 'general-equipment-purchase-inbound',
+                    label: '通用设备入库'
+                  },
+                  {
+                    key: 'consumable-purchase-inbound',
+                    label: '耗材入库'
                   },
                   {
                     key: 'raw-material-inbound',
@@ -400,7 +336,7 @@ function App() {
     </Layout>
   )
 
-  return loginVisible ? renderLoginForm() : renderLayout()
+  return loginVisible ? <LoginForm onLogin={handleLogin} /> : renderLayout()
 }
 
 export default App

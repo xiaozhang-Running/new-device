@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Form, Input, Select, DatePicker, InputNumber, Button, Space, message, Row, Col, Upload, Image } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import { deviceApi } from '../services/api'
 
 const { Option } = Select
 const { TextArea } = Input
@@ -18,7 +19,7 @@ const DeviceForm = ({ device, onSave, onCancel }) => {
         purchaseDate: device.purchaseDate ? dayjs(device.purchaseDate) : null
       }
       form.setFieldsValue(formattedDevice)
-      setImageUrl(device.image || '')
+      setImageUrl(device.imageUrl || device.image || '')
     } else {
       form.resetFields()
       setImageUrl('')
@@ -33,7 +34,14 @@ const DeviceForm = ({ device, onSave, onCancel }) => {
       // 格式化日期为字符串
       const formattedValues = {
         ...values,
-        purchaseDate: values.purchaseDate ? values.purchaseDate.format('YYYY-MM-DD') : ''
+        purchaseDate: values.purchaseDate ? values.purchaseDate.format('YYYY-MM-DD') : '',
+        quantity: values.quantity || 1,
+        purchasePrice: values.purchasePrice || 0
+      }
+      
+      // 如果是编辑现有设备，添加id
+      if (device && device.id) {
+        formattedValues.id = device.id
       }
       
       onSave(formattedValues)
@@ -53,7 +61,7 @@ const DeviceForm = ({ device, onSave, onCancel }) => {
       // 这里使用模拟URL
       const mockUrl = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=equipment%20device&image_size=square`
       setImageUrl(mockUrl)
-      form.setFieldsValue({ image: mockUrl })
+      form.setFieldsValue({ imageUrl: mockUrl })
       message.success(`${info.file.name} 上传成功`)
     } else if (info.file.status === 'error') {
       message.error(`${info.file.name} 上传失败`)
@@ -83,7 +91,20 @@ const DeviceForm = ({ device, onSave, onCancel }) => {
             label="设备编号"
             name="deviceCode"
             rules={[
-              { required: true, message: '请输入设备编号' }
+              { required: true, message: '请输入设备编号' },
+              {
+                validator: async (_, value) => {
+                  if (value) {
+                    try {
+                      // 这里应该调用API检查设备编号是否存在
+                      // 由于我们没有专门的API，这里暂时跳过
+                      // 实际项目中应该添加一个检查设备编号唯一性的API
+                    } catch (error) {
+                      console.error('检查设备编号失败:', error)
+                    }
+                  }
+                }
+              }
             ]}
           >
             <Input placeholder="请输入设备编号" />
@@ -123,6 +144,7 @@ const DeviceForm = ({ device, onSave, onCancel }) => {
           <Form.Item
             label="数量"
             name="quantity"
+            initialValue={1}
           >
             <InputNumber 
               style={{ width: '100%' }} 
@@ -210,7 +232,7 @@ const DeviceForm = ({ device, onSave, onCancel }) => {
 
       <Form.Item
         label="图片"
-        name="image"
+        name="imageUrl"
       >
         <div>
           {imageUrl && (
@@ -254,6 +276,7 @@ const DeviceForm = ({ device, onSave, onCancel }) => {
           <Form.Item
             label="购买价格"
             name="purchasePrice"
+            initialValue={0}
             rules={[
               { type: 'number', min: 0, message: '价格必须大于等于0' }
             ]}

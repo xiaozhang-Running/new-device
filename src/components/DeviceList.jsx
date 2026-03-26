@@ -20,6 +20,7 @@ const DeviceList = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
   const [filteredDevices, setFilteredDevices] = useState([])
+  const [searchParams, setSearchParams] = useState({})
 
   // 模拟数据
   const mockDevices = [
@@ -189,9 +190,9 @@ const DeviceList = () => {
     fetchDevices()
   }, [])
 
-  // 过滤设备数据
-  useEffect(() => {
-    console.log('设备数据更新:', devices)
+  // 处理搜索
+  const handleSearch = () => {
+    console.log('开始搜索...')
     let result = [...devices]
     
     // 搜索过滤
@@ -221,7 +222,23 @@ const DeviceList = () => {
     
     console.log('过滤后的设备数据:', result)
     setFilteredDevices(result)
-  }, [devices, searchText, statusFilter, locationFilter])
+    setSearchParams({ searchText, statusFilter, locationFilter })
+  }
+
+  // 当设备数据变化时，保持当前的过滤状态
+  useEffect(() => {
+    // 初始加载时设置filteredDevices
+    if (filteredDevices.length === 0) {
+      setFilteredDevices(devices)
+    } else {
+      // 设备更新时，保持当前的过滤状态
+      // 这里可以添加逻辑来更新filteredDevices中的对应设备
+      setFilteredDevices(prev => prev.map(device => {
+        const updatedDevice = devices.find(d => d.id === device.id)
+        return updatedDevice || device
+      }))
+    }
+  }, [devices])
 
   const handleAdd = () => {
     setEditingDevice(null)
@@ -258,22 +275,22 @@ const DeviceList = () => {
       if (device.id) {
         // 编辑现有设备
         const updatedDevice = await deviceApi.updateSpecialEquipment(device.id, {
-          Name: device.name,
-          DeviceCode: device.deviceCode,
-          SerialNumber: device.serialNumber,
-          Brand: device.brand,
-          Model: device.model,
-          Quantity: device.quantity,
-          Unit: device.unit,
-          Accessories: device.accessories,
-          ImageUrl: device.image,
-          Company: device.company,
-          Status: device.status,
-          UseStatus: device.useStatus,
-          Location: device.location,
-          Description: device.description,
-          PurchaseDate: device.purchaseDate,
-          PurchasePrice: device.purchasePrice
+          Name: device.name || '',
+          DeviceCode: device.deviceCode || '',
+          SerialNumber: device.serialNumber || '',
+          Brand: device.brand || '',
+          Model: device.model || '',
+          Quantity: device.quantity || 1,
+          Unit: device.unit || '台',
+          Accessories: device.accessories || '',
+          ImageUrl: device.imageUrl || '',
+          Company: device.company || '',
+          Status: device.status || '正常',
+          UseStatus: device.useStatus || '未使用',
+          Location: device.location || '',
+          Description: device.description || '',
+          PurchaseDate: device.purchaseDate || '',
+          PurchasePrice: device.purchasePrice || 0
         })
         // 转换返回的数据格式以匹配前端期望的格式
         const formattedUpdatedDevice = {
@@ -286,7 +303,7 @@ const DeviceList = () => {
           quantity: updatedDevice.quantity || updatedDevice.Quantity || 1,
           unit: updatedDevice.unit || updatedDevice.Unit || '台',
           accessories: updatedDevice.accessories || updatedDevice.Accessories || '',
-          image: updatedDevice.imageUrl || updatedDevice.ImageUrl || updatedDevice.image || device.image,
+          image: updatedDevice.imageUrl || updatedDevice.ImageUrl || device.imageUrl || device.image,
           warehouse: updatedDevice.warehouse || updatedDevice.Warehouse || '主仓库',
           company: updatedDevice.company || updatedDevice.Company || '',
           status: updatedDevice.status || updatedDevice.Status || '正常',
@@ -300,24 +317,30 @@ const DeviceList = () => {
         message.success('设备更新成功')
       } else {
         // 添加新设备
-        const newDevice = await deviceApi.createSpecialEquipment({
-          Name: device.name,
-          DeviceCode: device.deviceCode,
-          SerialNumber: device.serialNumber,
-          Brand: device.brand,
-          Model: device.model,
-          Quantity: device.quantity,
-          Unit: device.unit,
-          Accessories: device.accessories,
-          ImageUrl: device.image,
-          Company: device.company,
-          Status: device.status,
+        const deviceData = {
+          Name: device.name || '',
+          DeviceCode: device.deviceCode || '',
+          SerialNumber: device.serialNumber || '',
+          Brand: device.brand || '',
+          Model: device.model || '',
+          Quantity: device.quantity || 1,
+          Unit: device.unit || '台',
+          Accessories: device.accessories || '',
+          ImageUrl: device.imageUrl || '',
+          Warehouse: device.warehouse || '主仓库',
+          Company: device.company || '',
+          Status: device.status || '正常',
           UseStatus: device.useStatus || '未使用',
-          Location: device.location,
-          Description: device.description,
-          PurchaseDate: device.purchaseDate,
-          PurchasePrice: device.purchasePrice
-        })
+          Location: device.location || '',
+          Description: device.description || '',
+          PurchaseDate: device.purchaseDate || '',
+          PurchasePrice: device.purchasePrice || 0
+        };
+        console.log('发送到后端的数据:', deviceData);
+        console.log('设备数据类型:', typeof device);
+        console.log('设备名称类型:', typeof device.name);
+        console.log('设备编号类型:', typeof device.deviceCode);
+        const newDevice = await deviceApi.createSpecialEquipment(deviceData)
         // 转换返回的数据格式以匹配前端期望的格式
         const formattedDevice = {
           id: newDevice.id || newDevice.Id,
@@ -329,7 +352,7 @@ const DeviceList = () => {
           quantity: newDevice.quantity || newDevice.Quantity || 1,
           unit: newDevice.unit || newDevice.Unit || '台',
           accessories: newDevice.accessories || newDevice.Accessories || '',
-          image: newDevice.imageUrl || newDevice.ImageUrl || newDevice.image || `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent(newDevice.name || newDevice.Name)}%20equipment&image_size=square`,
+          image: newDevice.imageUrl || newDevice.ImageUrl || `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent(newDevice.name || newDevice.Name)}%20equipment&image_size=square`,
           warehouse: newDevice.warehouse || newDevice.Warehouse || '主仓库',
           company: newDevice.company || newDevice.Company || '',
           status: newDevice.status || newDevice.Status || '正常',
@@ -344,7 +367,11 @@ const DeviceList = () => {
       }
     } catch (error) {
       console.error('保存设备失败:', error)
-      message.error('保存设备失败')
+      if (error.message.includes('重复键') || error.message.includes('duplicate')) {
+        message.error('设备编号已存在，请输入新的设备编号')
+      } else {
+        message.error('保存设备失败')
+      }
     } finally {
       setLoading(false)
       setShowForm(false)
@@ -720,8 +747,11 @@ const DeviceList = () => {
               placeholder="搜索设备名称、品牌、型号或序列号"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              onSearch={() => handleSearch()}
+              onPressEnter={() => handleSearch()}
               style={{ width: '100%' }}
               prefix={<SearchOutlined />}
+              enterButton
             />
           </Col>
           <Col span={6}>
@@ -752,15 +782,22 @@ const DeviceList = () => {
             </Select>
           </Col>
           <Col span={4}>
-            <Button 
-              onClick={() => {
-                setSearchText('')
-                setStatusFilter('')
-                setLocationFilter('')
-              }}
-            >
-              重置筛选
-            </Button>
+            <Space>
+              <Button type="primary" onClick={handleSearch}>
+                搜索
+              </Button>
+              <Button 
+                onClick={() => {
+                  setSearchText('')
+                  setStatusFilter('')
+                  setLocationFilter('')
+                  setSearchParams({})
+                  setFilteredDevices(devices)
+                }}
+              >
+                重置
+              </Button>
+            </Space>
           </Col>
         </Row>
       </Card>

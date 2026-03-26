@@ -157,3 +157,4 @@ D:\new-device\DeviceWarehouseSystem\obj\Debug\net10.0\DeviceWarehouseSystem.pdb
 D:\new-device\DeviceWarehouseSystem\obj\Debug\net10.0\DeviceWarehouseSystem.genruntimeconfig.cache
 D:\new-device\DeviceWarehouseSystem\obj\Debug\net10.0\ref\DeviceWarehouseSystem.dll
 D:\new-device\devicewarehousesystem\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+D:\new-device\DeviceWarehouseSystem\obj\Debug\net10.0\DeviceWarehouseSystem.sourcelink.json

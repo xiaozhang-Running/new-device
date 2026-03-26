@@ -172,6 +172,16 @@ namespace DeviceWarehouseSystem.Services
             // 保存旧数量，用于更新库存
             int oldQuantity = equipment.Quantity;
 
+            // 检查设备编号是否被其他设备使用
+            if (dto.DeviceCode != equipment.DeviceCode)
+            {
+                var existingEquipment = await _context.SpecialEquipments.FirstOrDefaultAsync(e => e.DeviceCode == dto.DeviceCode);
+                if (existingEquipment != null)
+                {
+                    throw new Exception("设备编号已存在，请输入新的设备编号");
+                }
+            }
+
             equipment.DeviceName = dto.Name;
             equipment.DeviceCode = dto.DeviceCode;
             equipment.Brand = dto.Brand;

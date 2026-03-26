@@ -159,6 +159,10 @@ const InventoryManagement = () => {
         const specialEquipments = await deviceApi.getSpecialEquipments()
         // 获取通用设备数据
         const generalEquipments = await deviceApi.getGeneralEquipments()
+        // 获取耗材数据
+        const consumables = await deviceApi.getConsumables()
+        // 获取原材料数据
+        const rawMaterials = await deviceApi.getRawMaterials()
         
         // 转换设备数据为库存数据格式
         const inventoryData = []
@@ -198,6 +202,44 @@ const InventoryManagement = () => {
             location: equipment.location || '',
             status: equipment.status || '正常',
             lastUpdated: equipment.purchaseDate || new Date().toISOString().split('T')[0]
+          })
+        })
+        
+        // 处理耗材
+        consumables.forEach((consumable, index) => {
+          inventoryData.push({
+            id: specialEquipments.length + generalEquipments.length + index + 1,
+            category: '耗材',
+            name: consumable.name,
+            brand: consumable.brand || '',
+            model: consumable.modelSpecification || '',
+            totalQuantity: consumable.totalQuantity,
+            usedQuantity: consumable.usedQuantity,
+            remainingQuantity: consumable.remainingQuantity,
+            unit: consumable.unit || '个',
+            warehouse: '主仓库',
+            location: consumable.location || '',
+            status: consumable.status || '正常',
+            lastUpdated: consumable.updatedAt ? new Date(consumable.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+          })
+        })
+        
+        // 处理原材料
+        rawMaterials.forEach((rawMaterial, index) => {
+          inventoryData.push({
+            id: specialEquipments.length + generalEquipments.length + consumables.length + index + 1,
+            category: '原材料',
+            name: rawMaterial.productName,
+            brand: rawMaterial.brand || '',
+            model: rawMaterial.specification || '',
+            totalQuantity: rawMaterial.totalQuantity,
+            usedQuantity: rawMaterial.usedQuantity,
+            remainingQuantity: rawMaterial.remainingQuantity,
+            unit: rawMaterial.unit || 'kg',
+            warehouse: '原材料仓库',
+            location: rawMaterial.location || '',
+            status: '正常',
+            lastUpdated: rawMaterial.updatedAt ? new Date(rawMaterial.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
           })
         })
         
@@ -604,47 +646,89 @@ const InventoryManagement = () => {
               const specialEquipments = await deviceApi.getSpecialEquipments()
               // 获取通用设备数据
               const generalEquipments = await deviceApi.getGeneralEquipments()
+              // 获取耗材数据
+              const consumables = await deviceApi.getConsumables()
+              // 获取原材料数据
+              const rawMaterials = await deviceApi.getRawMaterials()
               
               // 转换设备数据为库存数据格式
               const inventoryData = []
               
               // 处理专用设备
-        specialEquipments.forEach((equipment, index) => {
-          inventoryData.push({
-            id: index + 1,
-            category: '专用设备',
-            name: equipment.name,
-            brand: equipment.brand || '',
-            model: equipment.model || '',
-            totalQuantity: equipment.quantity,
-            usedQuantity: equipment.useStatus === '使用中' ? equipment.quantity : 0,
-            remainingQuantity: equipment.useStatus === '使用中' ? 0 : equipment.quantity,
-            unit: equipment.unit || '台',
-            warehouse: equipment.warehouse || '主仓库',
-            location: equipment.location || '',
-            status: equipment.status || '正常',
-            lastUpdated: equipment.purchaseDate || new Date().toISOString().split('T')[0]
-          })
-        })
-        
-        // 处理通用设备
-        generalEquipments.forEach((equipment, index) => {
-          inventoryData.push({
-            id: specialEquipments.length + index + 1,
-            category: '通用设备',
-            name: equipment.name,
-            brand: equipment.brand || '',
-            model: equipment.model || '',
-            totalQuantity: equipment.quantity,
-            usedQuantity: equipment.useStatus === '使用中' ? equipment.quantity : 0,
-            remainingQuantity: equipment.useStatus === '使用中' ? 0 : equipment.quantity,
-            unit: equipment.unit || '台',
-            warehouse: equipment.warehouse || '主仓库',
-            location: equipment.location || '',
-            status: equipment.status || '正常',
-            lastUpdated: equipment.purchaseDate || new Date().toISOString().split('T')[0]
-          })
-        })
+              specialEquipments.forEach((equipment, index) => {
+                inventoryData.push({
+                  id: index + 1,
+                  category: '专用设备',
+                  name: equipment.name,
+                  brand: equipment.brand || '',
+                  model: equipment.model || '',
+                  totalQuantity: equipment.quantity,
+                  usedQuantity: equipment.useStatus === '使用中' ? equipment.quantity : 0,
+                  remainingQuantity: equipment.useStatus === '使用中' ? 0 : equipment.quantity,
+                  unit: equipment.unit || '台',
+                  warehouse: equipment.warehouse || '主仓库',
+                  location: equipment.location || '',
+                  status: equipment.status || '正常',
+                  lastUpdated: equipment.purchaseDate || new Date().toISOString().split('T')[0]
+                })
+              })
+              
+              // 处理通用设备
+              generalEquipments.forEach((equipment, index) => {
+                inventoryData.push({
+                  id: specialEquipments.length + index + 1,
+                  category: '通用设备',
+                  name: equipment.name,
+                  brand: equipment.brand || '',
+                  model: equipment.model || '',
+                  totalQuantity: equipment.quantity,
+                  usedQuantity: equipment.useStatus === '使用中' ? equipment.quantity : 0,
+                  remainingQuantity: equipment.useStatus === '使用中' ? 0 : equipment.quantity,
+                  unit: equipment.unit || '台',
+                  warehouse: equipment.warehouse || '主仓库',
+                  location: equipment.location || '',
+                  status: equipment.status || '正常',
+                  lastUpdated: equipment.purchaseDate || new Date().toISOString().split('T')[0]
+                })
+              })
+              
+              // 处理耗材
+              consumables.forEach((consumable, index) => {
+                inventoryData.push({
+                  id: specialEquipments.length + generalEquipments.length + index + 1,
+                  category: '耗材',
+                  name: consumable.name,
+                  brand: consumable.brand || '',
+                  model: consumable.modelSpecification || '',
+                  totalQuantity: consumable.totalQuantity,
+                  usedQuantity: consumable.usedQuantity,
+                  remainingQuantity: consumable.remainingQuantity,
+                  unit: consumable.unit || '个',
+                  warehouse: '主仓库',
+                  location: consumable.location || '',
+                  status: consumable.status || '正常',
+                  lastUpdated: consumable.updatedAt ? new Date(consumable.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                })
+              })
+              
+              // 处理原材料
+              rawMaterials.forEach((rawMaterial, index) => {
+                inventoryData.push({
+                  id: specialEquipments.length + generalEquipments.length + consumables.length + index + 1,
+                  category: '原材料',
+                  name: rawMaterial.productName,
+                  brand: rawMaterial.brand || '',
+                  model: rawMaterial.specification || '',
+                  totalQuantity: rawMaterial.totalQuantity,
+                  usedQuantity: rawMaterial.usedQuantity,
+                  remainingQuantity: rawMaterial.remainingQuantity,
+                  unit: rawMaterial.unit || 'kg',
+                  warehouse: '原材料仓库',
+                  location: rawMaterial.location || '',
+                  status: '正常',
+                  lastUpdated: rawMaterial.updatedAt ? new Date(rawMaterial.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                })
+              })
               
               setInventory(inventoryData)
               message.success('库存数据刷新成功')

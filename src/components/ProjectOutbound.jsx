@@ -12,10 +12,14 @@ import {
   Card, 
   Tabs,
   Row,
-  Col
+  Col,
+  InputNumber,
+  Drawer
 } from 'antd'
+
+const { TextArea } = Input
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
-import { deviceApi } from '../services/api'
+import { deviceApi, projectOutboundApi } from '../services/api'
 
 const { Option } = Select
 const { TabPane } = Tabs
@@ -109,6 +113,17 @@ function ProjectOutbound() {
   const [consumables, setConsumables] = useState([])
   const [loading, setLoading] = useState(false)
   const [brandFilter, setBrandFilter] = useState('')
+  
+  // 图片上传
+  const [selectedImages, setSelectedImages] = useState([])
+
+  // 处理图片选择
+  const handleImageChange = (e) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      setSelectedImages(Array.from(files))
+    }
+  }
 
   // 从后端获取设备数据（从库存表）
   useEffect(() => {
@@ -150,9 +165,9 @@ function ProjectOutbound() {
         console.log('耗材数据:', consumablesData)
         setConsumables(consumablesData.map(consumable => ({
           id: consumable.id,
-          name: consumable.productName,
+          name: consumable.name,
           model: consumable.brand,
-          specification: consumable.specification,
+          specification: consumable.modelSpecification,
           inventory: consumable.remainingQuantity || 0,
           unit: consumable.unit
         })))
@@ -186,7 +201,7 @@ function ProjectOutbound() {
           specification: d.specification,
           unit: d.unit,
           accessories: d.accessories,
-          status: d.useStatus
+          status: d.status
         })))
       } else if (deviceType === 'general') {
         const devices = await deviceApi.getGeneralEquipmentDetails(device.name, device.brand)
@@ -200,7 +215,7 @@ function ProjectOutbound() {
           specification: d.specification,
           unit: d.unit,
           accessories: d.accessories,
-          status: d.useStatus
+          status: d.status
         })))
       }
     } catch (error) {
@@ -229,7 +244,7 @@ function ProjectOutbound() {
           specification: d.specification,
           unit: d.unit,
           accessories: d.accessories,
-          status: d.useStatus
+          status: d.status
         })))
       } else if (currentDeviceType === 'general') {
         const devices = await deviceApi.getGeneralEquipmentDetails(currentDeviceGroup.name, brand)
@@ -242,7 +257,7 @@ function ProjectOutbound() {
           specification: d.specification,
           unit: d.unit,
           accessories: d.accessories,
-          status: d.useStatus
+          status: d.status
         })))
       }
     } catch (error) {
@@ -255,29 +270,23 @@ function ProjectOutbound() {
 
   // 从详情模态框添加设备
   const addDeviceFromDetail = (device) => {
+    // 检查设备是否已添加
     if (currentDeviceType === 'special') {
-      setSelectedSpecialDevices(prev => {
-        const existingIndex = prev.findIndex(item => item.deviceId === device.deviceId)
-        if (existingIndex >= 0) {
-          message.warning('该设备已添加到已选物品中')
-          return prev
-        } else {
-          message.success('设备已添加到已选物品')
-          return [...prev, { ...device, quantity: 1 }]
-        }
-      })
+      const existingIndex = selectedSpecialDevices.findIndex(item => item.deviceId === device.deviceId)
+      if (existingIndex >= 0) {
+        message.warning('该设备已添加到已选物品中')
+        return
+      }
+      setSelectedSpecialDevices(prev => [...prev, { ...device, quantity: 1 }])
     } else if (currentDeviceType === 'general') {
-      setSelectedGeneralDevices(prev => {
-        const existingIndex = prev.findIndex(item => item.deviceId === device.deviceId)
-        if (existingIndex >= 0) {
-          message.warning('该设备已添加到已选物品中')
-          return prev
-        } else {
-          message.success('设备已添加到已选物品')
-          return [...prev, { ...device, quantity: 1 }]
-        }
-      })
+      const existingIndex = selectedGeneralDevices.findIndex(item => item.deviceId === device.deviceId)
+      if (existingIndex >= 0) {
+        message.warning('该设备已添加到已选物品中')
+        return
+      }
+      setSelectedGeneralDevices(prev => [...prev, { ...device, quantity: 1 }])
     }
+    message.success('设备已添加到已选物品')
   }
 
   // 处理专用设备选择
@@ -447,7 +456,7 @@ function ProjectOutbound() {
       dataIndex: 'quantity',
       key: 'quantity',
       render: (text, record) => (
-        <Input.Number 
+        <InputNumber 
           min={1} 
           max={record.inventory} 
           defaultValue={1}
@@ -495,20 +504,30 @@ function ProjectOutbound() {
     {
       title: '状态',
       dataIndex: 'status',
-      key: 'status'
+      key: 'status',
+      render: (text, record) => (
+        <div title={`项目名称: ${record.projectName}\n项目时间: ${record['项目时间']}`}>
+          {text}
+        </div>
+      )
     },
     {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Button onClick={() => viewOutboundDetail(record)}>查看详情</Button>
+        <Space>
+          <Button onClick={() => viewOutboundDetail(record)}>查看详情</Button>
+          {record.status === '待确认' && (
+            <Button type="primary" onClick={() => confirmOutbound(record.id)}>确认出库</Button>
+          )}
+          <Button danger onClick={() => deleteOutbound(record.id)}>删除</Button>
+        </Space>
       )
     }
   ]
 
   // 处理新建出库单
   const handleCreateOutbound = async () => {
-    form.resetFields()
     setSelectedSpecialDevices([])
     setSelectedGeneralDevices([])
     setSelectedConsumables([])
@@ -549,9 +568,9 @@ function ProjectOutbound() {
       console.log('耗材数据:', consumablesData)
       setConsumables(consumablesData.map(consumable => ({
         id: consumable.id,
-        name: consumable.productName,
+        name: consumable.name,
         model: consumable.brand,
-        specification: consumable.specification,
+        specification: consumable.modelSpecification,
         inventory: consumable.remainingQuantity || 0,
         unit: consumable.unit
       })))
@@ -560,55 +579,171 @@ function ProjectOutbound() {
       message.error('获取设备数据失败')
     } finally {
       setLoading(false)
+      // 显示模态框
+      setCreateModalVisible(true)
+      // 模态框显示后重置表单
+      setTimeout(() => {
+        form.resetFields()
+      }, 100)
     }
-    
-    setCreateModalVisible(true)
+  }
+
+  // 确认出库操作
+  const confirmOutbound = async (outboundId) => {
+    try {
+      await projectOutboundApi.completeProjectOutbound(outboundId)
+      setOutboundHistory(prev => prev.map(item => {
+        if (item.id === outboundId) {
+          return { ...item, status: '已完成' }
+        }
+        return item
+      }))
+      message.success('出库确认成功')
+    } catch (error) {
+      message.error('出库确认失败：' + error.message)
+    }
+  }
+
+  // 删除出库记录
+  const deleteOutbound = async (outboundId) => {
+    try {
+      await projectOutboundApi.deleteProjectOutbound(outboundId)
+      setOutboundHistory(prev => prev.filter(item => item.id !== outboundId))
+      message.success('出库记录已删除')
+    } catch (error) {
+      if (error.message.includes('404')) {
+        message.error('出库记录不存在，删除失败')
+      } else {
+        message.error('删除出库记录失败：' + error.message)
+      }
+    }
   }
 
   // 处理表单提交
-  const handleSubmit = (values) => {
-    const allItems = [
-      ...selectedSpecialDevices.map(item => ({ type: '专用设备', ...item })),
-      ...selectedGeneralDevices.map(item => ({ type: '通用设备', ...item })),
-      ...selectedConsumables.map(item => ({ type: '耗材', ...item }))
+  const handleSubmit = async (values) => {
+    const now = new Date().toISOString();
+    const projectOutboundItems = [
+      ...selectedSpecialDevices.map(item => ({
+        ItemType: 1, // 1表示专用设备
+        ItemId: parseInt(item.deviceId),
+        ItemName: item.name,
+        DeviceCode: item.deviceCode,
+        Brand: item.brand,
+        Model: item.model,
+        Quantity: item.quantity || 1,
+        Unit: item.unit,
+        Accessories: item.accessories,
+        Remark: item.remark,
+        DeviceStatus: item.status,
+        CreatedAt: now
+      })),
+      ...selectedGeneralDevices.map(item => ({
+        ItemType: 2, // 2表示通用设备
+        ItemId: parseInt(item.deviceId),
+        ItemName: item.name,
+        DeviceCode: item.deviceCode,
+        Brand: item.brand,
+        Model: item.model,
+        Quantity: item.quantity || 1,
+        Unit: item.unit,
+        Accessories: item.accessories,
+        Remark: item.remark,
+        DeviceStatus: item.status,
+        CreatedAt: now
+      })),
+      ...selectedConsumables.map(item => ({
+        ItemType: 3, // 3表示耗材
+        ItemId: parseInt(item.id),
+        ItemName: item.name,
+        DeviceCode: item.deviceCode,
+        Brand: item.brand,
+        Model: item.model,
+        Quantity: item.quantity || 1,
+        Unit: item.unit,
+        Accessories: item.accessories,
+        Remark: item.remark,
+        DeviceStatus: item.status,
+        CreatedAt: now
+      }))
     ]
 
-    if (allItems.length === 0) {
+    if (projectOutboundItems.length === 0) {
       message.error('请至少选择一项设备或耗材')
       return
     }
 
-    // 模拟提交
-    setTimeout(() => {
+    try {
+      // 上传图片
+      let imageUrls = ''
+      if (selectedImages.length > 0) {
+        setLoading(true)
+        const uploadPromises = selectedImages.map(async (image) => {
+          const formData = new FormData()
+          formData.append('file', image)
+          try {
+            const response = await imageApi.uploadInOutboundImage(0, 'outbound', formData)
+            return response.url
+          } catch (error) {
+            console.error('上传图片失败:', error)
+            return null
+          }
+        })
+        const results = await Promise.all(uploadPromises)
+        imageUrls = results.filter(url => url).join(',')
+        setLoading(false)
+      }
+
+      const outboundData = {
+        OutboundDate: values['出库时间'] ? values['出库时间'].toISOString() : new Date().toISOString(),
+        ProjectName: values['项目名称'] || '未知项目',
+        ProjectTime: values['项目时间'] || '',
+        ProjectManager: values['项目负责人'] || '',
+        Recipient: values['领用人'] || '',
+        OutboundType: values['领用方式'] || '',
+        ContactPhone: values['联系电话'] || '',
+        UsageLocation: values['使用地'] || '',
+        ReturnDate: values['预计归还时间'] ? values['预计归还时间'].toISOString() : null,
+        WarehouseKeeper: values['库管'] || '',
+        LogisticsMethod: null,
+        OutboundImages: imageUrls,
+        Remark: values.remark || '',
+        ProjectOutboundItems: projectOutboundItems
+      }
+
+      console.log('发送出库单数据:', outboundData);
+      const response = await projectOutboundApi.createProjectOutbound(outboundData)
       const newOutbound = {
-        id: outboundHistory.length + 1,
-        outboundId: values.outboundId || `OUT${Date.now()}`,
-        projectName: values['项目名称'] || '未知项目',
-        领用方式: values['领用方式'] || '',
-        物流方式: values['物流方式'] || '',
-        项目时间: values['项目时间'] || '',
-        使用地: values['使用地'] || '',
-        项目负责人: values['项目负责人'] || '',
-        联系电话: values['联系电话'] || '',
-        预计归还时间: values['预计归还时间'] ? values['预计归还时间'].format('YYYY-MM-DD') : '',
-        领用人: values['领用人'] || '',
-        库管: values['库管'] || '',
-        出库时间: values['出库时间'] ? values['出库时间'].format('YYYY-MM-DD') : '',
-        remark: values.remark || '',
-        status: '已完成',
-        items: allItems
+        id: response.id,
+        outboundId: response.outboundNumber,
+        projectName: response.projectName,
+        领用方式: response.outboundType,
+        物流方式: response.logisticsMethod,
+        项目时间: response.projectTime,
+        使用地: response.usageLocation,
+        项目负责人: response.projectManager,
+        联系电话: response.contactPhone,
+        预计归还时间: response.returnDate ? new Date(response.returnDate).toISOString().split('T')[0] : '',
+        领用人: response.recipient,
+        库管: response.warehouseKeeper,
+        出库时间: response.outboundDate ? new Date(response.outboundDate).toISOString().split('T')[0] : '',
+        remark: response.remark,
+        status: '待确认',
+        items: projectOutboundItems
       }
 
       setOutboundHistory(prev => [newOutbound, ...prev])
-      message.success('项目出库成功')
+      message.success('项目出库单提交成功')
       
       // 重置表单和选择
       form.resetFields()
       setSelectedSpecialDevices([])
       setSelectedGeneralDevices([])
       setSelectedConsumables([])
+      setSelectedImages([])
       setCreateModalVisible(false)
-    }, 1000)
+    } catch (error) {
+      message.error('项目出库单提交失败：' + error.message)
+    }
   }
 
   return (
@@ -634,9 +769,9 @@ function ProjectOutbound() {
         title="新建出库单"
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
-        width={1400}
-        style={{ top: 20, height: '90vh' }}
-        styles={{ body: { height: 'calc(90vh - 100px)', overflow: 'auto' } }}
+        width={1600}
+        style={{ top: 10, height: '95vh' }}
+        styles={{ body: { height: 'calc(95vh - 100px)', overflow: 'auto' } }}
         footer={null}
       >
         <Form 
@@ -649,8 +784,8 @@ function ProjectOutbound() {
 3.设备损坏不能使用：按照设备实际价格赔偿（不高于市场价）。`
           }}
         >
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={6} lg={3.8} xl={3.8}>
+          <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ flex: 1, minWidth: '180px' }}>
               <Form.Item 
                 name="outboundId" 
                 label="出库单号" 
@@ -658,8 +793,8 @@ function ProjectOutbound() {
               >
                 <Input disabled placeholder="系统自动生成" />
               </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6} lg={3.8} xl={3.8}>
+            </div>
+            <div style={{ flex: 1, minWidth: '180px' }}>
               <Form.Item 
                 name="领用方式" 
                 label="领用方式" 
@@ -671,8 +806,8 @@ function ProjectOutbound() {
                   <Option value="其他">其他</Option>
                 </Select>
               </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6} lg={3.8} xl={3.8}>
+            </div>
+            <div style={{ flex: 1, minWidth: '180px' }}>
               <Form.Item 
                 name="物流方式" 
                 label="物流方式" 
@@ -686,8 +821,8 @@ function ProjectOutbound() {
                   <Option value="其他方式">其他方式</Option>
                 </Select>
               </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={5.8} xl={5.8}>
+            </div>
+            <div style={{ flex: 1, minWidth: '180px' }}>
               <Form.Item 
                 name="项目名称" 
                 label="项目名称" 
@@ -695,8 +830,8 @@ function ProjectOutbound() {
               >
                 <Input placeholder="请输入项目名称" />
               </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6.8} xl={6.8}>
+            </div>
+            <div style={{ flex: 1, minWidth: '180px' }}>
               <Form.Item 
                 name="项目时间" 
                 label="项目时间" 
@@ -704,8 +839,8 @@ function ProjectOutbound() {
               >
                 <Input placeholder="请输入项目时间" />
               </Form.Item>
-            </Col>
-          </Row>
+            </div>
+          </div>
 
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={8} lg={6} xl={6}>
@@ -747,16 +882,37 @@ function ProjectOutbound() {
           </Row>
 
           <Form.Item 
-            name="图片" 
             label="图片添加" 
           >
-            <Input type="file" multiple />
+            <Input 
+              type="file" 
+              multiple 
+              accept="image/*" 
+              onChange={handleImageChange} 
+            />
+            {selectedImages.length > 0 && (
+              <div className="mt-2">
+                <p>已选择 {selectedImages.length} 张图片</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedImages.map((file, index) => (
+                    <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <img 
+                        src={URL.createObjectURL(file)} 
+                        alt={`预览 ${index + 1}`} 
+                        style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }}
+                      />
+                      <span style={{ fontSize: '12px', marginTop: '4px' }}>{file.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </Form.Item>
 
           <Row gutter={[16, 16]} className="mt-4">
             {/* 左侧：已选物品窗口 */}
-            <Col span={12}>
-              <Card title="已选物品" variant="outlined">
+            <Col span={16}>
+              <Card title="已选物品" variant="outlined" style={{ height: '500px', overflow: 'auto' }}>
                 <Table 
                   columns={[
                     {
@@ -813,9 +969,9 @@ function ProjectOutbound() {
                       title: '操作',
                       key: 'action',
                       render: (_, record) => (
-                        <Space>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           {record.type === '耗材' && (
-                            <Input.Number 
+                            <InputNumber 
                               min={1} 
                               max={record.inventory} 
                               value={record.quantity} 
@@ -838,7 +994,7 @@ function ProjectOutbound() {
                           >
                             移除
                           </Button>
-                        </Space>
+                        </div>
                       )
                     }
                   ]} 
@@ -855,8 +1011,8 @@ function ProjectOutbound() {
             </Col>
 
             {/* 右侧：可选物品窗口 */}
-            <Col span={12}>
-              <Card title="可选物品" variant="outlined" style={{ height: '500px', overflow: 'auto' }}>
+            <Col span={8}>
+              <Card title="可选物品" variant="outlined" style={{ height: '700px' }}>
                 <Tabs 
                   defaultActiveKey="special-device"
                   items={[
@@ -878,36 +1034,51 @@ function ProjectOutbound() {
                               ))}
                             </Select>
                           </div>
-                          <Table 
-                            columns={[
-                              {
-                                title: '设备名称',
-                                dataIndex: 'name',
-                                key: 'name'
-                              },
-                              {
-                                title: '库存数量',
-                                dataIndex: 'inventory',
-                                key: 'inventory'
-                              },
-                              {
-                                title: '操作',
-                                key: 'action',
-                                render: (_, record) => (
-                                  <Button 
-                                    type="primary"
-                                    onClick={() => openDeviceDetailModal(record, 'special')}
-                                  >
-                                    选择
-                                  </Button>
-                                )
-                              }
-                            ]} 
-                            dataSource={specialDevices} 
-                            rowKey="id"
-                            loading={loading}
-                            pagination={false}
-                          />
+                          <div style={{ height: '550px', overflow: 'auto' }}>
+                            <Table 
+                              columns={[
+                                {
+                                  title: '设备名称',
+                                  dataIndex: 'name',
+                                  key: 'name',
+                                  width: '50%'
+                                },
+                                {
+                                  title: '库存数量',
+                                  dataIndex: 'inventory',
+                                  key: 'inventory',
+                                  width: '30%'
+                                },
+                                {
+                                  title: '操作',
+                                  key: 'action',
+                                  width: '20%',
+                                  render: (_, record) => (
+                                    <Button 
+                                      type="primary"
+                                      onClick={() => openDeviceDetailModal(record, 'special')}
+                                      style={{ width: '100%' }}
+                                    >
+                                      选择
+                                    </Button>
+                                  )
+                                }
+                              ]} 
+                              dataSource={specialDevices} 
+                              rowKey="id"
+                              loading={loading}
+                              pagination={{ 
+                                pageSize: 5, 
+                                showSizeChanger: true,
+                                pageSizeOptions: ['5', '10', '15', '20'],
+                                showTotal: (total) => `共 ${total} 条记录`,
+                                showQuickJumper: true,
+                                size: 'small',
+                                position: 'bottom'
+                              }}
+                              style={{ border: '1px solid #f0f0f0', borderRadius: '4px' }}
+                            />
+                          </div>
                         </div>
                       )
                     },
@@ -929,36 +1100,51 @@ function ProjectOutbound() {
                               ))}
                             </Select>
                           </div>
-                          <Table 
-                            columns={[
-                              {
-                                title: '设备名称',
-                                dataIndex: 'name',
-                                key: 'name'
-                              },
-                              {
-                                title: '库存数量',
-                                dataIndex: 'inventory',
-                                key: 'inventory'
-                              },
-                              {
-                                title: '操作',
-                                key: 'action',
-                                render: (_, record) => (
-                                  <Button 
-                                    type="primary"
-                                    onClick={() => openDeviceDetailModal(record, 'general')}
-                                  >
-                                    选择
-                                  </Button>
-                                )
-                              }
-                            ]} 
-                            dataSource={generalDevices} 
-                            rowKey="id"
-                            loading={loading}
-                            pagination={false}
-                          />
+                          <div style={{ height: '550px', overflow: 'auto' }}>
+                            <Table 
+                              columns={[
+                                {
+                                  title: '设备名称',
+                                  dataIndex: 'name',
+                                  key: 'name',
+                                  width: '50%'
+                                },
+                                {
+                                  title: '库存数量',
+                                  dataIndex: 'inventory',
+                                  key: 'inventory',
+                                  width: '30%'
+                                },
+                                {
+                                  title: '操作',
+                                  key: 'action',
+                                  width: '20%',
+                                  render: (_, record) => (
+                                    <Button 
+                                      type="primary"
+                                      onClick={() => openDeviceDetailModal(record, 'general')}
+                                      style={{ width: '100%' }}
+                                    >
+                                      选择
+                                    </Button>
+                                  )
+                                }
+                              ]} 
+                              dataSource={generalDevices} 
+                              rowKey="id"
+                              loading={loading}
+                              pagination={{ 
+                                pageSize: 5, 
+                                showSizeChanger: true,
+                                pageSizeOptions: ['5', '10', '15', '20'],
+                                showTotal: (total) => `共 ${total} 条记录`,
+                                showQuickJumper: true,
+                                size: 'small',
+                                position: 'bottom'
+                              }}
+                              style={{ border: '1px solid #f0f0f0', borderRadius: '4px' }}
+                            />
+                          </div>
                         </div>
                       )
                     },
@@ -980,38 +1166,51 @@ function ProjectOutbound() {
                               ))}
                             </Select>
                           </div>
-                          <Table 
-                            columns={[
-                              {
-                                title: '设备名称',
-                                dataIndex: 'name',
-                                key: 'name'
-                              },
-                              {
-                                title: '库存数量',
-                                dataIndex: 'inventory',
-                                key: 'inventory'
-                              },
-                              {
-                                title: '操作',
-                                key: 'action',
-                                render: (_, record) => (
-                                  <Button 
-                                    type="primary"
-                                    onClick={() => handleConsumableSelect(record.id, 1)}
-                                  >
-                                    选择
-                                  </Button>
-                                )
-                              }
-                            ]} 
-                            dataSource={consumables.filter(consumable => 
-                              !selectedConsumables.some(item => item.id === consumable.id)
-                            )} 
-                            rowKey="id"
-                            pagination={false}
-                            loading={loading}
-                          />
+                          <div style={{ height: '550px', overflow: 'auto' }}>
+                            <Table 
+                              columns={[
+                                {
+                                  title: '设备名称',
+                                  dataIndex: 'name',
+                                  key: 'name',
+                                  width: '50%'
+                                },
+                                {
+                                  title: '库存数量',
+                                  dataIndex: 'inventory',
+                                  key: 'inventory',
+                                  width: '30%'
+                                },
+                                {
+                                  title: '操作',
+                                  key: 'action',
+                                  width: '20%',
+                                  render: (_, record) => (
+                                    <Button 
+                                      type="primary"
+                                      onClick={() => handleConsumableSelect(record.id, 1)}
+                                      style={{ width: '100%' }}
+                                    >
+                                      选择
+                                    </Button>
+                                  )
+                                }
+                              ]} 
+                              dataSource={consumables} 
+                              rowKey="id"
+                              pagination={{ 
+                                pageSize: 5, 
+                                showSizeChanger: true,
+                                pageSizeOptions: ['5', '10', '15', '20'],
+                                showTotal: (total) => `共 ${total} 条记录`,
+                                showQuickJumper: true,
+                                size: 'small',
+                                position: 'bottom'
+                              }}
+                              loading={loading}
+                              style={{ border: '1px solid #f0f0f0', borderRadius: '4px' }}
+                            />
+                          </div>
                         </div>
                       )
                     }
@@ -1020,6 +1219,16 @@ function ProjectOutbound() {
               </Card>
             </Col>
           </Row>
+
+          <Form.Item 
+            name="remark" 
+            label="备注"
+          >
+            <TextArea 
+              rows={3} 
+              placeholder="请输入备注信息"
+            />
+          </Form.Item>
 
           <Row gutter={[16, 16]} className="mt-4">
             <Col xs={24} sm={12} md={8} lg={8} xl={8}>
@@ -1051,19 +1260,9 @@ function ProjectOutbound() {
             </Col>
           </Row>
 
-          <Form.Item 
-            name="remark" 
-            label="备注"
-          >
-            <Input.TextArea 
-              rows={6} 
-              placeholder="请输入备注信息"
-            />
-          </Form.Item>
-
           <Form.Item className="mt-4">
             <Button type="primary" htmlType="submit" style={{ marginRight: 16 }}>
-              确认出库
+              提交出库
             </Button>
             <Button onClick={() => {
               form.resetFields()
@@ -1129,17 +1328,13 @@ function ProjectOutbound() {
         )}
       </Modal>
 
-      {/* 设备详情模态框 */}
-      <Modal
+      {/* 设备详情抽屉 */}
+      <Drawer
         title={`${currentDeviceGroup?.name} - 详细设备清单`}
+        placement="right"
+        onClose={() => setDeviceDetailModalVisible(false)}
         open={deviceDetailModalVisible}
-        onCancel={() => setDeviceDetailModalVisible(false)}
-        width={1200}
-        footer={[
-          <Button key="close" onClick={() => setDeviceDetailModalVisible(false)}>
-            关闭
-          </Button>
-        ]}
+        width={1000}
       >
         <div className="mb-4">
           <label className="mr-2">按品牌筛选:</label>
@@ -1170,9 +1365,9 @@ function ProjectOutbound() {
               render: (_, record) => (
                 <Button 
                   type="primary"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     addDeviceFromDetail(record);
-                    message.success('设备已添加到已选物品');
                   }}
                 >
                   添加
@@ -1185,7 +1380,7 @@ function ProjectOutbound() {
           loading={loading}
           pagination={false}
         />
-      </Modal>
+      </Drawer>
     </div>
   )
 }

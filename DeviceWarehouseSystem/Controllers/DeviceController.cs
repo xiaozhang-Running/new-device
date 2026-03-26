@@ -57,7 +57,16 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                var errorMessage = ex.Message;
+                if (ex.InnerException != null)
+                {
+                    errorMessage += " | 内部错误: " + ex.InnerException.Message;
+                    if (ex.InnerException.InnerException != null)
+                    {
+                        errorMessage += " | 内部错误: " + ex.InnerException.InnerException.Message;
+                    }
+                }
+                return BadRequest(new { message = errorMessage });
             }
         }
 

@@ -4,6 +4,7 @@ using DeviceWarehouseSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeviceWarehouseSystem.Migrations
 {
     [DbContext(typeof(DeviceWarehouseContext))]
-    partial class DeviceWarehouseContextModelSnapshot : ModelSnapshot
+    [Migration("20260326050112_RemoveSpecificationFromEquipmentInboundItem")]
+    partial class RemoveSpecificationFromEquipmentInboundItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -205,12 +208,6 @@ namespace DeviceWarehouseSystem.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("InboundPerson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Inspector")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Operator")
                         .HasMaxLength(100)

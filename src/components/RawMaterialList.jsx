@@ -26,11 +26,21 @@ const RawMaterialList = () => {
         const response = await fetch('http://localhost:5054/api/RawMaterials')
         if (response.ok) {
           const data = await response.json()
-          // 确保每个对象都有唯一的key属性
-          const dataWithKey = data.map((item, index) => ({
-            ...item,
-            key: item.id || index
-          }))
+          // 确保每个对象都有唯一的key属性，并且数量字段为数字类型
+          const dataWithKey = data.map((item, index) => {
+            // 确保剩余数量正确计算
+            const totalQty = parseInt(item.totalQuantity) || 0
+            const usedQty = parseInt(item.usedQuantity) || 0
+            const remainingQty = totalQty - usedQty
+            
+            return {
+              ...item,
+              key: item.id || index,
+              totalQuantity: totalQty,
+              usedQuantity: usedQty,
+              remainingQuantity: remainingQty
+            }
+          })
           setRawMaterials(dataWithKey)
           setFilteredRawMaterials(dataWithKey)
         } else {
@@ -70,11 +80,21 @@ const RawMaterialList = () => {
         const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
-          // 确保每个对象都有唯一的key属性
-          const dataWithKey = data.map((item, index) => ({
-            ...item,
-            key: item.id || index
-          }))
+          // 确保每个对象都有唯一的key属性，并且数量字段为数字类型
+          const dataWithKey = data.map((item, index) => {
+            // 确保剩余数量正确计算
+            const totalQty = parseInt(item.totalQuantity) || 0
+            const usedQty = parseInt(item.usedQuantity) || 0
+            const remainingQty = totalQty - usedQty
+            
+            return {
+              ...item,
+              key: item.id || index,
+              totalQuantity: totalQty,
+              usedQuantity: usedQty,
+              remainingQuantity: remainingQty
+            }
+          })
           setFilteredRawMaterials(dataWithKey)
         } else {
           message.error('获取过滤数据失败')
@@ -124,25 +144,35 @@ const RawMaterialList = () => {
 
   const handleSave = async (rawMaterial) => {
     try {
-      if (rawMaterial.id) {
+      // 确保数量字段为数字类型
+      const processedRawMaterial = {
+        ...rawMaterial,
+        totalQuantity: parseInt(rawMaterial.totalQuantity) || 0,
+        usedQuantity: parseInt(rawMaterial.usedQuantity) || 0
+      }
+      
+      if (processedRawMaterial.id) {
         // 编辑现有原材料
-        const response = await fetch(`http://localhost:5054/api/RawMaterials/${rawMaterial.id}`, {
+        const response = await fetch(`http://localhost:5054/api/RawMaterials/${processedRawMaterial.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(rawMaterial)
+          body: JSON.stringify(processedRawMaterial)
         })
         
         if (response.ok) {
           const updatedRawMaterial = await response.json()
-          // 确保更新后的原材料有key属性
+          // 确保更新后的原材料有key属性，并且数量字段为数字类型
           const updatedRawMaterialWithKey = {
             ...updatedRawMaterial,
-            key: updatedRawMaterial.id
+            key: updatedRawMaterial.id,
+            totalQuantity: parseInt(updatedRawMaterial.totalQuantity) || 0,
+            usedQuantity: parseInt(updatedRawMaterial.usedQuantity) || 0,
+            remainingQuantity: parseInt(updatedRawMaterial.remainingQuantity) || 0
           }
-          setRawMaterials(rawMaterials.map(r => r.id === rawMaterial.id ? updatedRawMaterialWithKey : r))
-          setFilteredRawMaterials(filteredRawMaterials.map(r => r.id === rawMaterial.id ? updatedRawMaterialWithKey : r))
+          setRawMaterials(rawMaterials.map(r => r.id === processedRawMaterial.id ? updatedRawMaterialWithKey : r))
+          setFilteredRawMaterials(filteredRawMaterials.map(r => r.id === processedRawMaterial.id ? updatedRawMaterialWithKey : r))
           message.success('原材料更新成功')
         } else {
           message.error('更新原材料失败')
@@ -154,15 +184,18 @@ const RawMaterialList = () => {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(rawMaterial)
+          body: JSON.stringify(processedRawMaterial)
         })
         
         if (response.ok) {
           const newRawMaterial = await response.json()
-          // 确保新原材料有key属性
+          // 确保新原材料有key属性，并且数量字段为数字类型
           const newRawMaterialWithKey = {
             ...newRawMaterial,
-            key: newRawMaterial.id
+            key: newRawMaterial.id,
+            totalQuantity: parseInt(newRawMaterial.totalQuantity) || 0,
+            usedQuantity: parseInt(newRawMaterial.usedQuantity) || 0,
+            remainingQuantity: parseInt(newRawMaterial.remainingQuantity) || 0
           }
           setRawMaterials([...rawMaterials, newRawMaterialWithKey])
           setFilteredRawMaterials([...filteredRawMaterials, newRawMaterialWithKey])
@@ -195,28 +228,33 @@ const RawMaterialList = () => {
       let usedQuantityValue = 0
       
       // 处理总数量
-      if (item['总数量'] !== undefined && item['总数量'] !== null) {
+      if (item['总数量'] !== undefined && item['总数量'] !== null && item['总数量'] !== '') {
         totalQuantityValue = parseInt(item['总数量']) || 0
-      } else if (item['数量'] !== undefined && item['数量'] !== null) {
+      } else if (item['数量'] !== undefined && item['数量'] !== null && item['数量'] !== '') {
         totalQuantityValue = parseInt(item['数量']) || 0
-      } else if (item['totalQuantity'] !== undefined && item['totalQuantity'] !== null) {
+      } else if (item['totalQuantity'] !== undefined && item['totalQuantity'] !== null && item['totalQuantity'] !== '') {
         totalQuantityValue = parseInt(item['totalQuantity']) || 0
-      } else if (item.totalQuantity !== undefined && item.totalQuantity !== null) {
+      } else if (item.totalQuantity !== undefined && item.totalQuantity !== null && item.totalQuantity !== '') {
         totalQuantityValue = parseInt(item.totalQuantity) || 0
+      } else if (item['剩余数量'] !== undefined && item['剩余数量'] !== null && item['剩余数量'] !== '') {
+        totalQuantityValue = parseInt(item['剩余数量']) || 0
+      } else if (item.remainingQuantity !== undefined && item.remainingQuantity !== null && item.remainingQuantity !== '') {
+        totalQuantityValue = parseInt(item.remainingQuantity) || 0
       }
       
       // 处理已用数量
-      if (item['已用数量'] !== undefined && item['已用数量'] !== null) {
+      if (item['已用数量'] !== undefined && item['已用数量'] !== null && item['已用数量'] !== '') {
         usedQuantityValue = parseInt(item['已用数量']) || 0
-      } else if (item['usedQuantity'] !== undefined && item['usedQuantity'] !== null) {
+      } else if (item['usedQuantity'] !== undefined && item['usedQuantity'] !== null && item['usedQuantity'] !== '') {
         usedQuantityValue = parseInt(item['usedQuantity']) || 0
-      } else if (item.usedQuantity !== undefined && item.usedQuantity !== null) {
+      } else if (item.usedQuantity !== undefined && item.usedQuantity !== null && item.usedQuantity !== '') {
         usedQuantityValue = parseInt(item.usedQuantity) || 0
       }
       
       // 计算剩余数量
-      const totalQty = totalQuantityValue
-      const usedQty = usedQuantityValue
+      const totalQty = totalQuantityValue > 0 ? totalQuantityValue : 0
+      const usedQty = usedQuantityValue > 0 ? usedQuantityValue : 0
+      const remainingQty = totalQty - usedQty
       
       return {
         productName,
@@ -229,7 +267,8 @@ const RawMaterialList = () => {
         location,
         company: company || '科技有限公司',
         remark,
-        image: ''
+        image: '',
+        createdBy: 'system'
       }
     })
     
@@ -254,11 +293,21 @@ const RawMaterialList = () => {
         const fetchResponse = await fetch('http://localhost:5054/api/RawMaterials')
         if (fetchResponse.ok) {
           const data = await fetchResponse.json()
-          // 确保每个对象都有唯一的key属性
-          const dataWithKey = data.map((item, index) => ({
-            ...item,
-            key: item.id || index
-          }))
+          // 确保每个对象都有唯一的key属性，并且数量字段为数字类型
+          const dataWithKey = data.map((item, index) => {
+            // 确保剩余数量正确计算
+            const totalQty = parseInt(item.totalQuantity) || 0
+            const usedQty = parseInt(item.usedQuantity) || 0
+            const remainingQty = totalQty - usedQty
+            
+            return {
+              ...item,
+              key: item.id || index,
+              totalQuantity: totalQty,
+              usedQuantity: usedQty,
+              remainingQuantity: remainingQty
+            }
+          })
           setRawMaterials(dataWithKey)
           setFilteredRawMaterials(dataWithKey)
         }
@@ -266,9 +315,26 @@ const RawMaterialList = () => {
         message.success(`成功导入 ${successCount} 个原材料`)
       } else {
         // 获取详细的错误信息
-        const errorData = await response.json().catch(() => ({}))
-        console.error('导入失败:', errorData)
-        message.error(`导入原材料失败: ${errorData.message || '未知错误'}`)
+        try {
+          const errorData = await response.json()
+          console.error('导入失败:', JSON.stringify(errorData, null, 2))
+          console.error('错误状态:', response.status)
+          console.error('错误状态文本:', response.statusText)
+          
+          // 显示详细的错误信息
+          let errorMessage = '导入原材料失败: '
+          if (errorData.errors) {
+            errorMessage += Object.entries(errorData.errors)
+              .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+              .join('; ')
+          } else {
+            errorMessage += errorData.title || '未知错误'
+          }
+          message.error(errorMessage)
+        } catch (error) {
+          console.error('解析错误响应失败:', error)
+          message.error(`导入原材料失败: 服务器返回错误 ${response.status}`)
+        }
       }
     } catch (error) {
       console.error('导入原材料失败:', error)
@@ -339,8 +405,9 @@ const RawMaterialList = () => {
       width: 80,
       align: 'center',
       render: (remainingQuantity) => {
-        const color = remainingQuantity < 100 ? 'red' : remainingQuantity < 500 ? 'orange' : 'green'
-        return <span style={{ color }}>{remainingQuantity}</span>
+        const quantity = parseInt(remainingQuantity) || 0
+        const color = quantity < 100 ? 'red' : quantity < 500 ? 'orange' : 'green'
+        return <span style={{ color }}>{quantity}</span>
       }
     },
     {
@@ -422,9 +489,9 @@ const RawMaterialList = () => {
 
   // 计算总数量统计
   const quantityStats = {
-    total: rawMaterials.reduce((sum, r) => sum + r.totalQuantity, 0),
-    used: rawMaterials.reduce((sum, r) => sum + r.usedQuantity, 0),
-    remaining: rawMaterials.reduce((sum, r) => sum + r.remainingQuantity, 0)
+    total: rawMaterials.reduce((sum, r) => sum + (r.totalQuantity || 0), 0),
+    used: rawMaterials.reduce((sum, r) => sum + (r.usedQuantity || 0), 0),
+    remaining: rawMaterials.reduce((sum, r) => sum + (r.remainingQuantity || 0), 0)
   }
 
   return (

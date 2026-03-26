@@ -126,7 +126,6 @@ public partial class DeviceWarehouseContext : DbContext
             entity.Property(e => e.Model).HasMaxLength(100);
             entity.Property(e => e.Remark).HasMaxLength(500);
             entity.Property(e => e.SerialNumber).HasMaxLength(100);
-            entity.Property(e => e.Specification).HasMaxLength(200);
             entity.Property(e => e.Status).HasMaxLength(200);
             entity.Property(e => e.Unit).HasMaxLength(20);
 

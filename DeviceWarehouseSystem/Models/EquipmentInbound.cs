@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DeviceWarehouseSystem.Models;
@@ -14,6 +14,10 @@ public partial class EquipmentInbound
     public int EquipmentType { get; set; }
 
     public string? DeliveryPerson { get; set; }
+
+    public string? Inspector { get; set; }
+
+    public string? InboundPerson { get; set; }
 
     public string? Operator { get; set; }
 

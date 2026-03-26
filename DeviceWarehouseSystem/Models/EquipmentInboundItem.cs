@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DeviceWarehouseSystem.Models;
@@ -18,8 +18,6 @@ public partial class EquipmentInboundItem
     public string? Model { get; set; }
 
     public string? SerialNumber { get; set; }
-
-    public string? Specification { get; set; }
 
     public int Quantity { get; set; }
 
