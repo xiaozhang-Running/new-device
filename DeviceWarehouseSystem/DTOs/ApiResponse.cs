@@ -16,12 +16,12 @@ namespace DeviceWarehouseSystem.DTOs
         /// <summary>
         /// 响应数据
         /// </summary>
-        public T Data { get; set; }
+        public T? Data { get; set; }
 
         /// <summary>
         /// 响应消息
         /// </summary>
-        public string Message { get; set; }
+        public string? Message { get; set; }
 
         /// <summary>
         /// 错误列表
@@ -92,7 +92,7 @@ namespace DeviceWarehouseSystem.DTOs
         /// <summary>
         /// 响应消息
         /// </summary>
-        public string Message { get; set; }
+        public string? Message { get; set; }
 
         /// <summary>
         /// 错误列表

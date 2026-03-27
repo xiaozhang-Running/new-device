@@ -18,6 +18,8 @@ namespace DeviceWarehouseSystem.DTOs
         public string? Company { get; set; }
         public string? Status { get; set; }
         public string? UseStatus { get; set; }
+        public string? ProjectName { get; set; }
+        public string? ProjectTime { get; set; }
         public string? Location { get; set; }
         public string? Description { get; set; }
         public string? PurchaseDate { get; set; }
@@ -40,6 +42,8 @@ namespace DeviceWarehouseSystem.DTOs
         public string? Company { get; set; }
         public string? Status { get; set; }
         public string? UseStatus { get; set; }
+        public string? ProjectName { get; set; }
+        public string? ProjectTime { get; set; }
         public string? Location { get; set; }
         public string? Description { get; set; }
         public string? PurchaseDate { get; set; }

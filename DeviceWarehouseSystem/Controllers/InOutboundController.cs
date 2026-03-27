@@ -266,6 +266,21 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
+        // POST: api/InOutbound/special-equipment-purchase-inbounds/{id}/confirm
+        [HttpPost("special-equipment-purchase-inbounds/{id}/confirm")]
+        public async Task<ActionResult<SpecialEquipmentPurchaseInboundDTO>> ConfirmSpecialEquipmentPurchaseInbound(int id)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.ConfirmSpecialEquipmentPurchaseInboundAsync(id);
+                return Ok(inbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // DELETE: api/InOutbound/special-equipment-purchase-inbounds/{id}
         [HttpDelete("special-equipment-purchase-inbounds/{id}")]
         public async Task<ActionResult<bool>> DeleteSpecialEquipmentPurchaseInbound(int id)
@@ -274,6 +289,21 @@ namespace DeviceWarehouseSystem.Controllers
             {
                 await _inOutboundService.DeleteSpecialEquipmentPurchaseInboundAsync(id);
                 return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/InOutbound/general-equipment-purchase-inbounds/{id}/confirm
+        [HttpPost("general-equipment-purchase-inbounds/{id}/confirm")]
+        public async Task<ActionResult<GeneralEquipmentPurchaseInboundDTO>> ConfirmGeneralEquipmentPurchaseInbound(int id)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.ConfirmGeneralEquipmentPurchaseInboundAsync(id);
+                return Ok(inbound);
             }
             catch (Exception ex)
             {

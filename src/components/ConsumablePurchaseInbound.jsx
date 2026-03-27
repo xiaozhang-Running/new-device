@@ -290,7 +290,7 @@ function ConsumablePurchaseInbound() {
   // 生成入库单号
   const generateOrderNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
-    return `Con-IN-${timestamp}`;
+    return `CON-IN-${timestamp}`;
   };
 
   // 处理新建入库单

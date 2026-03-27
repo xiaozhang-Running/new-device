@@ -15,7 +15,7 @@ const RawMaterialInboundList = () => {
   useEffect(() => {
     const fetchRawMaterials = async () => {
       try {
-        const response = await fetch('http://localhost:5054/api/RawMaterials')
+        const response = await fetch('http://localhost:5055/api/RawMaterials')
         if (response.ok) {
           const data = await response.json()
           setRawMaterials(data)
@@ -45,7 +45,7 @@ const RawMaterialInboundList = () => {
 
     const fetchInbounds = async () => {
       try {
-        const response = await fetch('http://localhost:5054/api/InOutbound/raw-material-inbounds')
+        const response = await fetch('http://localhost:5055/api/InOutbound/raw-material-inbounds')
         if (response.ok) {
           const data = await response.json()
           // 转换数据格式以匹配前端组件的期望
@@ -97,7 +97,7 @@ const RawMaterialInboundList = () => {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5054/api/InOutbound/raw-material-inbounds/${id}`, {
+      const response = await fetch(`http://localhost:5055/api/InOutbound/raw-material-inbounds/${id}`, {
         method: 'DELETE'
       })
 
@@ -128,7 +128,7 @@ const RawMaterialInboundList = () => {
         }))
       }
 
-      const response = await fetch('http://localhost:5054/api/InOutbound/raw-material-inbounds', {
+      const response = await fetch('http://localhost:5055/api/InOutbound/raw-material-inbounds', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -156,7 +156,7 @@ const RawMaterialInboundList = () => {
     try {
       message.loading('正在确认入库...')
       
-      const response = await fetch('http://localhost:5054/api/InOutbound/raw-material-inbounds/confirm', {
+      const response = await fetch('http://localhost:5055/api/InOutbound/raw-material-inbounds/confirm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -170,7 +170,7 @@ const RawMaterialInboundList = () => {
         // 重新获取原材料列表以更新库存数量
         const fetchRawMaterialsAgain = async () => {
           try {
-            const response = await fetch('http://localhost:5054/api/RawMaterials')
+            const response = await fetch('http://localhost:5055/api/RawMaterials')
             if (response.ok) {
               const data = await response.json()
               setRawMaterials(data)

@@ -169,13 +169,21 @@ const GeneralDeviceList = () => {
           warehouse: item.warehouse || item.Warehouse || '主仓库',
           company: item.company || item.Company || '',
           status: item.status || item.Status || '正常',
-          useStatus: item.useStatus || item.UseStatus || '未使用',
+          useStatus: item.useStatus || item.UseStatus === 1 ? '未使用' : '使用中',
+          projectName: item.projectName || item.ProjectName || '',
+          projectTime: item.projectTime || item.ProjectTime || '',
           location: item.location || item.Location || '',
           description: item.description || item.Description || '',
           purchaseDate: item.purchaseDate || item.PurchaseDate || new Date().toISOString().split('T')[0],
           purchasePrice: item.purchasePrice || item.PurchasePrice || 0
         }))
-        console.log('格式化后的通用设备数据:', formattedDevices)
+        // 按设备名称排序，确保同名称的设备放到一起
+        formattedDevices.sort((a, b) => {
+          if (a.name < b.name) return -1;
+          if (a.name > b.name) return 1;
+          return 0;
+        });
+        console.log('格式化并排序后的通用设备数据:', formattedDevices)
         setDevices(formattedDevices)
         // 直接设置filteredDevices，确保数据立即显示
         setFilteredDevices(formattedDevices)
@@ -614,8 +622,8 @@ const GeneralDeviceList = () => {
       title: '使用状态',
       dataIndex: 'useStatus',
       key: 'useStatus',
-      width: 100,
-      render: (useStatus) => {
+      width: 150,
+      render: (useStatus, record) => {
         let color = ''
         switch (useStatus) {
           case '使用中':
@@ -626,6 +634,15 @@ const GeneralDeviceList = () => {
             break
           default:
             color = 'gray'
+        }
+        if (useStatus === '使用中' && (record.projectName || record.projectTime)) {
+          return (
+            <div style={{ color }} title={`项目名称: ${record.projectName || '未知'}\n项目时间: ${record.projectTime || '未知'}`}>
+              {useStatus}
+              {record.projectName && <div style={{ fontSize: '12px', marginTop: '2px' }}>{record.projectName}</div>}
+              {record.projectTime && <div style={{ fontSize: '11px', color: '#666' }}>{record.projectTime}</div>}
+            </div>
+          )
         }
         return <span style={{ color }}>{useStatus}</span>
       }
@@ -869,6 +886,12 @@ const GeneralDeviceList = () => {
                       {selectedDevice.useStatus}
                     </Tag>
                   </Descriptions.Item>
+                  {selectedDevice.useStatus === '使用中' && (
+                    <>
+                      <Descriptions.Item label="项目名称" key="projectName">{selectedDevice.projectName || selectedDevice.ProjectName || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="项目时间" key="projectTime">{selectedDevice.projectTime || selectedDevice.ProjectTime || '-'}</Descriptions.Item>
+                    </>
+                  )}
                   <Descriptions.Item label="位置" key="location">{selectedDevice.location}</Descriptions.Item>
                   <Descriptions.Item label="购买日期" key="purchaseDate">{selectedDevice.purchaseDate}</Descriptions.Item>
                   <Descriptions.Item label="购买价格" key="purchasePrice">¥{selectedDevice.purchasePrice}</Descriptions.Item>

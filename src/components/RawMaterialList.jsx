@@ -23,7 +23,7 @@ const RawMaterialList = () => {
     const fetchRawMaterials = async () => {
       setLoading(true)
       try {
-        const response = await fetch('http://localhost:5054/api/RawMaterials')
+        const response = await fetch('http://localhost:5055/api/RawMaterials')
         if (response.ok) {
           const data = await response.json()
           // 确保每个对象都有唯一的key属性，并且数量字段为数字类型
@@ -61,7 +61,7 @@ const RawMaterialList = () => {
     const fetchFilteredRawMaterials = async () => {
       setLoading(true)
       try {
-        let url = 'http://localhost:5054/api/RawMaterials?'
+        let url = 'http://localhost:5055/api/RawMaterials?'
         let params = []
         
         if (searchText) {
@@ -126,7 +126,7 @@ const RawMaterialList = () => {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5054/api/RawMaterials/${id}`, {
+      const response = await fetch(`http://localhost:5055/api/RawMaterials/${id}`, {
         method: 'DELETE'
       })
       
@@ -153,7 +153,7 @@ const RawMaterialList = () => {
       
       if (processedRawMaterial.id) {
         // 编辑现有原材料
-        const response = await fetch(`http://localhost:5054/api/RawMaterials/${processedRawMaterial.id}`, {
+        const response = await fetch(`http://localhost:5055/api/RawMaterials/${processedRawMaterial.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -179,7 +179,7 @@ const RawMaterialList = () => {
         }
       } else {
         // 添加新原材料
-        const response = await fetch('http://localhost:5054/api/RawMaterials', {
+        const response = await fetch('http://localhost:5055/api/RawMaterials', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -277,7 +277,7 @@ const RawMaterialList = () => {
       // 调试：打印发送的数据
       console.log('发送的导入数据:', { RawMaterials: importedRawMaterials });
       
-      const response = await fetch('http://localhost:5054/api/RawMaterials/import', {
+      const response = await fetch('http://localhost:5055/api/RawMaterials/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -290,7 +290,7 @@ const RawMaterialList = () => {
         const successCount = result
         
         // 重新获取原材料列表
-        const fetchResponse = await fetch('http://localhost:5054/api/RawMaterials')
+        const fetchResponse = await fetch('http://localhost:5055/api/RawMaterials')
         if (fetchResponse.ok) {
           const data = await fetchResponse.json()
           // 确保每个对象都有唯一的key属性，并且数量字段为数字类型
@@ -346,7 +346,7 @@ const RawMaterialList = () => {
     setLoading(true)
     try {
       // 调用后端API清空所有原材料
-      const response = await fetch('http://localhost:5054/api/RawMaterials', {
+      const response = await fetch('http://localhost:5055/api/RawMaterials', {
         method: 'DELETE'
       })
       if (response.ok) {

@@ -169,13 +169,21 @@ const DeviceList = () => {
           warehouse: item.warehouse || item.Warehouse || '主仓库',
           company: item.company || item.Company || '',
           status: item.status || item.Status || '正常',
-          useStatus: item.useStatus || item.UseStatus || '未使用',
+          useStatus: item.useStatus || item.UseStatus === 1 ? '未使用' : '使用中',
+          projectName: item.projectName || item.ProjectName || '',
+          projectTime: item.projectTime || item.ProjectTime || '',
           location: item.location || item.Location || '',
           description: item.description || item.Description || '',
           purchaseDate: item.purchaseDate || item.PurchaseDate || new Date().toISOString().split('T')[0],
           purchasePrice: item.purchasePrice || item.PurchasePrice || 0
         }))
-        console.log('格式化后的设备数据:', formattedDevices)
+        // 按设备名称排序，确保同名称的设备放到一起
+        formattedDevices.sort((a, b) => {
+          if (a.name < b.name) return -1;
+          if (a.name > b.name) return 1;
+          return 0;
+        });
+        console.log('格式化并排序后的设备数据:', formattedDevices)
         setDevices(formattedDevices)
         // 直接设置filteredDevices，确保数据立即显示
         setFilteredDevices(formattedDevices)
@@ -460,24 +468,24 @@ const DeviceList = () => {
         
         // 格式化返回的设备数据
         const formattedDevice = {
-          id: newDevice.Id,
-          name: newDevice.Name,
-          deviceCode: newDevice.DeviceCode,
-          serialNumber: newDevice.SerialNumber || '',
-          brand: newDevice.Brand || '',
-          model: newDevice.Model || '',
-          quantity: newDevice.Quantity || 1,
-          unit: newDevice.Unit || '台',
-          accessories: newDevice.Accessories || '',
-          image: newDevice.ImageUrl || image,
-          warehouse: newDevice.Warehouse || '主仓库',
-          company: newDevice.Company || '',
-          status: newDevice.Status || '正常',
-          useStatus: newDevice.UseStatus || '未使用',
-          location: newDevice.Location || '',
-          description: newDevice.Description || '',
-          purchaseDate: newDevice.PurchaseDate || purchaseDate || new Date().toISOString().split('T')[0],
-          purchasePrice: newDevice.PurchasePrice || 0
+          id: newDevice.id || newDevice.Id,
+          name: newDevice.name || newDevice.Name,
+          deviceCode: newDevice.deviceCode || newDevice.DeviceCode,
+          serialNumber: newDevice.serialNumber || newDevice.SerialNumber || '',
+          brand: newDevice.brand || newDevice.Brand || '',
+          model: newDevice.model || newDevice.Model || '',
+          quantity: newDevice.quantity || newDevice.Quantity || 1,
+          unit: newDevice.unit || newDevice.Unit || '台',
+          accessories: newDevice.accessories || newDevice.Accessories || '',
+          image: newDevice.imageUrl || newDevice.ImageUrl || image,
+          warehouse: newDevice.warehouse || newDevice.Warehouse || '主仓库',
+          company: newDevice.company || newDevice.Company || '',
+          status: newDevice.status || newDevice.Status || '正常',
+          useStatus: newDevice.useStatus || newDevice.UseStatus || '未使用',
+          location: newDevice.location || newDevice.Location || '',
+          description: newDevice.description || newDevice.Description || '',
+          purchaseDate: newDevice.purchaseDate || newDevice.PurchaseDate || purchaseDate || new Date().toISOString().split('T')[0],
+          purchasePrice: newDevice.purchasePrice || newDevice.PurchasePrice || 0
         }
         
         importedDevices.push(formattedDevice)
@@ -614,8 +622,8 @@ const DeviceList = () => {
       title: '使用状态',
       dataIndex: 'useStatus',
       key: 'useStatus',
-      width: 100,
-      render: (useStatus) => {
+      width: 150,
+      render: (useStatus, record) => {
         let color = ''
         switch (useStatus) {
           case '使用中':
@@ -626,6 +634,15 @@ const DeviceList = () => {
             break
           default:
             color = 'gray'
+        }
+        if (useStatus === '使用中' && (record.projectName || record.projectTime)) {
+          return (
+            <div style={{ color }} title={`项目名称: ${record.projectName || '未知'}\n项目时间: ${record.projectTime || '未知'}`}>
+              {useStatus}
+              {record.projectName && <div style={{ fontSize: '12px', marginTop: '2px' }}>{record.projectName}</div>}
+              {record.projectTime && <div style={{ fontSize: '11px', color: '#666' }}>{record.projectTime}</div>}
+            </div>
+          )
         }
         return <span style={{ color }}>{useStatus}</span>
       }
@@ -869,6 +886,12 @@ const DeviceList = () => {
                       {selectedDevice.useStatus}
                     </Tag>
                   </Descriptions.Item>
+                  {selectedDevice.useStatus === '使用中' && (
+                    <>
+                      <Descriptions.Item label="项目名称" key="projectName">{selectedDevice.projectName || selectedDevice.ProjectName || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="项目时间" key="projectTime">{selectedDevice.projectTime || selectedDevice.ProjectTime || '-'}</Descriptions.Item>
+                    </>
+                  )}
                   <Descriptions.Item label="位置" key="location">{selectedDevice.location}</Descriptions.Item>
                   <Descriptions.Item label="购买日期" key="purchaseDate">{selectedDevice.purchaseDate}</Descriptions.Item>
                   <Descriptions.Item label="购买价格" key="purchasePrice">¥{selectedDevice.purchasePrice}</Descriptions.Item>

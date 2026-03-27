@@ -131,7 +131,9 @@ public class RawMaterialService : IRawMaterialService
             remark = rawMaterial.Remark,
             image = rawMaterial.Image,
             createdAt = rawMaterial.CreatedAt,
-            createdBy = rawMaterial.CreatedBy
+            updatedAt = rawMaterial.UpdatedAt,
+            createdBy = rawMaterial.CreatedBy,
+            updatedBy = rawMaterial.UpdatedBy
         };
     }
 

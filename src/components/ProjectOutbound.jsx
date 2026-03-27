@@ -197,6 +197,7 @@ function ProjectOutbound() {
           recipient: item.recipient,
           outboundDate: item.outboundDate ? new Date(item.outboundDate).toISOString().split('T')[0] : '',
           status: item.isCompleted ? '已完成' : '待确认',
+          inboundStatus: item.inboundStatus || '未入库',
           items: item.projectOutboundItems || []
         }))
         setOutboundHistory(formattedHistory)
@@ -534,12 +535,22 @@ function ProjectOutbound() {
       key: 'recipient'
     },
     {
-      title: '状态',
+      title: '出库状态',
       dataIndex: 'status',
       key: 'status',
       render: (text, record) => (
         <div title={`项目名称: ${record.projectName}\n项目时间: ${record.projectTime}`}>
           {text}
+        </div>
+      )
+    },
+    {
+      title: '入库状态',
+      dataIndex: 'inboundStatus',
+      key: 'inboundStatus',
+      render: (text, record) => (
+        <div>
+          {text || '未入库'}
         </div>
       )
     },
@@ -635,6 +646,7 @@ function ProjectOutbound() {
         recipient: outbound.recipient,
         outboundDate: outbound.outboundDate ? new Date(outbound.outboundDate).toISOString().split('T')[0] : '',
         status: outbound.isCompleted ? '已完成' : '待确认',
+        inboundStatus: outbound.inboundStatus || '未入库',
         items: [] // 简化处理，实际应用中可以从outbound.ProjectOutboundItems获取
       }));
       setOutboundHistory(outboundHistoryData);

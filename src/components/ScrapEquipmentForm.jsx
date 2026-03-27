@@ -17,11 +17,11 @@ const ScrapEquipmentForm = ({ onSuccess }) => {
     try {
       setLoading(true);
       // 获取专用设备
-      const specialResponse = await fetch('http://localhost:5054/api/Device/special-equipments');
+      const specialResponse = await fetch('http://localhost:5055/api/Device/special-equipments');
       const specialDevices = await specialResponse.json();
       
       // 获取通用设备
-      const generalResponse = await fetch('http://localhost:5054/api/Device/general-equipments');
+      const generalResponse = await fetch('http://localhost:5055/api/Device/general-equipments');
       const generalDevices = await generalResponse.json();
       
       // 合并设备列表
@@ -52,7 +52,7 @@ const ScrapEquipmentForm = ({ onSuccess }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:5054/api/Device/scrap-equipments', {
+      const response = await fetch('http://localhost:5055/api/Device/scrap-equipments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -35,7 +35,7 @@ const fetchInboundHistory = async () => {
       inboundPerson: item.inboundPerson || '未知入库人',
       inboundDate: item.inboundDate ? new Date(item.inboundDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       operator: item.handler || '未知操作人',
-      status: '已完成',
+      status: item.status || '待确认',
       items: item.items.map(item => ({
         type: '专用设备',
         name: item.equipmentName,
@@ -45,7 +45,7 @@ const fetchInboundHistory = async () => {
         unit: item.unit,
         inventory: item.inventory || 0,
         quantity: item.quantity,
-        deviceId: `YD${item.equipmentName}001` // 临时生成设备编号
+        deviceId: item.deviceCode || `YD${item.equipmentName}001` // 使用后端返回的设备编号或临时生成
       }))
     }));
   } catch (error) {
@@ -60,34 +60,54 @@ const createSpecialEquipmentPurchaseInbound = async (data) => {
     // 生成入库单号: SPE-IN-时间戳
     const inboundNumber = `SPE-IN-${new Date().getTime()}`;
     
-    const response = await fetch('http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        InboundNumber: inboundNumber,
-        DeliveryPerson: data.deliveryPerson,
-        Inspector: data.inspector,
-        InboundPerson: data.inboundPerson,
-        InboundDate: data.inboundDate ? data.inboundDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0],
-        Handler: data.inboundPerson, // 使用入库人作为操作人
-        WarehouseKeeper: data.inspector, // 使用检验人员作为仓管员
-        Remark: data.remark || '',
-        Items: data.items.map(item => ({
+    const requestData = {
+      InboundNumber: inboundNumber,
+      DeliveryPerson: data.deliveryPerson,
+      Inspector: data.inspector,
+      InboundPerson: data.inboundPerson,
+      InboundDate: data.inboundDate ? data.inboundDate.format('YYYY-MM-DDTHH:mm:ss.SSSZ') : new Date().toISOString(),
+      Handler: data.inboundPerson, // 使用入库人作为操作人
+      WarehouseKeeper: data.inspector, // 使用检验人员作为仓管员
+      Remark: data.remark || '',
+      Items: data.items.map(item => ({
           EquipmentName: item.name,
           Brand: item.brand,
           Model: item.model,
           Unit: item.unit,
           Quantity: item.quantity,
-          Status: item.status || '正常'
+          Status: item.status || '正常',
+          DeviceCode: item.deviceId
         }))
-      })
+    };
+    
+    console.log('发送的请求数据:', JSON.stringify(requestData, null, 2));
+    
+    const response = await fetch('http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestData)
     });
+    
+    console.log('响应状态码:', response.status);
+    console.log('响应状态文本:', response.statusText);
+    
     if (!response.ok) {
-      throw new Error('创建入库单失败');
+      try {
+        const errorData = await response.json();
+        console.error('错误响应数据:', JSON.stringify(errorData, null, 2));
+        throw new Error(`创建入库单失败: ${errorData.message || response.statusText}`);
+      } catch (jsonError) {
+        console.error('解析错误响应失败:', jsonError);
+        const responseText = await response.text();
+        console.error('错误响应文本:', responseText);
+        throw new Error(`创建入库单失败: ${response.statusText}\n响应内容: ${responseText}`);
+      }
     }
+    
     const result = await response.json();
+    console.log('成功响应数据:', JSON.stringify(result, null, 2));
     message.success('专用设备采购入库成功');
     return result;
   } catch (error) {
@@ -521,6 +541,11 @@ function SpecialEquipmentPurchaseInbound() {
       )
     },
     {
+      title: '单位',
+      dataIndex: 'unit',
+      key: 'unit'
+    },
+    {
       title: '操作',
       key: 'action',
       render: (_, record) => (
@@ -532,13 +557,30 @@ function SpecialEquipmentPurchaseInbound() {
           移除
         </Button>
       )
-    },
-    {
-      title: '单位',
-      dataIndex: 'unit',
-      key: 'unit'
     }
   ];
+
+  // 确认入库
+  const confirmInbound = async (record) => {
+    try {
+      const response = await fetch(`http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds/${record.id}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error('确认入库失败');
+      }
+      message.success('确认入库成功');
+      // 重新加载入库历史
+      const history = await fetchInboundHistory();
+      setInboundHistory(history);
+    } catch (error) {
+      console.error('确认入库失败:', error);
+      message.error('确认入库失败');
+    }
+  };
 
   // 入库历史表格列
   const historyColumns = [
@@ -583,6 +625,9 @@ function SpecialEquipmentPurchaseInbound() {
       render: (_, record) => (
         <Space>
           <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
+          {record.status === '待确认' && (
+            <Button type="primary" onClick={() => confirmInbound(record)}>确认入库</Button>
+          )}
           <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteInbound(record)}>删除</Button>
         </Space>
       )
@@ -712,16 +757,6 @@ function SpecialEquipmentPurchaseInbound() {
                         </Col>
                         
                         <Col xs={24} sm={12} md={2}>
-                          <Form.Item label="单位">
-                            <Input 
-                              value={deviceForm.unit}
-                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
-                              placeholder="请输入单位"
-                            />
-                          </Form.Item>
-                        </Col>
-                        
-                        <Col xs={24} sm={12} md={2}>
                           <Form.Item label="采购数量">
                             <InputNumber 
                               min={1} 
@@ -741,6 +776,16 @@ function SpecialEquipmentPurchaseInbound() {
                               style={{ width: '100%' }}
                               placeholder="库存数量"
                               disabled
+                            />
+                          </Form.Item>
+                        </Col>
+                        
+                        <Col xs={24} sm={12} md={2}>
+                          <Form.Item label="单位">
+                            <Input 
+                              value={deviceForm.unit}
+                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
+                              placeholder="请输入单位"
                             />
                           </Form.Item>
                         </Col>
@@ -781,16 +826,6 @@ function SpecialEquipmentPurchaseInbound() {
                         </Col>
                         
                         <Col xs={24} sm={12} md={2}>
-                          <Form.Item label="单位">
-                            <Input 
-                              value={deviceForm.unit}
-                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
-                              placeholder="请输入单位"
-                            />
-                          </Form.Item>
-                        </Col>
-                        
-                        <Col xs={24} sm={12} md={2}>
                           <Form.Item label="采购数量">
                             <InputNumber 
                               min={1} 
@@ -810,6 +845,16 @@ function SpecialEquipmentPurchaseInbound() {
                               style={{ width: '100%' }}
                               placeholder="库存数量"
                               disabled
+                            />
+                          </Form.Item>
+                        </Col>
+                        
+                        <Col xs={24} sm={12} md={2}>
+                          <Form.Item label="单位">
+                            <Input 
+                              value={deviceForm.unit}
+                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
+                              placeholder="请输入单位"
                             />
                           </Form.Item>
                         </Col>

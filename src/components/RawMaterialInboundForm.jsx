@@ -198,7 +198,7 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
 
       const newItem = {
         id: Date.now(),
-        rawMaterialId: `new-${Date.now()}`,
+        rawMaterialId: 0, // 使用0表示新原材料
         quantity: materialForm.quantity,
         specification: materialForm.specification,
         remark: materialForm.remark,
@@ -272,7 +272,7 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
       key: 'rawMaterialId',
       render: (value, record) => {
         // 处理新创建的原材料
-        if (value && value.toString().startsWith('new-')) {
+        if (value === 0 || (value && value.toString().startsWith('new-'))) {
           return record.productName || ''
         }
         const material = rawMaterials.find(m => m.id === value)
@@ -368,7 +368,13 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
                     <Select 
                       value={materialType}
                       style={{ width: '100%' }}
-                      onChange={(value) => setMaterialType(value)}
+                      onChange={(value) => {
+                        setMaterialType(value);
+                        // 当切换到新原材料时，重置库存数量为0
+                        if (value === 'new') {
+                          setInventoryQuantity(0);
+                        }
+                      }}
                     >
                       <Option value="existing">已有原材料</Option>
                       <Option value="new">新原材料</Option>

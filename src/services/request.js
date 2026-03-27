@@ -1,5 +1,5 @@
 // 统一的请求封装函数
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5054/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api';
 
 // 请求超时时间
 const TIMEOUT = 30000;

@@ -249,7 +249,7 @@ const ConsumableList = () => {
     try {
       if (consumable.id) {
         // 编辑现有耗材
-        const response = await fetch(`http://localhost:5054/api/Consumable/${consumable.id}`, {
+        const response = await fetch(`http://localhost:5055/api/Consumable/${consumable.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -272,7 +272,7 @@ const ConsumableList = () => {
         }
       } else {
         // 添加新耗材
-        const response = await fetch('http://localhost:5054/api/Consumable', {
+        const response = await fetch('http://localhost:5055/api/Consumable', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -369,7 +369,7 @@ const ConsumableList = () => {
     let successCount = 0
     for (const consumable of importedConsumables) {
       try {
-        const response = await fetch('http://localhost:5054/api/Consumable', {
+        const response = await fetch('http://localhost:5055/api/Consumable', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -386,7 +386,7 @@ const ConsumableList = () => {
     
     // 重新获取耗材列表
     try {
-      const response = await fetch('http://localhost:5054/api/Consumable')
+      const response = await fetch('http://localhost:5055/api/Consumable')
       if (response.ok) {
         const data = await response.json()
         // 确保每个对象都有唯一的key属性
@@ -408,7 +408,7 @@ const ConsumableList = () => {
     setLoading(true)
     try {
       // 调用后端API清空所有耗材
-      const response = await fetch('http://localhost:5054/api/Consumable', {
+      const response = await fetch('http://localhost:5055/api/Consumable', {
         method: 'DELETE'
       })
       if (response.ok) {

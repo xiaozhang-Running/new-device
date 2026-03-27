@@ -32,7 +32,7 @@ const ImageUpload = ({ entityId, entityType, type, onImagesUpdated }) => {
           uid: `existing_${index}`,
           name: url.split('/').pop(),
           status: 'done',
-          url: `http://localhost:5054/${url}`
+          url: `http://localhost:5055/${url}`
         }))
         setFileList(newFileList)
       }
@@ -71,7 +71,7 @@ const ImageUpload = ({ entityId, entityType, type, onImagesUpdated }) => {
           uid: `new_${Date.now()}_${index}`,
           name: url.split('/').pop(),
           status: 'done',
-          url: `http://localhost:5054/${url}`
+          url: `http://localhost:5055/${url}`
         }))
         
         setFileList([...fileList, ...newFileList])

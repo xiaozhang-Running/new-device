@@ -2,7 +2,7 @@ namespace DeviceWarehouseSystem.DTOs;
 
 public class RawMaterialCreateDTO
 {
-    public string productName { get; set; }
+    public required string productName { get; set; }
     public string? brand { get; set; }
     public string? specification { get; set; }
     public int? totalQuantity { get; set; }

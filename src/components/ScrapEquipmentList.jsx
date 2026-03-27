@@ -12,7 +12,7 @@ const ScrapEquipmentList = () => {
   const fetchScrapEquipments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5054/api/Device/scrap-equipments');
+      const response = await fetch('http://localhost:5055/api/Device/scrap-equipments');
       if (!response.ok) {
         throw new Error('Failed to fetch scrap equipments');
       }
@@ -30,7 +30,7 @@ const ScrapEquipmentList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('确定要删除这个报废设备记录吗？')) {
       try {
-        const response = await fetch(`http://localhost:5054/api/Device/scrap-equipments/${id}`, {
+        const response = await fetch(`http://localhost:5055/api/Device/scrap-equipments/${id}`, {
           method: 'DELETE'
         });
         if (!response.ok) {
