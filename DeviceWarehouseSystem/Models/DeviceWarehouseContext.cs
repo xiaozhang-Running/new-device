@@ -15,67 +15,67 @@ public partial class DeviceWarehouseContext : DbContext
     {
     }
 
-    public virtual DbSet<Consumable> Consumables { get; set; }
+    public virtual DbSet<Consumable>? Consumables { get; set; }
 
-    public virtual DbSet<EquipmentInbound> EquipmentInbounds { get; set; }
+    public virtual DbSet<EquipmentInbound>? EquipmentInbounds { get; set; }
 
-    public virtual DbSet<EquipmentInboundItem> EquipmentInboundItems { get; set; }
+    public virtual DbSet<EquipmentInboundItem>? EquipmentInboundItems { get; set; }
 
-    public virtual DbSet<GeneralEquipment> GeneralEquipments { get; set; }
+    public virtual DbSet<GeneralEquipment>? GeneralEquipments { get; set; }
 
-    public virtual DbSet<Image> Images { get; set; }
+    public virtual DbSet<Image>? Images { get; set; }
 
-    public virtual DbSet<InboundOrder> InboundOrders { get; set; }
+    public virtual DbSet<InboundOrder>? InboundOrders { get; set; }
 
-    public virtual DbSet<InboundOrderItem> InboundOrderItems { get; set; }
+    public virtual DbSet<InboundOrderItem>? InboundOrderItems { get; set; }
 
-    public virtual DbSet<Inventory> Inventories { get; set; }
+    public virtual DbSet<Inventory>? Inventories { get; set; }
 
-    public virtual DbSet<InventoryTransaction> InventoryTransactions { get; set; }
+    public virtual DbSet<InventoryTransaction>? InventoryTransactions { get; set; }
 
-    public virtual DbSet<OutboundOrder> OutboundOrders { get; set; }
+    public virtual DbSet<OutboundOrder>? OutboundOrders { get; set; }
 
-    public virtual DbSet<OutboundOrderItem> OutboundOrderItems { get; set; }
+    public virtual DbSet<OutboundOrderItem>? OutboundOrderItems { get; set; }
 
-    public virtual DbSet<Permission> Permissions { get; set; }
+    public virtual DbSet<Permission>? Permissions { get; set; }
 
-    public virtual DbSet<ProjectInbound> ProjectInbounds { get; set; }
+    public virtual DbSet<ProjectInbound>? ProjectInbounds { get; set; }
 
-    public virtual DbSet<ProjectInboundItem> ProjectInboundItems { get; set; }
+    public virtual DbSet<ProjectInboundItem>? ProjectInboundItems { get; set; }
 
-    public virtual DbSet<ProjectInboundOutbound> ProjectInboundOutbounds { get; set; }
+    public virtual DbSet<ProjectInboundOutbound>? ProjectInboundOutbounds { get; set; }
 
-    public virtual DbSet<ProjectOutbound> ProjectOutbounds { get; set; }
+    public virtual DbSet<ProjectOutbound>? ProjectOutbounds { get; set; }
 
-    public virtual DbSet<ProjectOutboundItem> ProjectOutboundItems { get; set; }
+    public virtual DbSet<ProjectOutboundItem>? ProjectOutboundItems { get; set; }
 
-    public virtual DbSet<RawMaterial> RawMaterials { get; set; }
+    public virtual DbSet<RawMaterial>? RawMaterials { get; set; }
 
-    public virtual DbSet<RawMaterialInbound> RawMaterialInbounds { get; set; }
+    public virtual DbSet<RawMaterialInbound>? RawMaterialInbounds { get; set; }
 
-    public virtual DbSet<RawMaterialInboundItem> RawMaterialInboundItems { get; set; }
+    public virtual DbSet<RawMaterialInboundItem>? RawMaterialInboundItems { get; set; }
 
-    public virtual DbSet<RawMaterialOutbound> RawMaterialOutbounds { get; set; }
+    public virtual DbSet<RawMaterialOutbound>? RawMaterialOutbounds { get; set; }
 
-    public virtual DbSet<RawMaterialOutboundItem> RawMaterialOutboundItems { get; set; }
+    public virtual DbSet<RawMaterialOutboundItem>? RawMaterialOutboundItems { get; set; }
 
-    public virtual DbSet<Role> Roles { get; set; }
+    public virtual DbSet<Role>? Roles { get; set; }
 
-    public virtual DbSet<ScrapEquipment> ScrapEquipments { get; set; }
+    public virtual DbSet<ScrapEquipment>? ScrapEquipments { get; set; }
 
-    public virtual DbSet<SpecialEquipment> SpecialEquipments { get; set; }
+    public virtual DbSet<SpecialEquipment>? SpecialEquipments { get; set; }
 
-    public virtual DbSet<User> Users { get; set; }
+    public virtual DbSet<User>? Users { get; set; }
 
-        public virtual DbSet<UserActivityLog> UserActivityLogs { get; set; }
+        public virtual DbSet<UserActivityLog>? UserActivityLogs { get; set; }
 
-        public virtual DbSet<EquipmentImage> EquipmentImages { get; set; }
+        public virtual DbSet<EquipmentImage>? EquipmentImages { get; set; }
 
-        public virtual DbSet<InOutboundImage> InOutboundImages { get; set; }
+        public virtual DbSet<InOutboundImage>? InOutboundImages { get; set; }
 
-    public virtual DbSet<Warehouse> Warehouses { get; set; }
+    public virtual DbSet<Warehouse>? Warehouses { get; set; }
 
-    public virtual DbSet<Company> Companies { get; set; }
+    public virtual DbSet<Company>? Companies { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.

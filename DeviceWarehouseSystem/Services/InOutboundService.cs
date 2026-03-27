@@ -207,27 +207,61 @@ namespace DeviceWarehouseSystem.Services
                     int rawMaterialId = item.RawMaterialId;
                     
                     // 处理新原材料的情况
-                    if (rawMaterialId <= 0) // 前端可能发送0或负数表示新原材料
+            if (rawMaterialId <= 0) // 前端可能发送0或负数表示新原材料
+            {
+                // 尝试从备注中提取名称、规格和单位
+                string productName = "新原材料";
+                string specification = "";
+                string unit = "个"; // 默认单位
+                
+                if (item.Remark != null)
+                {
+                    // 尝试从备注中提取名称
+                    if (item.Remark.Contains("名称:"))
                     {
-                        // 创建新的原材料记录
-                        var newRawMaterial = new RawMaterial
-                        {
-                            SortOrder = 0,
-                            ProductName = "新原材料", // 临时使用默认名称
-                            Specification = item.Remark != null && item.Remark.Contains("规格:") ? item.Remark.Split("规格:")[1].Trim() : "", // 尝试从备注中提取规格
-                            TotalQuantity = 0,
-                            UsedQuantity = 0,
-                            RemainingQuantity = 0,
-                            Unit = "个", // 临时使用默认单位
-                            Supplier = dto.Supplier,
-                            CreatedAt = DateTime.Now
-                        };
-                        
-                        _context.RawMaterials.Add(newRawMaterial);
-                        await _context.SaveChangesAsync();
-                        
-                        rawMaterialId = newRawMaterial.Id;
+                        productName = item.Remark.Split("名称:")[1].Split(';')[0].Trim();
                     }
+                    // 尝试从备注中提取规格
+                    if (item.Remark.Contains("规格:"))
+                    {
+                        specification = item.Remark.Split("规格:")[1].Split(';')[0].Trim();
+                    }
+                    // 尝试从备注中提取单位
+                    if (item.Remark.Contains("单位:"))
+                    {
+                        unit = item.Remark.Split("单位:")[1].Split(';')[0].Trim();
+                    }
+                }
+                
+                // 验证必要信息
+                if (string.IsNullOrEmpty(productName))
+                {
+                    throw new Exception("新原材料必须提供名称");
+                }
+                if (string.IsNullOrEmpty(specification))
+                {
+                    throw new Exception("新原材料必须提供规格信息");
+                }
+                
+                // 创建新的原材料记录
+                var newRawMaterial = new RawMaterial
+                {
+                    SortOrder = 0,
+                    ProductName = productName,
+                    Specification = specification,
+                    TotalQuantity = 0,
+                    UsedQuantity = 0,
+                    RemainingQuantity = 0,
+                    Unit = unit,
+                    Supplier = dto.Supplier,
+                    CreatedAt = DateTime.Now
+                };
+                
+                _context.RawMaterials.Add(newRawMaterial);
+                await _context.SaveChangesAsync();
+                
+                rawMaterialId = newRawMaterial.Id;
+            }
                     
                     var inboundItem = new RawMaterialInboundItem
                     {
@@ -299,6 +333,20 @@ namespace DeviceWarehouseSystem.Services
             if (inbound == null)
             {
                 throw new Exception("入库记录不存在");
+            }
+
+            // 如果入库记录已完成，需要减少原材料库存
+            if (inbound.Status == "已完成")
+            {
+                foreach (var item in inbound.RawMaterialInboundItems)
+                {
+                    var rawMaterial = await _context.RawMaterials.FirstOrDefaultAsync(m => m.Id == item.RawMaterialId);
+                    if (rawMaterial != null)
+                    {
+                        rawMaterial.RemainingQuantity = Math.Max(0, rawMaterial.RemainingQuantity - item.Quantity);
+                        rawMaterial.TotalQuantity = Math.Max(0, rawMaterial.TotalQuantity - item.Quantity);
+                    }
+                }
             }
 
             // 删除入库明细
@@ -448,37 +496,47 @@ namespace DeviceWarehouseSystem.Services
                 throw new Exception("入库记录不存在");
             }
 
-            // 更新入库状态为已完成
-            inbound.Status = "已完成";
-            inbound.UpdatedAt = DateTime.Now;
-
-            // 创建设备记录
-            foreach (var item in inbound.EquipmentInboundItems)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                // 创建新的专用设备记录
-                var specialEquipment = new SpecialEquipment
-                {
-                    SortOrder = 0, // 默认排序
-                    DeviceType = 1, // 1表示专用设备
-                    DeviceName = item.DeviceName,
-                    DeviceCode = item.DeviceCode,
-                    Brand = item.Brand,
-                    Model = item.Model,
-                    Unit = item.Unit,
-                    Quantity = 1,
-                    DeviceStatus = 1, // 1表示正常
-                    UseStatus = 1, // 1表示未使用
-                    Status = item.Status,
-                    Location = "主仓库", // 默认位置
-                    Company = "", // 默认公司
-                    Warehouse = "主仓库", // 默认仓库
-                    NameSequence = 0, // 默认序列号
-                    CreatedAt = DateTime.Now
-                };
-                _context.SpecialEquipments.Add(specialEquipment);
-            }
+                // 更新入库状态为已完成
+                inbound.Status = "已完成";
+                inbound.UpdatedAt = DateTime.Now;
 
-            await _context.SaveChangesAsync();
+                // 创建设备记录
+                foreach (var item in inbound.EquipmentInboundItems)
+                {
+                    // 创建新的专用设备记录
+                    var specialEquipment = new SpecialEquipment
+                    {
+                        SortOrder = 0, // 默认排序
+                        DeviceType = 1, // 1表示专用设备
+                        DeviceName = item.DeviceName,
+                        DeviceCode = item.DeviceCode,
+                        Brand = item.Brand,
+                        Model = item.Model,
+                        Unit = item.Unit,
+                        Quantity = 1,
+                        DeviceStatus = 1, // 1表示正常
+                        UseStatus = 0, // 0表示未使用
+                        Status = item.Status,
+                        Location = "主仓库", // 默认位置
+                        Company = "", // 默认公司
+                        Warehouse = "主仓库", // 默认仓库
+                        NameSequence = 0, // 默认序列号
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.SpecialEquipments.Add(specialEquipment);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             // 返回更新后的入库记录
             return new SpecialEquipmentPurchaseInboundDTO
@@ -620,7 +678,7 @@ namespace DeviceWarehouseSystem.Services
                     Unit = item.Unit,
                     Quantity = 1,
                     DeviceStatus = 1, // 1表示正常
-                    UseStatus = 1, // 1表示未使用
+                    UseStatus = 0, // 0表示未使用
                     Status = item.Status,
                     NameSequence = 0, // 默认序列号
                     CreatedAt = DateTime.Now
@@ -823,6 +881,24 @@ namespace DeviceWarehouseSystem.Services
                 throw new Exception("入库记录不存在");
             }
 
+            // 如果入库记录已完成，需要减少消耗品库存
+            if (inbound.Status == "已完成")
+            {
+                foreach (var item in inbound.EquipmentInboundItems)
+                {
+                    var consumable = await _context.Consumables.FirstOrDefaultAsync(c => 
+                        c.Name == item.DeviceName && 
+                        (c.Brand == item.Brand || (c.Brand == null && item.Brand == "")) && 
+                        (c.ModelSpecification == item.Model || (c.ModelSpecification == null && item.Model == ""))
+                    );
+                    if (consumable != null)
+                    {
+                        consumable.RemainingQuantity = Math.Max(0, consumable.RemainingQuantity - item.Quantity);
+                        consumable.TotalQuantity = Math.Max(0, consumable.TotalQuantity - item.Quantity);
+                    }
+                }
+            }
+
             // 删除入库明细
             _context.EquipmentInboundItems.RemoveRange(inbound.EquipmentInboundItems);
             // 删除入库记录
@@ -843,10 +919,17 @@ namespace DeviceWarehouseSystem.Services
             // 收集需要删除的设备编号
             var deviceCodes = inbound.EquipmentInboundItems.Select(item => item.DeviceCode).ToList();
 
-            // 删除相关的专用设备记录
+            // 删除相关的专用设备记录和对应的库存记录
             if (deviceCodes.Count > 0)
             {
                 var devicesToDelete = await _context.SpecialEquipments.Where(d => deviceCodes.Contains(d.DeviceCode)).ToListAsync();
+                var deviceIds = devicesToDelete.Select(d => d.Id).ToList();
+                
+                // 删除对应的库存记录
+                var inventoriesToDelete = await _context.Inventories.Where(i => deviceIds.Contains(i.SpecialEquipmentId.Value)).ToListAsync();
+                _context.Inventories.RemoveRange(inventoriesToDelete);
+                
+                // 删除专用设备记录
                 _context.SpecialEquipments.RemoveRange(devicesToDelete);
             }
 
@@ -870,10 +953,17 @@ namespace DeviceWarehouseSystem.Services
             // 收集需要删除的设备编号
             var deviceCodes = inbound.EquipmentInboundItems.Select(item => item.DeviceCode).ToList();
 
-            // 删除相关的通用设备记录
+            // 删除相关的通用设备记录和对应的库存记录
             if (deviceCodes.Count > 0)
             {
                 var devicesToDelete = await _context.GeneralEquipments.Where(d => deviceCodes.Contains(d.DeviceCode)).ToListAsync();
+                var deviceIds = devicesToDelete.Select(d => d.Id).ToList();
+                
+                // 删除对应的库存记录
+                var inventoriesToDelete = await _context.Inventories.Where(i => deviceIds.Contains(i.GeneralEquipmentId.Value)).ToListAsync();
+                _context.Inventories.RemoveRange(inventoriesToDelete);
+                
+                // 删除通用设备记录
                 _context.GeneralEquipments.RemoveRange(devicesToDelete);
             }
 
@@ -900,58 +990,35 @@ namespace DeviceWarehouseSystem.Services
         // 生成设备编号
         public async Task<string> GenerateDeviceCodeAsync(string deviceName, string brand, string model, int deviceType)
         {
-            Console.WriteLine($"开始生成设备编号: deviceName={deviceName}, brand={brand}, model={model}, deviceType={deviceType}");
-            
-            // 处理空值
-            deviceName = deviceName ?? "";
-            brand = brand ?? "";
-            model = model ?? "";
-            
-            string prefix = "YD";
-            if (deviceType == 2) // 通用设备
+            try
             {
-                prefix = "YD";
-            }
-            else if (deviceType == 3) // 耗材
-            {
-                prefix = "HC";
-            }
-
-            // 获取该设备名称、品牌、型号下的最大编号
-            int maxSequence = 0;
-
-            // 从设备入库记录中查找最大编号
-            var query = _context.EquipmentInboundItems.Where(item => 
-                (item.DeviceName == deviceName || (item.DeviceName == null && deviceName == "")) && 
-                (item.Brand == brand || (item.Brand == null && brand == ""))
-            );
-            if (!string.IsNullOrEmpty(model))
-            {
-                query = query.Where(item => item.Model == model || (item.Model == null && model == ""));
-            }
-            var maxItem = await query
-                .Select(item => item.DeviceCode)
-                .OrderByDescending(code => code)
-                .FirstOrDefaultAsync();
-
-            if (!string.IsNullOrEmpty(maxItem))
-            {
-                // 提取编号中的数字部分
-                var parts = maxItem.Split('-');
-                if (parts.Length >= 3)
+                Console.WriteLine($"开始生成设备编号: deviceName={deviceName}, brand={brand}, model={model}, deviceType={deviceType}");
+                
+                // 处理空值
+                deviceName = deviceName ?? "";
+                brand = brand ?? "";
+                model = model ?? "";
+                
+                // 验证设备名称不能为空
+                if (string.IsNullOrWhiteSpace(deviceName))
                 {
-                    string sequencePart = parts[^1];
-                    if (int.TryParse(sequencePart, out int sequence))
-                    {
-                        maxSequence = sequence;
-                        Console.WriteLine($"从入库记录中找到最大编号: {maxItem}, 序列号: {sequence}");
-                    }
+                    throw new ArgumentException("设备名称不能为空");
                 }
-            }
+                
+                string prefix = "YD";
+                if (deviceType == 2) // 通用设备
+                {
+                    prefix = "YD";
+                }
+                else if (deviceType == 3) // 耗材
+                {
+                    prefix = "HC";
+                }
 
-            // 从设备表中查找最大编号（如果入库记录中没有）
-            if (maxSequence == 0)
-            {
+                // 获取该设备名称、品牌、型号下的最大编号
+                // 只从当前实际存在的设备表中查询，不查询历史入库记录
+                int maxSequence = 0;
+                
                 if (deviceType == 1) // 专用设备
                 {
                     // 查找该设备名称的所有设备
@@ -989,9 +1056,9 @@ namespace DeviceWarehouseSystem.Services
                 }
                 else if (deviceType == 2) // 通用设备
                 {
-                    // 查找该设备名称的所有设备
+                    // 查找该设备名称、品牌、型号的所有设备
                     var devices = await _context.GeneralEquipments
-                        .Where(d => d.DeviceName == deviceName || (d.DeviceName == null && deviceName == ""))
+                        .Where(d => d.DeviceName == deviceName)
                         .Select(d => d.DeviceCode)
                         .ToListAsync();
                     
@@ -1024,15 +1091,22 @@ namespace DeviceWarehouseSystem.Services
                 }
                 else if (deviceType == 3) // 耗材
                 {
-                    // 耗材表中没有 ConsumableCode 字段，只从入库记录中查找
+                    // 耗材表中没有 ConsumableCode 字段，需要从其他方式生成编号
+                    // 这里可以添加耗材的编号生成逻辑
                 }
-            }
 
-            // 生成新的编号
-            maxSequence++;
-            string newDeviceCode = $"{prefix}-{deviceName}-{maxSequence.ToString().PadLeft(3, '0')}";
-            Console.WriteLine($"生成的新设备编号: {newDeviceCode}");
-            return newDeviceCode;
+                // 生成新的编号
+                maxSequence++;
+                string newDeviceCode = $"{prefix}-{deviceName}-{maxSequence.ToString().PadLeft(3, '0')}";
+                Console.WriteLine($"生成的新设备编号: {newDeviceCode}");
+                return newDeviceCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"生成设备编号时发生错误: {ex.Message}");
+                Console.WriteLine($"错误堆栈: {ex.StackTrace}");
+                throw;
+            }
         }
     }
 }

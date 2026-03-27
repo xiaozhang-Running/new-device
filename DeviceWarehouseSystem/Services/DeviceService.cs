@@ -805,70 +805,64 @@ namespace DeviceWarehouseSystem.Services
             await _context.SaveChangesAsync();
         }
 
-        // 从库存表获取专用设备（用于出库单选择）- 按设备名称、品牌、型号汇总，只包含正常未使用设备
+        // 从设备表获取专用设备（用于出库单选择）- 按设备名称、品牌汇总，只包含正常未使用设备
         public async Task<List<InventoryDeviceDTO>> GetSpecialInventoryDevicesAsync()
         {
-            var inventories = await _context.Inventories
-                .Include(i => i.SpecialEquipment)
-                .Where(i => i.SpecialEquipmentId != null && i.SpecialEquipment != null && 
-                            i.SpecialEquipment.DeviceStatus == 1 && // 1表示正常
-                            i.SpecialEquipment.UseStatus == 0) // 0表示未使用
+            var equipments = await _context.SpecialEquipments
+                .Where(e => e.DeviceStatus == 1 && // 1表示正常
+                            e.UseStatus == 0) // 0表示未使用
                 .ToListAsync();
 
-            // 按设备名称、品牌、型号分组汇总
-            var groupedDevices = inventories
-                .GroupBy(i => new 
+            // 按设备名称、品牌分组汇总
+            var groupedDevices = equipments
+                .GroupBy(e => new 
                 { 
-                    i.SpecialEquipment!.DeviceName, 
-                    i.SpecialEquipment.Brand, 
-                    i.SpecialEquipment.Model 
+                    e.DeviceName, 
+                    e.Brand
                 })
                 .Select((g, index) => new InventoryDeviceDTO
                 {
                     Id = index + 1,
-                    EquipmentId = g.First().SpecialEquipmentId,
+                    EquipmentId = g.First().Id,
                     Name = g.Key.DeviceName ?? "未知设备",
                     Brand = g.Key.Brand,
-                    Model = g.Key.Model,
-                    Specification = g.First().SpecialEquipment?.Specification,
-                    InventoryQuantity = g.Sum(i => i.CurrentQuantity),
-                    Unit = g.First().SpecialEquipment?.Unit,
-                    Warehouse = g.First().SpecialEquipment?.Warehouse ?? "主仓库"
+                    Model = g.First().Model,
+                    Specification = g.First().Specification,
+                    InventoryQuantity = g.Count(), // 未使用设备的数量
+                    Unit = g.First().Unit,
+                    Warehouse = g.First().Warehouse ?? "主仓库"
                 })
                 .ToList();
 
             return groupedDevices;
         }
 
-        // 从库存表获取通用设备（用于出库单选择）- 按设备名称、品牌、型号汇总，只包含正常未使用设备
+        // 从设备表获取通用设备（用于出库单选择）- 按设备名称、品牌汇总，只包含正常未使用设备
         public async Task<List<InventoryDeviceDTO>> GetGeneralInventoryDevicesAsync()
         {
-            var inventories = await _context.Inventories
-                .Include(i => i.GeneralEquipment)
-                .Where(i => i.GeneralEquipmentId != null && i.GeneralEquipment != null && 
-                            i.GeneralEquipment.DeviceStatus == 1 && // 1表示正常
-                            i.GeneralEquipment.UseStatus == 0) // 0表示未使用
+            var equipments = await _context.GeneralEquipments
+                .Where(e => e.DeviceStatus == 1 && // 1表示正常
+                            e.UseStatus == 0) // 0表示未使用
                 .ToListAsync();
 
-            // 按设备名称、品牌、型号分组汇总
-            var groupedDevices = inventories
-                .GroupBy(i => new 
+            // 按设备名称、品牌分组汇总
+            var groupedDevices = equipments
+                .GroupBy(e => new 
                 { 
-                    i.GeneralEquipment!.DeviceName, 
-                    i.GeneralEquipment.Brand, 
-                    i.GeneralEquipment.Model 
+                    e.DeviceName, 
+                    e.Brand
                 })
                 .Select((g, index) => new InventoryDeviceDTO
                 {
                     Id = index + 1,
-                    EquipmentId = g.First().GeneralEquipmentId,
+                    EquipmentId = g.First().Id,
                     Name = g.Key.DeviceName ?? "未知设备",
                     Brand = g.Key.Brand,
-                    Model = g.Key.Model,
-                    Specification = g.First().GeneralEquipment?.Specification,
-                    InventoryQuantity = g.Sum(i => i.CurrentQuantity),
-                    Unit = g.First().GeneralEquipment?.Unit,
-                    Warehouse = g.First().GeneralEquipment?.Warehouse ?? "主仓库"
+                    Model = g.First().Model,
+                    Specification = g.First().Specification,
+                    InventoryQuantity = g.Count(), // 未使用设备的数量
+                    Unit = g.First().Unit,
+                    Warehouse = g.First().Warehouse ?? "主仓库"
                 })
                 .ToList();
 

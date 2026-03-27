@@ -18,7 +18,7 @@ public class RawMaterialsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<RawMaterialDTO>>> GetRawMaterials([FromQuery] string search = null, [FromQuery] string location = null)
+    public async Task<ActionResult<IEnumerable<RawMaterialDTO>>> GetRawMaterials([FromQuery] string? search = null, [FromQuery] string? location = null)
     {
         var rawMaterials = await _rawMaterialService.GetRawMaterials(search, location);
         return Ok(rawMaterials);

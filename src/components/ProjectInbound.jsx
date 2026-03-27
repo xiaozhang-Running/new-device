@@ -67,6 +67,7 @@ function ProjectInbound() {
   const [inboundHistory, setInboundHistory] = useState(mockInboundHistory)
   const [detailModalVisible, setDetailModalVisible] = useState(false)
   const [currentInboundDetail, setCurrentInboundDetail] = useState(null)
+  const [createModalVisible, setCreateModalVisible] = useState(false)
 
   // 处理出库单选择
   const handleOutboundOrderSelect = (orderId) => {
@@ -140,6 +141,7 @@ function ProjectInbound() {
       form.resetFields()
       setSelectedOutboundOrder(null)
       setSelectedItems([])
+      setCreateModalVisible(false)
     }, 1000)
   }
 
@@ -247,7 +249,38 @@ function ProjectInbound() {
 
   return (
     <div className="project-inbound">
-      <Card title="项目入库管理" className="mb-4">
+      <Card 
+        title="入库历史记录" 
+        className="mt-4"
+        extra={
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            onClick={() => setCreateModalVisible(true)}
+          >
+            新建入库
+          </Button>
+        }
+      >
+        <Table 
+          columns={historyColumns} 
+          dataSource={inboundHistory} 
+          rowKey="id"
+        />
+      </Card>
+
+      {/* 新建入库模态框 */}
+      <Modal
+        title="项目入库"
+        open={createModalVisible}
+        onCancel={() => {
+          setCreateModalVisible(false)
+          form.resetFields()
+          setSelectedOutboundOrder(null)
+          setSelectedItems([])
+        }}
+        footer={null}
+      >
         <Form 
           form={form} 
           layout="vertical" 
@@ -309,15 +342,7 @@ function ProjectInbound() {
             </Button>
           </Form.Item>
         </Form>
-      </Card>
-
-      <Card title="入库历史记录" className="mt-4">
-        <Table 
-          columns={historyColumns} 
-          dataSource={inboundHistory} 
-          rowKey="id"
-        />
-      </Card>
+      </Modal>
 
       {/* 入库详情模态框 */}
       <Modal

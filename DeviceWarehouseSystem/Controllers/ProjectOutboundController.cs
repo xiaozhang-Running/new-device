@@ -416,10 +416,19 @@ public class ProjectOutboundController : ControllerBase
                     if (specialEquipment != null)
                     {
                         specialEquipment.UseStatus = 0; // 0表示未使用
-                    specialEquipment.ProjectName = null;
-                    specialEquipment.ProjectTime = null;
+                        specialEquipment.ProjectName = null;
+                        specialEquipment.ProjectTime = null;
                         specialEquipment.UpdatedAt = DateTime.Now;
                         _context.Entry(specialEquipment).State = EntityState.Modified;
+
+                        // 恢复库存数量
+                        var inventory = await _context.Inventories.FirstOrDefaultAsync(i => i.SpecialEquipmentId == item.ItemId);
+                        if (inventory != null)
+                        {
+                            inventory.CurrentQuantity += 1; // 恢复一个设备的库存
+                            inventory.LastUpdated = DateTime.Now;
+                            _context.Entry(inventory).State = EntityState.Modified;
+                        }
                     }
                 }
                 else if (item.ItemType == 2) // 通用设备
@@ -428,10 +437,19 @@ public class ProjectOutboundController : ControllerBase
                     if (generalEquipment != null)
                     {
                         generalEquipment.UseStatus = 0; // 0表示未使用
-                    generalEquipment.ProjectName = null;
-                    generalEquipment.ProjectTime = null;
+                        generalEquipment.ProjectName = null;
+                        generalEquipment.ProjectTime = null;
                         generalEquipment.UpdatedAt = DateTime.Now;
                         _context.Entry(generalEquipment).State = EntityState.Modified;
+
+                        // 恢复库存数量
+                        var inventory = await _context.Inventories.FirstOrDefaultAsync(i => i.GeneralEquipmentId == item.ItemId);
+                        if (inventory != null)
+                        {
+                            inventory.CurrentQuantity += 1; // 恢复一个设备的库存
+                            inventory.LastUpdated = DateTime.Now;
+                            _context.Entry(inventory).State = EntityState.Modified;
+                        }
                     }
                 }
                 else if (item.ItemType == 3) // 耗材

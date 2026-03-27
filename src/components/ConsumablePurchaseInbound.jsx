@@ -406,6 +406,11 @@ function ConsumablePurchaseInbound() {
       const updatedHistory = inboundHistory.filter(item => item.id !== record.id);
       setInboundHistory(updatedHistory);
       message.success('删除入库单成功');
+      
+      // 清除耗材列表缓存并刷新
+      if (typeof window !== 'undefined' && window.cacheManager) {
+        window.cacheManager.invalidate('consumables');
+      }
     } catch (error) {
       console.error('删除入库单失败:', error);
       message.error('删除入库单失败');

@@ -35,7 +35,7 @@ const fetchInboundHistory = async () => {
       inboundPerson: item.inboundPerson || '未知入库人',
       inboundDate: item.inboundDate ? new Date(item.inboundDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       operator: item.handler || '未知操作人',
-      status: '已完成',
+      status: item.status || '待确认',
       items: item.items.map(item => ({
         type: '通用设备',
         name: item.equipmentName,
@@ -44,7 +44,7 @@ const fetchInboundHistory = async () => {
         unit: item.unit,
         inventory: item.inventory || 0,
         quantity: item.quantity,
-        deviceId: `YD${item.equipmentName}001` // 临时生成设备编号
+        deviceId: item.deviceCode || `YD${item.equipmentName}001` // 使用后端返回的设备编号或临时生成
       }))
     }));
   } catch (error) {
@@ -56,8 +56,9 @@ const fetchInboundHistory = async () => {
 
 const createGeneralEquipmentPurchaseInbound = async (data) => {
   try {
-    // 生成入库单号: GEN-IN-时间戳
-    const inboundNumber = `GEN-IN-${new Date().getTime()}`;
+    // 生成入库单号: GNE-IN-自动生成的数字
+    const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    const inboundNumber = `GNE-IN-${randomNumber}`;
     
     const response = await fetch('http://localhost:5055/api/InOutbound/general-equipment-purchase-inbounds', {
       method: 'POST',
@@ -79,7 +80,8 @@ const createGeneralEquipmentPurchaseInbound = async (data) => {
           Model: item.model,
           Unit: item.unit,
           Quantity: item.quantity,
-          Status: item.status || '正常'
+          Status: item.status || '正常',
+          DeviceCode: item.deviceId
         }))
       })
     });
@@ -96,13 +98,31 @@ const createGeneralEquipmentPurchaseInbound = async (data) => {
   }
 };
 
+// 删除通用设备采购入库记录
+const deleteGeneralEquipmentPurchaseInbound = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:5055/api/InOutbound/general-equipment-purchase-inbounds/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      throw new Error('删除入库记录失败');
+    }
+    message.success('删除入库记录成功');
+    return true;
+  } catch (error) {
+    console.error('删除入库记录失败:', error);
+    message.error('删除入库记录失败');
+    return false;
+  }
+};
+
 // 生成设备编号
 const generateDeviceId = async (name, brand, model) => {
   try {
-    let url = `http://localhost:5055/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&deviceType=2`;
-    if (model) {
-      url += `&model=${encodeURIComponent(model)}`;
-    }
+    let url = `http://localhost:5055/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name || '')}&brand=${encodeURIComponent(brand || '')}&deviceType=2&model=${encodeURIComponent(model || '')}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('生成设备编号失败');
@@ -113,7 +133,7 @@ const generateDeviceId = async (name, brand, model) => {
     console.error('生成设备编号失败:', error);
     // 失败时使用备用方案
     const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `YD-${name}-${randomNum}`;
+    return `YD-${name || '未知'}-${randomNum}`;
   }
 };
 
@@ -256,10 +276,6 @@ function GeneralEquipmentPurchaseInbound() {
       message.error('请选择设备名称');
       return;
     }
-    if (!brand) {
-      message.error('请填写品牌');
-      return;
-    }
     if (!unit) {
       message.error('请填写单位');
       return;
@@ -389,6 +405,53 @@ function GeneralEquipmentPurchaseInbound() {
     setDetailModalVisible(true);
   };
 
+  // 确认入库
+  const confirmInbound = async (record) => {
+    try {
+      const response = await fetch(`http://localhost:5055/api/InOutbound/general-equipment-purchase-inbounds/${record.id}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error('确认入库失败');
+      }
+      message.success('确认入库成功');
+      // 重新加载入库历史
+      const history = await fetchInboundHistory();
+      setInboundHistory(history);
+      
+      // 清除设备列表缓存并刷新
+      if (typeof window !== 'undefined' && window.cacheManager) {
+        window.cacheManager.invalidate('general-equipments');
+      }
+    } catch (error) {
+      console.error('确认入库失败:', error);
+      message.error('确认入库失败');
+    }
+  };
+
+  // 删除入库记录
+  const handleDeleteInbound = async (record) => {
+    try {
+      const success = await deleteGeneralEquipmentPurchaseInbound(record.id);
+      if (success) {
+        // 重新加载入库历史
+        const history = await fetchInboundHistory();
+        setInboundHistory(history);
+        
+        // 清除设备列表缓存并刷新
+        if (typeof window !== 'undefined' && window.cacheManager) {
+          window.cacheManager.invalidate('general-equipments');
+        }
+      }
+    } catch (error) {
+      console.error('删除入库记录失败:', error);
+      message.error('删除入库记录失败');
+    }
+  };
+
   // 入库项表格列
   const inboundItemColumns = [
     {
@@ -478,6 +541,11 @@ function GeneralEquipmentPurchaseInbound() {
       )
     },
     {
+      title: '单位',
+      dataIndex: 'unit',
+      key: 'unit'
+    },
+    {
       title: '操作',
       key: 'action',
       render: (_, record) => (
@@ -489,11 +557,6 @@ function GeneralEquipmentPurchaseInbound() {
           移除
         </Button>
       )
-    },
-    {
-      title: '单位',
-      dataIndex: 'unit',
-      key: 'unit'
     }
   ];
 
@@ -538,7 +601,13 @@ function GeneralEquipmentPurchaseInbound() {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
+        <Space>
+          <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
+          {record.status === '待确认' && (
+            <Button type="primary" onClick={() => confirmInbound(record)}>确认入库</Button>
+          )}
+          <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteInbound(record)}>删除</Button>
+        </Space>
       )
     }
   ];
@@ -587,8 +656,7 @@ function GeneralEquipmentPurchaseInbound() {
               <Form.Item 
                 name="orderNumber" 
                 label="入库单号" 
-                rules={[{ required: true, message: '请输入入库单号' }]}
-                initialValue="自动生成"
+                initialValue={`GNE-IN-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`}
               >
                 <Input disabled placeholder="自动生成" />
               </Form.Item>
@@ -666,16 +734,6 @@ function GeneralEquipmentPurchaseInbound() {
                         </Col>
                         
                         <Col xs={24} sm={12} md={2}>
-                          <Form.Item label="单位">
-                            <Input 
-                              value={deviceForm.unit}
-                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
-                              placeholder="请输入单位"
-                            />
-                          </Form.Item>
-                        </Col>
-                        
-                        <Col xs={24} sm={12} md={2}>
                           <Form.Item label="采购数量">
                             <InputNumber 
                               min={1} 
@@ -695,6 +753,16 @@ function GeneralEquipmentPurchaseInbound() {
                               style={{ width: '100%' }}
                               placeholder="库存数量"
                               disabled
+                            />
+                          </Form.Item>
+                        </Col>
+                        
+                        <Col xs={24} sm={12} md={2}>
+                          <Form.Item label="单位">
+                            <Input 
+                              value={deviceForm.unit}
+                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
+                              placeholder="请输入单位"
                             />
                           </Form.Item>
                         </Col>
@@ -735,16 +803,6 @@ function GeneralEquipmentPurchaseInbound() {
                         </Col>
                         
                         <Col xs={24} sm={12} md={2}>
-                          <Form.Item label="单位">
-                            <Input 
-                              value={deviceForm.unit}
-                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
-                              placeholder="请输入单位"
-                            />
-                          </Form.Item>
-                        </Col>
-                        
-                        <Col xs={24} sm={12} md={2}>
                           <Form.Item label="采购数量">
                             <InputNumber 
                               min={1} 
@@ -764,6 +822,16 @@ function GeneralEquipmentPurchaseInbound() {
                               style={{ width: '100%' }}
                               placeholder="库存数量"
                               disabled
+                            />
+                          </Form.Item>
+                        </Col>
+                        
+                        <Col xs={24} sm={12} md={2}>
+                          <Form.Item label="单位">
+                            <Input 
+                              value={deviceForm.unit}
+                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
+                              placeholder="请输入单位"
                             />
                           </Form.Item>
                         </Col>

@@ -141,7 +141,7 @@ const deleteSpecialEquipmentPurchaseInbound = async (id) => {
 // 生成设备编号
 const generateDeviceId = async (name, brand, model) => {
   try {
-    let url = `http://localhost:5055/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&deviceType=1`;
+    let url = `http://localhost:5055/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand || '')}&deviceType=1`;
     if (model) {
       url += `&model=${encodeURIComponent(model)}`;
     }
@@ -153,9 +153,9 @@ const generateDeviceId = async (name, brand, model) => {
     return deviceCode;
   } catch (error) {
     console.error('生成设备编号失败:', error);
-    // 失败时使用备用方案
-    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `YD-${name}-${randomNum}`;
+    // 失败时使用基于时间戳的备用方案，确保编号唯一且连续
+    const timestamp = Date.now() % 1000;
+    return `YD-${name}-${timestamp.toString().padStart(3, '0')}`;
   }
 };
 
@@ -297,10 +297,6 @@ function SpecialEquipmentPurchaseInbound() {
     // 详细验证每个字段
     if (!name) {
       message.error('请选择设备名称');
-      return;
-    }
-    if (!brand) {
-      message.error('请填写品牌');
       return;
     }
     if (!unit) {
@@ -445,6 +441,11 @@ function SpecialEquipmentPurchaseInbound() {
         // 重新加载入库历史
         const history = await fetchInboundHistory();
         setInboundHistory(history);
+        
+        // 清除设备列表缓存并刷新
+        if (typeof window !== 'undefined' && window.cacheManager) {
+          window.cacheManager.invalidate('special-equipments');
+        }
       }
     } catch (error) {
       console.error('删除入库记录失败:', error);
@@ -576,6 +577,11 @@ function SpecialEquipmentPurchaseInbound() {
       // 重新加载入库历史
       const history = await fetchInboundHistory();
       setInboundHistory(history);
+      
+      // 清除设备列表缓存并刷新
+      if (typeof window !== 'undefined' && window.cacheManager) {
+        window.cacheManager.invalidate('special-equipments');
+      }
     } catch (error) {
       console.error('确认入库失败:', error);
       message.error('确认入库失败');

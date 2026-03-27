@@ -358,3 +358,8 @@ export const projectOutboundApi = {
 
 // 导出缓存管理器供外部使用
 export { cacheManager };
+
+// 暴露到全局，供其他组件使用
+if (typeof window !== 'undefined') {
+  window.cacheManager = cacheManager;
+}

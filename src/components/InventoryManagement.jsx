@@ -243,10 +243,13 @@ const InventoryManagement = () => {
           })
         })
         
+        // 使用API返回的数据（包括空数组）
         setInventory(inventoryData)
       } catch (error) {
         console.error('获取库存数据失败:', error)
-        message.error('获取库存数据失败')
+        // API调用失败时，使用模拟数据
+        setInventory(mockInventory)
+        message.warning('无法连接到服务器，显示演示数据')
       } finally {
         setLoading(false)
       }
@@ -730,8 +733,14 @@ const InventoryManagement = () => {
                 })
               })
               
-              setInventory(inventoryData)
-              message.success('库存数据刷新成功')
+              // 如果API返回的数据为空，则清空库存显示
+              if (inventoryData.length === 0) {
+                setInventory([])
+                message.info('仓库中暂无数据')
+              } else {
+                setInventory(inventoryData)
+                message.success('库存数据刷新成功')
+              }
             } catch (error) {
               console.error('获取库存数据失败:', error)
               message.error('获取库存数据失败')

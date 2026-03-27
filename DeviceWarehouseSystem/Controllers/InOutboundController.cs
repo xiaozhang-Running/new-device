@@ -328,16 +328,37 @@ namespace DeviceWarehouseSystem.Controllers
 
         // GET: api/InOutbound/generate-device-code
         [HttpGet("generate-device-code")]
-        public async Task<ActionResult<string>> GenerateDeviceCode(string deviceName, string brand, int deviceType, string model = null)
+        public async Task<ActionResult<string>> GenerateDeviceCode(string deviceName = "", string brand = "", string deviceType = "1", string model = "")
         {
+            Console.WriteLine($"[API] ========== 收到生成设备编号请求 ==========");
+            Console.WriteLine($"[API] 原始参数: deviceName={deviceName}, brand={brand}, deviceType={deviceType}, model={model}");
+            
             try
             {
-                var deviceCode = await _inOutboundService.GenerateDeviceCodeAsync(deviceName, brand, model, deviceType);
+                // 手动转换deviceType
+                if (!int.TryParse(deviceType, out int deviceTypeInt))
+                {
+                    Console.WriteLine($"[API] deviceType转换失败: {deviceType}");
+                    return BadRequest(new { message = "deviceType必须是整数", errorType = "ValidationError" });
+                }
+                
+                Console.WriteLine($"[API] 转换后的deviceType: {deviceTypeInt}");
+                
+                // 调用服务生成编号
+                var deviceCode = await _inOutboundService.GenerateDeviceCodeAsync(deviceName, brand, model, deviceTypeInt);
+                Console.WriteLine($"[API] 生成设备编号成功: {deviceCode}");
                 return Ok(deviceCode);
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"[API] 生成设备编号参数错误: {ex.Message}");
+                return BadRequest(new { message = ex.Message, errorType = "ArgumentException" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                Console.WriteLine($"[API] 生成设备编号错误: {ex.Message}");
+                Console.WriteLine($"[API] 错误堆栈: {ex.StackTrace}");
+                return BadRequest(new { message = ex.Message, errorType = "GeneralException", stackTrace = ex.StackTrace });
             }
         }
     }

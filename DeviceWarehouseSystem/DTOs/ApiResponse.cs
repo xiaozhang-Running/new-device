@@ -42,7 +42,7 @@ namespace DeviceWarehouseSystem.DTOs
         /// <summary>
         /// 创建成功响应
         /// </summary>
-        public static ApiResponse<T> SuccessResponse(T data, string message = null)
+        public static ApiResponse<T> SuccessResponse(T data, string? message = null)
         {
             return new ApiResponse<T>
             {
@@ -55,7 +55,7 @@ namespace DeviceWarehouseSystem.DTOs
         /// <summary>
         /// 创建错误响应
         /// </summary>
-        public static ApiResponse<T> ErrorResponse(string message, List<string> errors = null)
+        public static ApiResponse<T> ErrorResponse(string message, List<string>? errors = null)
         {
             return new ApiResponse<T>
             {
@@ -113,7 +113,7 @@ namespace DeviceWarehouseSystem.DTOs
         /// <summary>
         /// 创建成功响应
         /// </summary>
-        public static ApiResponse SuccessResponse(string message = null)
+        public static ApiResponse SuccessResponse(string? message = null)
         {
             return new ApiResponse
             {
@@ -125,7 +125,7 @@ namespace DeviceWarehouseSystem.DTOs
         /// <summary>
         /// 创建错误响应
         /// </summary>
-        public static ApiResponse ErrorResponse(string message, List<string> errors = null)
+        public static ApiResponse ErrorResponse(string message, List<string>? errors = null)
         {
             return new ApiResponse
             {

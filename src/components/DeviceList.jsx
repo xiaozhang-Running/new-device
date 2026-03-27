@@ -169,7 +169,7 @@ const DeviceList = () => {
           warehouse: item.warehouse || item.Warehouse || '主仓库',
           company: item.company || item.Company || '',
           status: item.status || item.Status || '正常',
-          useStatus: item.useStatus || item.UseStatus === 1 ? '未使用' : '使用中',
+          useStatus: item.useStatus === '未使用' || item.UseStatus === 0 ? '未使用' : '使用中',
           projectName: item.projectName || item.ProjectName || '',
           projectTime: item.projectTime || item.ProjectTime || '',
           location: item.location || item.Location || '',

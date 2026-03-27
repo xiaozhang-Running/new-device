@@ -1,113 +1,158 @@
-import React, { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, message, Popconfirm, Input, Select, Card, Row, Col, Descriptions, Tag } from 'antd'
-import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Table, Button, Space, Modal, message, Popconfirm, Input, Select, Card, Row, Col, Descriptions, Tag, Spin } from 'antd'
+import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons'
 import RawMaterialForm from './RawMaterialForm'
 import FileUpload from './FileUpload'
+import { rawMaterialService } from '../services/rawMaterialService'
 
 const { Option } = Select
 const { Search } = Input
 
 const RawMaterialList = () => {
+  // 基本状态
   const [rawMaterials, setRawMaterials] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [filteredRawMaterials, setFilteredRawMaterials] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editingRawMaterial, setEditingRawMaterial] = useState(null)
   const [showDetail, setShowDetail] = useState(false)
   const [selectedRawMaterial, setSelectedRawMaterial] = useState(null)
   const [searchText, setSearchText] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
-  const [filteredRawMaterials, setFilteredRawMaterials] = useState([])
+  
+  // 细粒度加载状态
+  const [loadingStates, setLoadingStates] = useState({
+    initial: false,
+    filter: false,
+    add: false,
+    edit: false,
+    delete: false,
+    import: false,
+    clear: false,
+    refresh: false
+  })
+  
+  // 错误状态
+  const [error, setError] = useState(null)
+  
+  // 缓存状态
+  const [cache, setCache] = useState({
+    fullList: null,
+    lastFetch: null
+  })
+  
+  // 防抖函数
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
 
-  // 从API获取数据
-  useEffect(() => {
-    const fetchRawMaterials = async () => {
-      setLoading(true)
-      try {
-        const response = await fetch('http://localhost:5055/api/RawMaterials')
-        if (response.ok) {
-          const data = await response.json()
-          // 确保每个对象都有唯一的key属性，并且数量字段为数字类型
-          const dataWithKey = data.map((item, index) => {
-            // 确保剩余数量正确计算
-            const totalQty = parseInt(item.totalQuantity) || 0
-            const usedQty = parseInt(item.usedQuantity) || 0
-            const remainingQty = totalQty - usedQty
-            
-            return {
-              ...item,
-              key: item.id || index,
-              totalQuantity: totalQty,
-              usedQuantity: usedQty,
-              remainingQuantity: remainingQty
-            }
-          })
-          setRawMaterials(dataWithKey)
-          setFilteredRawMaterials(dataWithKey)
-        } else {
-          message.error('获取原材料数据失败')
-        }
-      } catch (error) {
-        message.error('网络错误，请检查后端服务是否运行')
-      } finally {
-        setLoading(false)
+  // 更新加载状态的辅助函数
+  const setLoading = (type, isLoading) => {
+    setLoadingStates(prev => ({
+      ...prev,
+      [type]: isLoading
+    }))
+  }
+  
+  // 错误处理函数
+  const handleError = (error, messageText) => {
+    console.error(messageText, error)
+    setError(messageText)
+    message.error(messageText)
+    // 3秒后自动清除错误
+    setTimeout(() => setError(null), 3000)
+  }
+  
+  // 处理数据格式化
+  const processRawMaterialData = (data) => {
+    return data.map((item, index) => {
+      // 确保剩余数量正确计算
+      const totalQty = parseInt(item.totalQuantity) || 0
+      const usedQty = parseInt(item.usedQuantity) || 0
+      const remainingQty = totalQty - usedQty
+      
+      return {
+        ...item,
+        key: item.id || index,
+        totalQuantity: totalQty,
+        usedQuantity: usedQty,
+        remainingQuantity: remainingQty
       }
+    })
+  }
+  
+  // 从API获取数据
+  const fetchRawMaterials = async (forceRefresh = false) => {
+    setLoading('initial', true)
+    try {
+      // 检查缓存是否有效（5分钟内）
+      const now = new Date()
+      if (!forceRefresh && cache.fullList && cache.lastFetch && (now - cache.lastFetch) < 5 * 60 * 1000) {
+        setRawMaterials(cache.fullList)
+        setFilteredRawMaterials(cache.fullList)
+        return
+      }
+      
+      const data = await rawMaterialService.getRawMaterials()
+      const dataWithKey = processRawMaterialData(data)
+      
+      // 更新状态和缓存
+      setRawMaterials(dataWithKey)
+      setFilteredRawMaterials(dataWithKey)
+      setCache({
+        fullList: dataWithKey,
+        lastFetch: new Date()
+      })
+    } catch (error) {
+      handleError(error, '获取原材料数据失败')
+    } finally {
+      setLoading('initial', false)
     }
-    
+  }
+  
+  // 初始加载数据
+  useEffect(() => {
     fetchRawMaterials()
   }, [])
 
-  // 过滤原材料数据
-  useEffect(() => {
-    const fetchFilteredRawMaterials = async () => {
-      setLoading(true)
+  // 防抖的过滤函数
+  const debouncedFetchFiltered = useCallback(
+    debounce(async () => {
+      setLoading('filter', true)
       try {
-        let url = 'http://localhost:5055/api/RawMaterials?'
-        let params = []
+        const params = {}
         
         if (searchText) {
-          params.push(`search=${encodeURIComponent(searchText)}`)
+          params.search = searchText
         }
         
         if (locationFilter) {
-          params.push(`location=${encodeURIComponent(locationFilter)}`)
+          params.location = locationFilter
         }
         
-        url += params.join('&')
-        
-        // 如果没有参数，移除末尾的?符号
-        url = url.replace(/\?$/, '')
-        
-        const response = await fetch(url)
-        if (response.ok) {
-          const data = await response.json()
-          // 确保每个对象都有唯一的key属性，并且数量字段为数字类型
-          const dataWithKey = data.map((item, index) => {
-            // 确保剩余数量正确计算
-            const totalQty = parseInt(item.totalQuantity) || 0
-            const usedQty = parseInt(item.usedQuantity) || 0
-            const remainingQty = totalQty - usedQty
-            
-            return {
-              ...item,
-              key: item.id || index,
-              totalQuantity: totalQty,
-              usedQuantity: usedQty,
-              remainingQuantity: remainingQty
-            }
-          })
-          setFilteredRawMaterials(dataWithKey)
-        } else {
-          message.error('获取过滤数据失败')
-        }
+        const data = await rawMaterialService.getRawMaterials(params)
+        const dataWithKey = processRawMaterialData(data)
+        setFilteredRawMaterials(dataWithKey)
       } catch (error) {
-        message.error('网络错误，请检查后端服务是否运行')
+        handleError(error, '获取过滤数据失败')
       } finally {
-        setLoading(false)
+        setLoading('filter', false)
       }
-    }
-    
-    fetchFilteredRawMaterials()
-  }, [searchText, locationFilter])
+    }, 300),
+    [searchText, locationFilter]
+  )
+  
+  // 过滤原材料数据
+  useEffect(() => {
+    debouncedFetchFiltered()
+  }, [debouncedFetchFiltered])
 
   const handleAdd = () => {
     setEditingRawMaterial(null)
@@ -125,24 +170,26 @@ const RawMaterialList = () => {
   }
 
   const handleDelete = async (id) => {
+    setLoading('delete', true)
     try {
-      const response = await fetch(`http://localhost:5055/api/RawMaterials/${id}`, {
-        method: 'DELETE'
-      })
+      await rawMaterialService.deleteRawMaterial(id)
       
-      if (response.ok) {
-          setRawMaterials(rawMaterials.filter(rawMaterial => rawMaterial.id !== id))
-          setFilteredRawMaterials(filteredRawMaterials.filter(rawMaterial => rawMaterial.id !== id))
-          message.success('原材料删除成功')
-        } else {
-          message.error('删除原材料失败')
-        }
+      // 更新本地状态
+      setRawMaterials(rawMaterials.filter(rawMaterial => rawMaterial.id !== id))
+      setFilteredRawMaterials(filteredRawMaterials.filter(rawMaterial => rawMaterial.id !== id))
+      message.success('原材料删除成功')
     } catch (error) {
-      message.error('网络错误，请检查后端服务是否运行')
+      handleError(error, '删除原材料失败')
+    } finally {
+      setLoading('delete', false)
     }
   }
 
   const handleSave = async (rawMaterial) => {
+    // 确定是添加还是编辑
+    const isEditing = !!rawMaterial.id
+    setLoading(isEditing ? 'edit' : 'add', true)
+    
     try {
       // 确保数量字段为数字类型
       const processedRawMaterial = {
@@ -151,217 +198,135 @@ const RawMaterialList = () => {
         usedQuantity: parseInt(rawMaterial.usedQuantity) || 0
       }
       
-      if (processedRawMaterial.id) {
+      let result
+      if (isEditing) {
         // 编辑现有原材料
-        const response = await fetch(`http://localhost:5055/api/RawMaterials/${processedRawMaterial.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(processedRawMaterial)
-        })
-        
-        if (response.ok) {
-          const updatedRawMaterial = await response.json()
-          // 确保更新后的原材料有key属性，并且数量字段为数字类型
-          const updatedRawMaterialWithKey = {
-            ...updatedRawMaterial,
-            key: updatedRawMaterial.id,
-            totalQuantity: parseInt(updatedRawMaterial.totalQuantity) || 0,
-            usedQuantity: parseInt(updatedRawMaterial.usedQuantity) || 0,
-            remainingQuantity: parseInt(updatedRawMaterial.remainingQuantity) || 0
-          }
-          setRawMaterials(rawMaterials.map(r => r.id === processedRawMaterial.id ? updatedRawMaterialWithKey : r))
-          setFilteredRawMaterials(filteredRawMaterials.map(r => r.id === processedRawMaterial.id ? updatedRawMaterialWithKey : r))
-          message.success('原材料更新成功')
-        } else {
-          message.error('更新原材料失败')
-        }
+        result = await rawMaterialService.updateRawMaterial(processedRawMaterial.id, processedRawMaterial)
       } else {
         // 添加新原材料
-        const response = await fetch('http://localhost:5055/api/RawMaterials', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(processedRawMaterial)
-        })
-        
-        if (response.ok) {
-          const newRawMaterial = await response.json()
-          // 确保新原材料有key属性，并且数量字段为数字类型
-          const newRawMaterialWithKey = {
-            ...newRawMaterial,
-            key: newRawMaterial.id,
-            totalQuantity: parseInt(newRawMaterial.totalQuantity) || 0,
-            usedQuantity: parseInt(newRawMaterial.usedQuantity) || 0,
-            remainingQuantity: parseInt(newRawMaterial.remainingQuantity) || 0
-          }
-          setRawMaterials([...rawMaterials, newRawMaterialWithKey])
-          setFilteredRawMaterials([...filteredRawMaterials, newRawMaterialWithKey])
-          message.success('原材料添加成功')
-        } else {
-          message.error('添加原材料失败')
-        }
+        result = await rawMaterialService.addRawMaterial(processedRawMaterial)
       }
+      
+      // 处理返回结果
+      const processedResult = processRawMaterialData([result])[0]
+      
+      if (isEditing) {
+        // 更新现有记录
+        setRawMaterials(rawMaterials.map(r => r.id === processedResult.id ? processedResult : r))
+        setFilteredRawMaterials(filteredRawMaterials.map(r => r.id === processedResult.id ? processedResult : r))
+        message.success('原材料更新成功')
+      } else {
+        // 添加新记录
+        setRawMaterials([...rawMaterials, processedResult])
+        setFilteredRawMaterials([...filteredRawMaterials, processedResult])
+        message.success('原材料添加成功')
+      }
+      
       setShowForm(false)
     } catch (error) {
-      message.error('网络错误，请检查后端服务是否运行')
+      handleError(error, isEditing ? '更新原材料失败' : '添加原材料失败')
+    } finally {
+      setLoading(isEditing ? 'edit' : 'add', false)
     }
   }
 
   const handleImport = async (data) => {
-    // 处理导入的数据
-    const importedRawMaterials = data.map(item => {
-      // 尝试不同的列名
-      const productName = item['原材料名称'] || item['名称'] || item['productName'] || item.name
-      const brand = item['品牌'] || item['brand'] || item.brand
-      const specification = item['规格'] || item['specification'] || item.specification
-      const unit = item['单位'] || item['unit'] || item.unit
-      const supplier = item['供应商'] || item['supplier'] || item.supplier
-      const location = item['所在仓库'] || item['仓库'] || item['location'] || item.location
-      const company = item['公司'] || item['所属公司'] || item['company'] || item.company
-      const remark = item['备注'] || item['remark'] || item.remark || ''
-      
-      // 处理数量字段，确保转换为数字
-      let totalQuantityValue = 0
-      let usedQuantityValue = 0
-      
-      // 处理总数量
-      if (item['总数量'] !== undefined && item['总数量'] !== null && item['总数量'] !== '') {
-        totalQuantityValue = parseInt(item['总数量']) || 0
-      } else if (item['数量'] !== undefined && item['数量'] !== null && item['数量'] !== '') {
-        totalQuantityValue = parseInt(item['数量']) || 0
-      } else if (item['totalQuantity'] !== undefined && item['totalQuantity'] !== null && item['totalQuantity'] !== '') {
-        totalQuantityValue = parseInt(item['totalQuantity']) || 0
-      } else if (item.totalQuantity !== undefined && item.totalQuantity !== null && item.totalQuantity !== '') {
-        totalQuantityValue = parseInt(item.totalQuantity) || 0
-      } else if (item['剩余数量'] !== undefined && item['剩余数量'] !== null && item['剩余数量'] !== '') {
-        totalQuantityValue = parseInt(item['剩余数量']) || 0
-      } else if (item.remainingQuantity !== undefined && item.remainingQuantity !== null && item.remainingQuantity !== '') {
-        totalQuantityValue = parseInt(item.remainingQuantity) || 0
-      }
-      
-      // 处理已用数量
-      if (item['已用数量'] !== undefined && item['已用数量'] !== null && item['已用数量'] !== '') {
-        usedQuantityValue = parseInt(item['已用数量']) || 0
-      } else if (item['usedQuantity'] !== undefined && item['usedQuantity'] !== null && item['usedQuantity'] !== '') {
-        usedQuantityValue = parseInt(item['usedQuantity']) || 0
-      } else if (item.usedQuantity !== undefined && item.usedQuantity !== null && item.usedQuantity !== '') {
-        usedQuantityValue = parseInt(item.usedQuantity) || 0
-      }
-      
-      // 计算剩余数量
-      const totalQty = totalQuantityValue > 0 ? totalQuantityValue : 0
-      const usedQty = usedQuantityValue > 0 ? usedQuantityValue : 0
-      const remainingQty = totalQty - usedQty
-      
-      return {
-        productName,
-        brand,
-        specification,
-        totalQuantity: totalQty,
-        usedQuantity: usedQty,
-        unit,
-        supplier,
-        location,
-        company: company || '科技有限公司',
-        remark,
-        image: '',
-        createdBy: 'system'
-      }
-    })
+    setLoading('import', true)
     
-    // 使用批量导入API
     try {
+      // 处理导入的数据
+      const importedRawMaterials = data.map(item => {
+        // 尝试不同的列名
+        const productName = item['原材料名称'] || item['名称'] || item['productName'] || item.name
+        const brand = item['品牌'] || item['brand'] || item.brand
+        const specification = item['规格'] || item['specification'] || item.specification
+        const unit = item['单位'] || item['unit'] || item.unit
+        const supplier = item['供应商'] || item['supplier'] || item.supplier
+        const location = item['所在仓库'] || item['仓库'] || item['location'] || item.location
+        const company = item['公司'] || item['所属公司'] || item['company'] || item.company
+        const remark = item['备注'] || item['remark'] || item.remark || ''
+        
+        // 处理数量字段，确保转换为数字
+        let totalQuantityValue = 0
+        let usedQuantityValue = 0
+        
+        // 处理总数量
+        if (item['总数量'] !== undefined && item['总数量'] !== null && item['总数量'] !== '') {
+          totalQuantityValue = parseInt(item['总数量']) || 0
+        } else if (item['数量'] !== undefined && item['数量'] !== null && item['数量'] !== '') {
+          totalQuantityValue = parseInt(item['数量']) || 0
+        } else if (item['totalQuantity'] !== undefined && item['totalQuantity'] !== null && item['totalQuantity'] !== '') {
+          totalQuantityValue = parseInt(item['totalQuantity']) || 0
+        } else if (item.totalQuantity !== undefined && item.totalQuantity !== null && item.totalQuantity !== '') {
+          totalQuantityValue = parseInt(item.totalQuantity) || 0
+        } else if (item['剩余数量'] !== undefined && item['剩余数量'] !== null && item['剩余数量'] !== '') {
+          totalQuantityValue = parseInt(item['剩余数量']) || 0
+        } else if (item.remainingQuantity !== undefined && item.remainingQuantity !== null && item.remainingQuantity !== '') {
+          totalQuantityValue = parseInt(item.remainingQuantity) || 0
+        }
+        
+        // 处理已用数量
+        if (item['已用数量'] !== undefined && item['已用数量'] !== null && item['已用数量'] !== '') {
+          usedQuantityValue = parseInt(item['已用数量']) || 0
+        } else if (item['usedQuantity'] !== undefined && item['usedQuantity'] !== null && item['usedQuantity'] !== '') {
+          usedQuantityValue = parseInt(item['usedQuantity']) || 0
+        } else if (item.usedQuantity !== undefined && item.usedQuantity !== null && item.usedQuantity !== '') {
+          usedQuantityValue = parseInt(item.usedQuantity) || 0
+        }
+        
+        // 计算剩余数量
+        const totalQty = totalQuantityValue > 0 ? totalQuantityValue : 0
+        const usedQty = usedQuantityValue > 0 ? usedQuantityValue : 0
+        
+        return {
+          productName,
+          brand,
+          specification,
+          totalQuantity: totalQty,
+          usedQuantity: usedQty,
+          unit,
+          supplier,
+          location,
+          company: company || '科技有限公司',
+          remark,
+          image: '',
+          createdBy: 'system'
+        }
+      })
+      
       // 调试：打印发送的数据
       console.log('发送的导入数据:', { RawMaterials: importedRawMaterials });
       
-      const response = await fetch('http://localhost:5055/api/RawMaterials/import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ RawMaterials: importedRawMaterials })
-      })
+      // 使用批量导入API
+      const successCount = await rawMaterialService.importRawMaterials(importedRawMaterials)
       
-      if (response.ok) {
-        const result = await response.json()
-        const successCount = result
-        
-        // 重新获取原材料列表
-        const fetchResponse = await fetch('http://localhost:5055/api/RawMaterials')
-        if (fetchResponse.ok) {
-          const data = await fetchResponse.json()
-          // 确保每个对象都有唯一的key属性，并且数量字段为数字类型
-          const dataWithKey = data.map((item, index) => {
-            // 确保剩余数量正确计算
-            const totalQty = parseInt(item.totalQuantity) || 0
-            const usedQty = parseInt(item.usedQuantity) || 0
-            const remainingQty = totalQty - usedQty
-            
-            return {
-              ...item,
-              key: item.id || index,
-              totalQuantity: totalQty,
-              usedQuantity: usedQty,
-              remainingQuantity: remainingQty
-            }
-          })
-          setRawMaterials(dataWithKey)
-          setFilteredRawMaterials(dataWithKey)
-        }
-        
-        message.success(`成功导入 ${successCount} 个原材料`)
-      } else {
-        // 获取详细的错误信息
-        try {
-          const errorData = await response.json()
-          console.error('导入失败:', JSON.stringify(errorData, null, 2))
-          console.error('错误状态:', response.status)
-          console.error('错误状态文本:', response.statusText)
-          
-          // 显示详细的错误信息
-          let errorMessage = '导入原材料失败: '
-          if (errorData.errors) {
-            errorMessage += Object.entries(errorData.errors)
-              .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
-              .join('; ')
-          } else {
-            errorMessage += errorData.title || '未知错误'
-          }
-          message.error(errorMessage)
-        } catch (error) {
-          console.error('解析错误响应失败:', error)
-          message.error(`导入原材料失败: 服务器返回错误 ${response.status}`)
-        }
-      }
+      // 重新获取原材料列表（强制刷新）
+      await fetchRawMaterials(true)
+      
+      message.success(`成功导入 ${successCount} 个原材料`)
     } catch (error) {
       console.error('导入原材料失败:', error)
-      message.error('网络错误，请检查后端服务是否运行')
+      handleError(error, '导入原材料失败')
+    } finally {
+      setLoading('import', false)
     }
   }
 
   const handleClearAll = async () => {
-    setLoading(true)
+    setLoading('clear', true)
     try {
       // 调用后端API清空所有原材料
-      const response = await fetch('http://localhost:5055/api/RawMaterials', {
-        method: 'DELETE'
-      })
-      if (response.ok) {
-        // 清空本地状态
-        setRawMaterials([])
-        setFilteredRawMaterials([])
-        message.success('所有原材料已清空')
-      } else {
-        throw new Error('清空原材料失败')
-      }
+      await rawMaterialService.clearAllRawMaterials()
+      
+      // 清空本地状态
+      setRawMaterials([])
+      setFilteredRawMaterials([])
+      message.success('所有原材料已清空')
     } catch (error) {
       console.error('清空原材料失败:', error)
-      message.error('清空原材料失败')
+      handleError(error, '清空原材料失败')
     } finally {
-      setLoading(false)
+      setLoading('clear', false)
     }
   }
 
@@ -503,13 +468,23 @@ const RawMaterialList = () => {
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             添加原材料
           </Button>
+          <Button 
+            icon={<ReloadOutlined />} 
+            loading={loadingStates.refresh}
+            onClick={() => {
+              setLoading('refresh', true);
+              fetchRawMaterials(true).finally(() => setLoading('refresh', false));
+            }}
+          >
+            刷新数据
+          </Button>
           <Popconfirm
             title="确定要清空所有原材料吗？此操作不可撤销！"
             onConfirm={handleClearAll}
             okText="确定"
             cancelText="取消"
           >
-            <Button danger>
+            <Button danger loading={loadingStates.clear}>
               清空原材料
             </Button>
           </Popconfirm>
@@ -582,10 +557,17 @@ const RawMaterialList = () => {
         </Row>
       </Card>
       
+      {/* 错误提示 */}
+      {error && (
+        <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#fff1f0', border: '1px solid #ffccc7', borderRadius: 4, color: '#cf1322' }}>
+          {error}
+        </div>
+      )}
+      
       <Table 
         columns={columns} 
         dataSource={filteredRawMaterials} 
-        loading={loading}
+        loading={loadingStates.initial || loadingStates.filter}
         rowKey="id"
         pagination={{ 
           pageSize: 10,
@@ -599,8 +581,12 @@ const RawMaterialList = () => {
               return (
                 <tbody>
                   <tr key="empty">
-                    <td colSpan={columns.length} style={{ textAlign: 'center' }}>
-                      暂无数据
+                    <td colSpan={columns.length} style={{ textAlign: 'center', padding: '40px 0' }}>
+                      {loadingStates.initial || loadingStates.filter ? (
+                        <Spin tip="加载中..." />
+                      ) : (
+                        '暂无数据'
+                      )}
                     </td>
                   </tr>
                 </tbody>

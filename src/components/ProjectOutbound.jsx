@@ -126,59 +126,60 @@ function ProjectOutbound() {
   }
 
   // 从后端获取设备数据（从库存表）
-  useEffect(() => {
-    const fetchDevices = async () => {
-      setLoading(true)
-      try {
-        // 从库存表获取专用设备
-        const specialInventoryDevices = await deviceApi.getSpecialInventoryDevices()
-        console.log('库存专用设备数据:', specialInventoryDevices)
-        setSpecialDevices(specialInventoryDevices.map(device => ({
-          id: device.id,
-          equipmentId: device.equipmentId,
-          name: device.name,
-          brand: device.brand,
-          model: device.model,
-          specification: device.specification,
-          inventory: device.inventoryQuantity || 0,
-          unit: device.unit,
-          warehouse: device.warehouse
-        })))
+  const fetchDevices = async () => {
+    setLoading(true)
+    try {
+      // 从库存表获取专用设备
+      const specialInventoryDevices = await deviceApi.getSpecialInventoryDevices()
+      console.log('库存专用设备数据:', specialInventoryDevices)
+      setSpecialDevices(specialInventoryDevices.map(device => ({
+        id: device.id,
+        equipmentId: device.equipmentId,
+        name: device.name,
+        brand: device.brand,
+        model: device.model,
+        specification: device.specification,
+        inventory: device.inventoryQuantity || 0,
+        unit: device.unit,
+        warehouse: device.warehouse
+      })))
 
-        // 从库存表获取通用设备
-        const generalInventoryDevices = await deviceApi.getGeneralInventoryDevices()
-        console.log('库存通用设备数据:', generalInventoryDevices)
-        setGeneralDevices(generalInventoryDevices.map(device => ({
-          id: device.id,
-          equipmentId: device.equipmentId,
-          name: device.name,
-          brand: device.brand,
-          model: device.model,
-          specification: device.specification,
-          inventory: device.inventoryQuantity || 0,
-          unit: device.unit,
-          warehouse: device.warehouse
-        })))
+      // 从库存表获取通用设备
+      const generalInventoryDevices = await deviceApi.getGeneralInventoryDevices()
+      console.log('库存通用设备数据:', generalInventoryDevices)
+      setGeneralDevices(generalInventoryDevices.map(device => ({
+        id: device.id,
+        equipmentId: device.equipmentId,
+        name: device.name,
+        brand: device.brand,
+        model: device.model,
+        specification: device.specification,
+        inventory: device.inventoryQuantity || 0,
+        unit: device.unit,
+        warehouse: device.warehouse
+      })))
 
-        // 从后端获取耗材数据
-        const consumablesData = await deviceApi.getConsumables()
-        console.log('耗材数据:', consumablesData)
-        setConsumables(consumablesData.map(consumable => ({
-          id: consumable.id,
-          name: consumable.name,
-          model: consumable.brand,
-          specification: consumable.modelSpecification,
-          inventory: consumable.remainingQuantity || 0,
-          unit: consumable.unit
-        })))
-      } catch (error) {
-        console.error('获取设备数据失败:', error)
-        message.error('获取设备数据失败')
-      } finally {
-        setLoading(false)
-      }
+      // 从后端获取耗材数据
+      const consumablesData = await deviceApi.getConsumables()
+      console.log('耗材数据:', consumablesData)
+      setConsumables(consumablesData.map(consumable => ({
+        id: consumable.id,
+        name: consumable.name,
+        model: consumable.brand,
+        specification: consumable.modelSpecification,
+        inventory: consumable.remainingQuantity || 0,
+        unit: consumable.unit
+      })))
+    } catch (error) {
+      console.error('获取设备数据失败:', error)
+      message.error('获取设备数据失败')
+    } finally {
+      setLoading(false)
     }
+  }
 
+  // 组件初始化时获取设备数据
+  useEffect(() => {
     fetchDevices()
   }, [])
 
@@ -651,6 +652,9 @@ function ProjectOutbound() {
       }));
       setOutboundHistory(outboundHistoryData);
       
+      // 重新获取设备和耗材数据，确保显示最新的库存数据
+      await fetchDevices();
+      
       message.success('出库确认成功')
     } catch (error) {
       console.error('确认出库失败:', error);
@@ -663,6 +667,10 @@ function ProjectOutbound() {
     try {
       await projectOutboundApi.deleteProjectOutbound(outboundId)
       setOutboundHistory(prev => prev.filter(item => item.id !== outboundId))
+      
+      // 重新获取设备和耗材数据，确保显示最新的库存数据
+      await fetchDevices();
+      
       message.success('出库记录已删除')
     } catch (error) {
       if (error.message.includes('404')) {
