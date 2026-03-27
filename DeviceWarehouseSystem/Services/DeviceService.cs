@@ -40,6 +40,74 @@ namespace DeviceWarehouseSystem.Services
             }).ToList();
         }
 
+        /// <summary>
+        /// 获取分页的专用设备列表
+        /// </summary>
+        public async Task<PagedResult<SpecialEquipmentDTO>> GetPagedSpecialEquipmentsAsync(PaginationParams parameters)
+        {
+            var query = _context.SpecialEquipments.AsQueryable();
+
+            // 应用搜索过滤
+            if (!string.IsNullOrWhiteSpace(parameters.Search))
+            {
+                var search = parameters.Search.ToLower();
+                query = query.Where(e =>
+                    e.DeviceName.ToLower().Contains(search) ||
+                    (e.Brand != null && e.Brand.ToLower().Contains(search)) ||
+                    (e.Model != null && e.Model.ToLower().Contains(search)) ||
+                    (e.DeviceCode != null && e.DeviceCode.ToLower().Contains(search)));
+            }
+
+            // 获取总数
+            var totalCount = await query.CountAsync();
+
+            // 应用排序
+            query = parameters.SortBy?.ToLower() switch
+            {
+                "name" => parameters.SortDesc ? query.OrderByDescending(e => e.DeviceName) : query.OrderBy(e => e.DeviceName),
+                "brand" => parameters.SortDesc ? query.OrderByDescending(e => e.Brand) : query.OrderBy(e => e.Brand),
+                "model" => parameters.SortDesc ? query.OrderByDescending(e => e.Model) : query.OrderBy(e => e.Model),
+                "quantity" => parameters.SortDesc ? query.OrderByDescending(e => e.Quantity) : query.OrderBy(e => e.Quantity),
+                "purchasedate" => parameters.SortDesc ? query.OrderByDescending(e => e.PurchaseDate) : query.OrderBy(e => e.PurchaseDate),
+                _ => query.OrderByDescending(e => e.CreatedAt) // 默认按创建时间降序
+            };
+
+            // 应用分页
+            var items = await query
+                .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                .Take(parameters.PageSize)
+                .Select(e => new SpecialEquipmentDTO
+                {
+                    Id = e.Id,
+                    Name = e.DeviceName,
+                    DeviceCode = e.DeviceCode,
+                    SerialNumber = e.SerialNumber,
+                    Brand = e.Brand,
+                    Model = e.Model,
+                    Quantity = e.Quantity,
+                    Unit = e.Unit,
+                    Accessories = e.Accessories,
+                    ImageUrl = e.ImageUrl,
+                    Warehouse = e.Warehouse ?? "主仓库",
+                    Company = e.Company,
+                    Status = e.Status,
+                    UseStatus = e.UseStatus == 1 ? "使用中" : e.UseStatus == 2 ? "停用" : "未使用",
+                    Location = e.Location,
+                    Description = e.Remark,
+                    PurchaseDate = e.PurchaseDate.HasValue ? e.PurchaseDate.Value.ToString("yyyy-MM-dd") : e.CreatedAt.ToString("yyyy-MM-dd"),
+                    PurchasePrice = e.PurchasePrice ?? 0
+                })
+                .ToListAsync();
+
+            return new PagedResult<SpecialEquipmentDTO>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = parameters.PageNumber,
+                PageSize = parameters.PageSize
+            };
+        }
+
         public async Task<SpecialEquipmentDTO> GetSpecialEquipmentByIdAsync(int id)
         {
             var equipment = await _context.SpecialEquipments.FindAsync(id);
@@ -297,6 +365,74 @@ namespace DeviceWarehouseSystem.Services
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),
                 PurchasePrice = e.PurchasePrice ?? 0
             }).ToList();
+        }
+
+        /// <summary>
+        /// 获取分页的通用设备列表
+        /// </summary>
+        public async Task<PagedResult<GeneralEquipmentDTO>> GetPagedGeneralEquipmentsAsync(PaginationParams parameters)
+        {
+            var query = _context.GeneralEquipments.AsQueryable();
+
+            // 应用搜索过滤
+            if (!string.IsNullOrWhiteSpace(parameters.Search))
+            {
+                var search = parameters.Search.ToLower();
+                query = query.Where(e =>
+                    e.DeviceName.ToLower().Contains(search) ||
+                    (e.Brand != null && e.Brand.ToLower().Contains(search)) ||
+                    (e.Model != null && e.Model.ToLower().Contains(search)) ||
+                    (e.DeviceCode != null && e.DeviceCode.ToLower().Contains(search)));
+            }
+
+            // 获取总数
+            var totalCount = await query.CountAsync();
+
+            // 应用排序
+            query = parameters.SortBy?.ToLower() switch
+            {
+                "name" => parameters.SortDesc ? query.OrderByDescending(e => e.DeviceName) : query.OrderBy(e => e.DeviceName),
+                "brand" => parameters.SortDesc ? query.OrderByDescending(e => e.Brand) : query.OrderBy(e => e.Brand),
+                "model" => parameters.SortDesc ? query.OrderByDescending(e => e.Model) : query.OrderBy(e => e.Model),
+                "quantity" => parameters.SortDesc ? query.OrderByDescending(e => e.Quantity) : query.OrderBy(e => e.Quantity),
+                "purchasedate" => parameters.SortDesc ? query.OrderByDescending(e => e.PurchaseDate) : query.OrderBy(e => e.PurchaseDate),
+                _ => query.OrderByDescending(e => e.CreatedAt) // 默认按创建时间降序
+            };
+
+            // 应用分页
+            var items = await query
+                .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                .Take(parameters.PageSize)
+                .Select(e => new GeneralEquipmentDTO
+                {
+                    Id = e.Id,
+                    Name = e.DeviceName,
+                    DeviceCode = e.DeviceCode,
+                    SerialNumber = e.SerialNumber,
+                    Brand = e.Brand,
+                    Model = e.Model,
+                    Quantity = e.Quantity,
+                    Unit = e.Unit,
+                    Accessories = e.Accessories,
+                    ImageUrl = e.ImageUrl,
+                    Warehouse = e.Warehouse ?? "主仓库",
+                    Company = e.Company,
+                    Status = e.Status,
+                    UseStatus = e.UseStatus == 1 ? "使用中" : e.UseStatus == 2 ? "停用" : "未使用",
+                    Location = e.Location,
+                    Description = e.Remark,
+                    PurchaseDate = e.PurchaseDate.HasValue ? e.PurchaseDate.Value.ToString("yyyy-MM-dd") : e.CreatedAt.ToString("yyyy-MM-dd"),
+                    PurchasePrice = e.PurchasePrice ?? 0
+                })
+                .ToListAsync();
+
+            return new PagedResult<GeneralEquipmentDTO>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = parameters.PageNumber,
+                PageSize = parameters.PageSize
+            };
         }
 
         public async Task<GeneralEquipmentDTO> GetGeneralEquipmentByIdAsync(int id)

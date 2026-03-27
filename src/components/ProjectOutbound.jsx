@@ -19,7 +19,7 @@ import {
 
 const { TextArea } = Input
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
-import { deviceApi, projectOutboundApi } from '../services/api'
+import { deviceApi, projectOutboundApi, imageApi } from '../services/api'
 
 const { Option } = Select
 const { TabPane } = Tabs
@@ -625,7 +625,7 @@ function ProjectOutbound() {
     const projectOutboundItems = [
       ...selectedSpecialDevices.map(item => ({
         ItemType: 1, // 1表示专用设备
-        ItemId: parseInt(item.deviceId),
+        ItemId: item.id || item.deviceId || 0,
         ItemName: item.name,
         DeviceCode: item.deviceCode,
         Brand: item.brand,
@@ -639,7 +639,7 @@ function ProjectOutbound() {
       })),
       ...selectedGeneralDevices.map(item => ({
         ItemType: 2, // 2表示通用设备
-        ItemId: parseInt(item.deviceId),
+        ItemId: item.id || item.deviceId || 0,
         ItemName: item.name,
         DeviceCode: item.deviceCode,
         Brand: item.brand,
@@ -653,7 +653,7 @@ function ProjectOutbound() {
       })),
       ...selectedConsumables.map(item => ({
         ItemType: 3, // 3表示耗材
-        ItemId: parseInt(item.id),
+        ItemId: item.id || 0,
         ItemName: item.name,
         DeviceCode: item.deviceCode,
         Brand: item.brand,
@@ -673,27 +673,9 @@ function ProjectOutbound() {
     }
 
     try {
-      // 上传图片
-      let imageUrls = ''
-      if (selectedImages.length > 0) {
-        setLoading(true)
-        const uploadPromises = selectedImages.map(async (image) => {
-          const formData = new FormData()
-          formData.append('file', image)
-          try {
-            const response = await imageApi.uploadInOutboundImage(0, 'outbound', formData)
-            return response.url
-          } catch (error) {
-            console.error('上传图片失败:', error)
-            return null
-          }
-        })
-        const results = await Promise.all(uploadPromises)
-        imageUrls = results.filter(url => url).join(',')
-        setLoading(false)
-      }
-
+      // 先创建出库单，不包含图片
       const outboundData = {
+        OutboundNumber: 'temp', // 临时值，后端会覆盖
         OutboundDate: values['出库时间'] ? values['出库时间'].toISOString() : new Date().toISOString(),
         ProjectName: values['项目名称'] || '未知项目',
         ProjectTime: values['项目时间'] || '',
@@ -705,13 +687,58 @@ function ProjectOutbound() {
         ReturnDate: values['预计归还时间'] ? values['预计归还时间'].toISOString() : null,
         WarehouseKeeper: values['库管'] || '',
         LogisticsMethod: null,
-        OutboundImages: imageUrls,
+        OutboundImages: '', // 先空着，后续更新
         Remark: values.remark || '',
-        ProjectOutboundItems: projectOutboundItems
+        ProjectOutboundItems: projectOutboundItems.map(item => {
+          // 只保留必要的字段，完全移除Outbound字段
+          return {
+            ItemType: item.ItemType,
+            ItemId: Number(item.ItemId),
+            ItemName: item.ItemName,
+            DeviceCode: item.DeviceCode || '',
+            Brand: item.Brand || '',
+            Model: item.Model || '',
+            Quantity: item.quantity || 1,
+            Unit: item.unit || '',
+            Accessories: item.accessories || '',
+            Remark: item.remark || '',
+            DeviceStatus: item.status || '',
+            CreatedAt: item.CreatedAt
+          };
+        })
       }
 
       console.log('发送出库单数据:', outboundData);
       const response = await projectOutboundApi.createProjectOutbound(outboundData)
+      
+      // 上传图片
+      let imageUrls = ''
+      if (selectedImages.length > 0) {
+        setLoading(true)
+        const uploadPromises = selectedImages.map(async (image) => {
+          const formData = new FormData()
+          formData.append('file', image)
+          try {
+            const response = await imageApi.uploadInOutboundImage(response.id, 'outbound', formData)
+            return response
+          } catch (error) {
+            console.error('上传图片失败:', error)
+            return null
+          }
+        })
+        const results = await Promise.all(uploadPromises)
+        const imagePaths = results.filter(url => url).flat() // 后端返回的是数组
+        imageUrls = imagePaths.join(',')
+        setLoading(false)
+        
+        // 更新出库单，添加图片URL
+        if (imageUrls) {
+          await projectOutboundApi.updateProjectOutbound(response.id, {
+            OutboundImages: imageUrls
+          })
+        }
+      }
+
       const newOutbound = {
         id: response.id,
         outboundId: response.outboundNumber,

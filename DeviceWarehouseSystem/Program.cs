@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using DeviceWarehouseSystem.Models;
 using DeviceWarehouseSystem.Services;
+using DeviceWarehouseSystem.Middleware;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,6 +68,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+
+// 使用请求日志记录中间件
+app.UseRequestLogging();
+
+// 使用全局异常处理中间件
+app.UseExceptionHandling();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

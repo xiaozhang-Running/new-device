@@ -4,6 +4,7 @@ using DeviceWarehouseSystem.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace DeviceWarehouseSystem.Controllers;
 
@@ -46,66 +47,112 @@ public class ProjectOutboundController : ControllerBase
 
     // POST: api/ProjectOutbound
     [HttpPost]
-    public async Task<ActionResult<ProjectOutbound>> CreateProjectOutbound(ProjectOutbound projectOutbound)
+    public async Task<ActionResult<ProjectOutbound>> CreateProjectOutbound([FromBody] JsonElement projectOutboundData)
     {
-        // 验证模型状态
-        if (!ModelState.IsValid)
+        try
         {
-            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
-            return BadRequest(new { errors = errors, modelState = ModelState });
-        }
-
-        // 生成出库单号
-        projectOutbound.OutboundNumber = "PROOUT" + DateTime.Now.Ticks;
-        projectOutbound.CreatedAt = DateTime.Now;
-        projectOutbound.IsCompleted = false;
-
-        // 计算总数量
-        projectOutbound.TotalQuantity = projectOutbound.ProjectOutboundItems?.Sum(item => item.Quantity) ?? 0;
-
-        // 创建新的ProjectOutbound对象，只包含必要的字段
-        var newProjectOutbound = new ProjectOutbound
-        {
-            OutboundNumber = projectOutbound.OutboundNumber,
-            OutboundDate = projectOutbound.OutboundDate,
-            ProjectName = projectOutbound.ProjectName,
-            ProjectCode = projectOutbound.ProjectCode,
-            ProjectManager = projectOutbound.ProjectManager,
-            Recipient = projectOutbound.Recipient,
-            OutboundType = projectOutbound.OutboundType,
-            ProjectTime = projectOutbound.ProjectTime,
-            ContactPhone = projectOutbound.ContactPhone,
-            UsageLocation = projectOutbound.UsageLocation,
-            ReturnDate = projectOutbound.ReturnDate,
-            Handler = projectOutbound.Handler,
-            WarehouseKeeper = projectOutbound.WarehouseKeeper,
-            LogisticsMethod = projectOutbound.LogisticsMethod,
-            OutboundImages = projectOutbound.OutboundImages,
-            Remark = projectOutbound.Remark,
-            TotalQuantity = projectOutbound.TotalQuantity,
-            IsCompleted = projectOutbound.IsCompleted,
-            CreatedAt = projectOutbound.CreatedAt,
-            ProjectOutboundItems = projectOutbound.ProjectOutboundItems?.Select(item => new ProjectOutboundItem
+            // 提取基本信息
+            string projectName = projectOutboundData.GetProperty("ProjectName").GetString() ?? "";
+            DateTime outboundDate = projectOutboundData.GetProperty("OutboundDate").GetDateTime();
+            string projectTime = projectOutboundData.GetProperty("ProjectTime").GetString() ?? "";
+            string projectManager = projectOutboundData.GetProperty("ProjectManager").GetString() ?? "";
+            string recipient = projectOutboundData.GetProperty("Recipient").GetString() ?? "";
+            string outboundType = projectOutboundData.GetProperty("OutboundType").GetString() ?? "";
+            string contactPhone = projectOutboundData.GetProperty("ContactPhone").GetString() ?? "";
+            string usageLocation = projectOutboundData.GetProperty("UsageLocation").GetString() ?? "";
+            
+            DateTime? returnDate = null;
+            if (projectOutboundData.TryGetProperty("ReturnDate", out var returnDateElement) && returnDateElement.ValueKind != JsonValueKind.Null)
             {
-                ItemType = item.ItemType,
-                ItemId = item.ItemId,
-                ItemName = item.ItemName,
-                DeviceCode = item.DeviceCode,
-                Brand = item.Brand,
-                Model = item.Model,
-                Quantity = item.Quantity,
-                Unit = item.Unit,
-                Accessories = item.Accessories,
-                Remark = item.Remark,
-                DeviceStatus = item.DeviceStatus,
-                CreatedAt = item.CreatedAt
-            }).ToList()
-        };
+                returnDate = returnDateElement.GetDateTime();
+            }
+            
+            string warehouseKeeper = projectOutboundData.GetProperty("WarehouseKeeper").GetString() ?? "";
+            
+            int? logisticsMethod = null;
+            if (projectOutboundData.TryGetProperty("LogisticsMethod", out var logisticsMethodElement) && logisticsMethodElement.ValueKind != JsonValueKind.Null)
+            {
+                logisticsMethod = logisticsMethodElement.GetInt32();
+            }
+            
+            string outboundImages = "";
+            if (projectOutboundData.TryGetProperty("OutboundImages", out var outboundImagesElement))
+            {
+                outboundImages = outboundImagesElement.GetString() ?? "";
+            }
+            
+            string remark = "";
+            if (projectOutboundData.TryGetProperty("Remark", out var remarkElement))
+            {
+                remark = remarkElement.GetString() ?? "";
+            }
 
-        _context.ProjectOutbounds.Add(newProjectOutbound);
-        await _context.SaveChangesAsync();
+            // 生成出库单号
+            string outboundNumber = "PROOUT" + DateTime.Now.Ticks;
+            DateTime createdAt = DateTime.Now;
+            bool isCompleted = false;
 
-        return CreatedAtAction(nameof(GetProjectOutbound), new { id = newProjectOutbound.Id }, newProjectOutbound);
+            // 创建新的ProjectOutbound对象
+            var newProjectOutbound = new ProjectOutbound
+            {
+                OutboundNumber = outboundNumber,
+                OutboundDate = outboundDate,
+                ProjectName = projectName,
+                ProjectTime = projectTime,
+                ProjectManager = projectManager,
+                Recipient = recipient,
+                OutboundType = outboundType,
+                ContactPhone = contactPhone,
+                UsageLocation = usageLocation,
+                ReturnDate = returnDate,
+                WarehouseKeeper = warehouseKeeper,
+                LogisticsMethod = logisticsMethod,
+                OutboundImages = outboundImages,
+                Remark = remark,
+                IsCompleted = isCompleted,
+                CreatedAt = createdAt,
+                ProjectOutboundItems = new List<ProjectOutboundItem>()
+            };
+
+            // 添加ProjectOutboundItems
+            if (projectOutboundData.TryGetProperty("ProjectOutboundItems", out var projectOutboundItemsElement) && 
+                projectOutboundItemsElement.ValueKind == JsonValueKind.Array)
+            {
+                int totalQuantity = 0;
+                foreach (var itemData in projectOutboundItemsElement.EnumerateArray())
+                {
+                    int quantity = itemData.GetProperty("Quantity").GetInt32();
+                    totalQuantity += quantity;
+                    
+                    var item = new ProjectOutboundItem
+                    {
+                        ItemType = itemData.GetProperty("ItemType").GetInt32(),
+                        ItemId = itemData.GetProperty("ItemId").GetInt32(),
+                        ItemName = itemData.GetProperty("ItemName").GetString() ?? "",
+                        DeviceCode = itemData.TryGetProperty("DeviceCode", out var deviceCodeElement) ? deviceCodeElement.GetString() : null,
+                        Brand = itemData.TryGetProperty("Brand", out var brandElement) ? brandElement.GetString() : null,
+                        Model = itemData.TryGetProperty("Model", out var modelElement) ? modelElement.GetString() : null,
+                        Quantity = quantity,
+                        Unit = itemData.TryGetProperty("Unit", out var unitElement) ? unitElement.GetString() : null,
+                        Accessories = itemData.TryGetProperty("Accessories", out var accessoriesElement) ? accessoriesElement.GetString() : null,
+                        Remark = itemData.TryGetProperty("Remark", out var itemRemarkElement) ? itemRemarkElement.GetString() : null,
+                        DeviceStatus = itemData.TryGetProperty("DeviceStatus", out var deviceStatusElement) ? deviceStatusElement.GetString() : null,
+                        CreatedAt = itemData.GetProperty("CreatedAt").GetDateTime()
+                    };
+                    newProjectOutbound.ProjectOutboundItems.Add(item);
+                }
+                newProjectOutbound.TotalQuantity = totalQuantity;
+            }
+
+            _context.ProjectOutbounds.Add(newProjectOutbound);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetProjectOutbound), new { id = newProjectOutbound.Id }, newProjectOutbound);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message, innerException = ex.InnerException?.Message });
+        }
     }
 
     // PUT: api/ProjectOutbound/5/complete

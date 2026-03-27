@@ -31,6 +31,21 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
+        // GET: api/Device/special-equipments/paged
+        [HttpGet("special-equipments/paged")]
+        public async Task<ActionResult<PagedResult<SpecialEquipmentDTO>>> GetPagedSpecialEquipments([FromQuery] PaginationParams parameters)
+        {
+            try
+            {
+                var result = await _deviceService.GetPagedSpecialEquipmentsAsync(parameters);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // GET: api/Device/special-equipments/{id}
         [HttpGet("special-equipments/{id}")]
         public async Task<ActionResult<SpecialEquipmentDTO>> GetSpecialEquipmentById(int id)
@@ -124,6 +139,21 @@ namespace DeviceWarehouseSystem.Controllers
             {
                 var equipments = await _deviceService.GetGeneralEquipmentsAsync();
                 return Ok(equipments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/Device/general-equipments/paged
+        [HttpGet("general-equipments/paged")]
+        public async Task<ActionResult<PagedResult<GeneralEquipmentDTO>>> GetPagedGeneralEquipments([FromQuery] PaginationParams parameters)
+        {
+            try
+            {
+                var result = await _deviceService.GetPagedGeneralEquipmentsAsync(parameters);
+                return Ok(result);
             }
             catch (Exception ex)
             {

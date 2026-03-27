@@ -20,6 +20,7 @@ const GeneralDeviceList = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
   const [filteredDevices, setFilteredDevices] = useState([])
+  const [searchParams, setSearchParams] = useState({})
 
   // 通用设备模拟数据
   const mockDevices = [
@@ -189,9 +190,9 @@ const GeneralDeviceList = () => {
     fetchDevices()
   }, [])
 
-  // 过滤设备数据
-  useEffect(() => {
-    console.log('设备数据更新:', devices)
+  // 处理搜索
+  const handleSearch = () => {
+    console.log('开始搜索...')
     let result = [...devices]
     
     // 搜索过滤
@@ -221,7 +222,23 @@ const GeneralDeviceList = () => {
     
     console.log('过滤后的设备数据:', result)
     setFilteredDevices(result)
-  }, [devices, searchText, statusFilter, locationFilter])
+    setSearchParams({ searchText, statusFilter, locationFilter })
+  }
+
+  // 当设备数据变化时，保持当前的过滤状态
+  useEffect(() => {
+    // 初始加载时设置filteredDevices
+    if (filteredDevices.length === 0) {
+      setFilteredDevices(devices)
+    } else {
+      // 设备更新时，保持当前的过滤状态
+      // 这里可以添加逻辑来更新filteredDevices中的对应设备
+      setFilteredDevices(prev => prev.map(device => {
+        const updatedDevice = devices.find(d => d.id === device.id)
+        return updatedDevice || device
+      }))
+    }
+  }, [devices])
 
   const handleAdd = () => {
     setEditingDevice(null)
@@ -258,22 +275,22 @@ const GeneralDeviceList = () => {
       if (device.id) {
         // 编辑现有设备
         const updatedDevice = await deviceApi.updateGeneralEquipment(device.id, {
-          Name: device.name,
-          DeviceCode: device.deviceCode,
-          SerialNumber: device.serialNumber,
-          Brand: device.brand,
-          Model: device.model,
-          Quantity: device.quantity,
-          Unit: device.unit,
-          Accessories: device.accessories,
-          ImageUrl: device.image,
-          Company: device.company,
-          Status: device.status,
+          Name: device.name || '',
+          DeviceCode: device.deviceCode || '',
+          SerialNumber: device.serialNumber || '',
+          Brand: device.brand || '',
+          Model: device.model || '',
+          Quantity: device.quantity || 1,
+          Unit: device.unit || '台',
+          Accessories: device.accessories || '',
+          ImageUrl: device.image || '',
+          Company: device.company || '',
+          Status: device.status || '正常',
           UseStatus: device.useStatus || '未使用',
-          Location: device.location,
-          Description: device.description,
-          PurchaseDate: device.purchaseDate,
-          PurchasePrice: device.purchasePrice
+          Location: device.location || '',
+          Description: device.description || '',
+          PurchaseDate: device.purchaseDate || '',
+          PurchasePrice: device.purchasePrice || 0
         })
         // 转换返回的数据格式以匹配前端期望的格式
         const formattedUpdatedDevice = {
@@ -300,24 +317,30 @@ const GeneralDeviceList = () => {
         message.success('设备更新成功')
       } else {
         // 添加新设备
-        const newDevice = await deviceApi.createGeneralEquipment({
-          Name: device.name,
-          DeviceCode: device.deviceCode,
-          SerialNumber: device.serialNumber,
-          Brand: device.brand,
-          Model: device.model,
-          Quantity: device.quantity,
-          Unit: device.unit,
-          Accessories: device.accessories,
-          ImageUrl: device.image,
-          Company: device.company,
-          Status: device.status,
+        const deviceData = {
+          Name: device.name || '',
+          DeviceCode: device.deviceCode || '',
+          SerialNumber: device.serialNumber || '',
+          Brand: device.brand || '',
+          Model: device.model || '',
+          Quantity: device.quantity || 1,
+          Unit: device.unit || '台',
+          Accessories: device.accessories || '',
+          ImageUrl: device.image || '',
+          Warehouse: device.warehouse || '主仓库',
+          Company: device.company || '',
+          Status: device.status || '正常',
           UseStatus: device.useStatus || '未使用',
-          Location: device.location,
-          Description: device.description,
-          PurchaseDate: device.purchaseDate,
-          PurchasePrice: device.purchasePrice
-        })
+          Location: device.location || '',
+          Description: device.description || '',
+          PurchaseDate: device.purchaseDate || '',
+          PurchasePrice: device.purchasePrice || 0
+        };
+        console.log('发送到后端的数据:', deviceData);
+        console.log('设备数据类型:', typeof device);
+        console.log('设备名称类型:', typeof device.name);
+        console.log('设备编号类型:', typeof device.deviceCode);
+        const newDevice = await deviceApi.createGeneralEquipment(deviceData)
         // 转换返回的数据格式以匹配前端期望的格式
         const formattedDevice = {
           id: newDevice.id || newDevice.Id,
@@ -344,7 +367,11 @@ const GeneralDeviceList = () => {
       }
     } catch (error) {
       console.error('保存设备失败:', error)
-      message.error('保存设备失败')
+      if (error.message.includes('重复键') || error.message.includes('duplicate')) {
+        message.error('设备编号已存在，请输入新的设备编号')
+      } else {
+        message.error('保存设备失败')
+      }
     } finally {
       setLoading(false)
       setShowForm(false)
@@ -600,6 +627,9 @@ const GeneralDeviceList = () => {
           case '闲置':
             color = 'blue'
             break
+          case '未使用':
+            color = 'gray'
+            break
           default:
             color = 'gray'
         }
@@ -642,12 +672,14 @@ const GeneralDeviceList = () => {
   ]
 
   // 计算设备状态统计
+  console.log('计算状态统计，设备数量:', devices.length)
   const statusStats = {
     normal: devices.filter(device => device.status === '正常').length,
     repair: devices.filter(device => device.status === '待维修').length,
     scrap: devices.filter(device => device.status === '报废').length,
     total: devices.length
   }
+  console.log('状态统计结果:', statusStats)
 
   return (
     <div className="device-list">
@@ -715,8 +747,11 @@ const GeneralDeviceList = () => {
               placeholder="搜索设备名称、品牌、型号或序列号"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              onSearch={() => handleSearch()}
+              onPressEnter={() => handleSearch()}
               style={{ width: '100%' }}
               prefix={<SearchOutlined />}
+              enterButton
             />
           </Col>
           <Col span={6}>
@@ -747,15 +782,22 @@ const GeneralDeviceList = () => {
             </Select>
           </Col>
           <Col span={4}>
-            <Button 
-              onClick={() => {
-                setSearchText('')
-                setStatusFilter('')
-                setLocationFilter('')
-              }}
-            >
-              重置筛选
-            </Button>
+            <Space>
+              <Button type="primary" onClick={handleSearch}>
+                搜索
+              </Button>
+              <Button 
+                onClick={() => {
+                  setSearchText('')
+                  setStatusFilter('')
+                  setLocationFilter('')
+                  setSearchParams({})
+                  setFilteredDevices(devices)
+                }}
+              >
+                重置
+              </Button>
+            </Space>
           </Col>
         </Row>
       </Card>
@@ -770,23 +812,7 @@ const GeneralDeviceList = () => {
           showTotal: (total) => `共 ${total} 个设备`
         }}
         scroll={{ x: 1500 }}
-        components={{
-          body: (props) => {
-            const { data } = props;
-            if (data.length === 0) {
-              return (
-                <tbody>
-                  <tr key="empty">
-                    <td colSpan={columns.length} style={{ textAlign: 'center' }}>
-                      暂无数据
-                    </td>
-                  </tr>
-                </tbody>
-              );
-            }
-            return <tbody>{props.children}</tbody>;
-          }
-        }}
+        locale={{ emptyText: '暂无数据' }}
       />
 
       <Modal
