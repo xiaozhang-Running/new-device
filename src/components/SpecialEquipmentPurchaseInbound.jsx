@@ -22,7 +22,7 @@ const { Option } = Select
 // API调用函数
 const fetchInboundHistory = async () => {
   try {
-    const response = await fetch('http://localhost:5054/api/InOutbound/special-equipment-purchase-inbounds');
+    const response = await fetch('http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds');
     if (!response.ok) {
       throw new Error('获取入库历史失败');
     }
@@ -57,29 +57,30 @@ const fetchInboundHistory = async () => {
 
 const createSpecialEquipmentPurchaseInbound = async (data) => {
   try {
-    const response = await fetch('http://localhost:5054/api/InOutbound/special-equipment-purchase-inbounds', {
+    // 生成入库单号: SPE-IN-时间戳
+    const inboundNumber = `SPE-IN-${new Date().getTime()}`;
+    
+    const response = await fetch('http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        deliveryPerson: data.deliveryPerson,
-        inspector: data.inspector,
-        inboundPerson: data.inboundPerson,
-        inboundDate: data.inboundDate,
-        handler: data.inboundPerson, // 使用入库人作为操作人
-        warehouseKeeper: data.inspector, // 使用检验人员作为仓管员
-        remark: data.remark || '',
-        items: data.items.map(item => ({
-          equipmentName: item.name,
-          brand: item.brand,
-          model: item.model,
-          specification: item.specification,
-          unit: item.unit,
-          quantity: item.quantity,
-          status: item.status || '正常',
-          snCode: item.snCode || '',
-          accessories: item.accessories || ''
+        InboundNumber: inboundNumber,
+        DeliveryPerson: data.deliveryPerson,
+        Inspector: data.inspector,
+        InboundPerson: data.inboundPerson,
+        InboundDate: data.inboundDate ? data.inboundDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0],
+        Handler: data.inboundPerson, // 使用入库人作为操作人
+        WarehouseKeeper: data.inspector, // 使用检验人员作为仓管员
+        Remark: data.remark || '',
+        Items: data.items.map(item => ({
+          EquipmentName: item.name,
+          Brand: item.brand,
+          Model: item.model,
+          Unit: item.unit,
+          Quantity: item.quantity,
+          Status: item.status || '正常'
         }))
       })
     });
@@ -96,10 +97,35 @@ const createSpecialEquipmentPurchaseInbound = async (data) => {
   }
 };
 
+// 删除专用设备采购入库记录
+const deleteSpecialEquipmentPurchaseInbound = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      throw new Error('删除入库记录失败');
+    }
+    message.success('删除入库记录成功');
+    return true;
+  } catch (error) {
+    console.error('删除入库记录失败:', error);
+    message.error('删除入库记录失败');
+    return false;
+  }
+};
+
 // 生成设备编号
 const generateDeviceId = async (name, brand, model) => {
   try {
-    const response = await fetch(`http://localhost:5054/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&deviceType=1`);
+    let url = `http://localhost:5055/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&deviceType=1`;
+    if (model) {
+      url += `&model=${encodeURIComponent(model)}`;
+    }
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error('生成设备编号失败');
     }
@@ -124,7 +150,7 @@ const mockSuppliers = [
 // API调用函数 - 获取专用设备列表
 const fetchSpecialEquipments = async () => {
   try {
-    const response = await fetch('http://localhost:5054/api/Device/special-equipments');
+    const response = await fetch('http://localhost:5055/api/Device/special-equipments');
     if (!response.ok) {
       throw new Error('获取专用设备失败');
     }
@@ -391,6 +417,21 @@ function SpecialEquipmentPurchaseInbound() {
     setDetailModalVisible(true);
   };
 
+  // 删除入库记录
+  const handleDeleteInbound = async (record) => {
+    try {
+      const success = await deleteSpecialEquipmentPurchaseInbound(record.id);
+      if (success) {
+        // 重新加载入库历史
+        const history = await fetchInboundHistory();
+        setInboundHistory(history);
+      }
+    } catch (error) {
+      console.error('删除入库记录失败:', error);
+      message.error('删除入库记录失败');
+    }
+  };
+
   // 入库项表格列
   const inboundItemColumns = [
     {
@@ -436,11 +477,6 @@ function SpecialEquipmentPurchaseInbound() {
       title: '数量',
       dataIndex: 'quantity',
       key: 'quantity'
-    },
-    {
-      title: '单位',
-      dataIndex: 'unit',
-      key: 'unit'
     },
     {
       title: '配件',
@@ -496,6 +532,11 @@ function SpecialEquipmentPurchaseInbound() {
           移除
         </Button>
       )
+    },
+    {
+      title: '单位',
+      dataIndex: 'unit',
+      key: 'unit'
     }
   ];
 
@@ -540,7 +581,10 @@ function SpecialEquipmentPurchaseInbound() {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
+        <Space>
+          <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
+          <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteInbound(record)}>删除</Button>
+        </Space>
       )
     }
   ];
@@ -590,7 +634,7 @@ function SpecialEquipmentPurchaseInbound() {
                 name="orderNumber" 
                 label="入库单号" 
                 rules={[{ required: true, message: '请输入入库单号' }]}
-                initialValue="自动生成"
+                initialValue={`SPE-IN-${new Date().getTime()}`}
               >
                 <Input disabled placeholder="自动生成" />
               </Form.Item>
@@ -847,7 +891,7 @@ function SpecialEquipmentPurchaseInbound() {
 
           <Form.Item className="mt-4">
             <Button type="primary" htmlType="submit" style={{ marginRight: 16 }}>
-              确认入库
+              提交入库
             </Button>
             <Button onClick={() => {
               form.resetFields();

@@ -297,11 +297,7 @@ export const imageApi = {
   uploadInOutboundImage: async (orderId, orderType, formData) => {
     formData.append('orderId', orderId);
     formData.append('orderType', orderType === 'outbound' ? 1 : 2);
-    return await post('/Image/in-outbound', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return await post('/Image/in-outbound', formData);
   },
 
   // 获取出入库图片列表

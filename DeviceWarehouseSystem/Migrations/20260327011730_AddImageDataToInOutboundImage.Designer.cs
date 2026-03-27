@@ -4,6 +4,7 @@ using DeviceWarehouseSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeviceWarehouseSystem.Migrations
 {
     [DbContext(typeof(DeviceWarehouseContext))]
-    partial class DeviceWarehouseContextModelSnapshot : ModelSnapshot
+    [Migration("20260327011730_AddImageDataToInOutboundImage")]
+    partial class AddImageDataToInOutboundImage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -149,10 +152,6 @@ namespace DeviceWarehouseSystem.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -161,10 +160,6 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.Property<int>("EquipmentType")
                         .HasColumnType("int");
-
-                    b.Property<byte[]>("ImageData")
-                        .IsRequired()
-                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("ImageName")
                         .IsRequired()

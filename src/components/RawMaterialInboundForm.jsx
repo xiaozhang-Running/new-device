@@ -20,7 +20,8 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
     rawMaterialId: '',
     quantity: 1,
     specification: '',
-    remark: ''
+    remark: '',
+    unit: ''
   })
   
   // 库存数量
@@ -140,13 +141,14 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
   // 处理原材料表单变更
   const handleMaterialFormChange = (field, value) => {
     if (field === 'rawMaterialId') {
-      // 当选择原材料时，自动填充规格和库存数量
+      // 当选择原材料时，自动填充规格、单位和库存数量
       const selectedMaterial = rawMaterials.find(m => m.id === value)
       if (selectedMaterial) {
         setMaterialForm(prev => ({
           ...prev,
           rawMaterialId: value,
-          specification: selectedMaterial.specification || ''
+          specification: selectedMaterial.specification || '',
+          unit: selectedMaterial.unit || ''
         }))
         // 设置库存数量（剩余数量）
         setInventoryQuantity(selectedMaterial.remainingQuantity || 0)
@@ -179,6 +181,7 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
         quantity: materialForm.quantity,
         specification: materialForm.specification,
         remark: materialForm.remark,
+        unit: materialForm.unit,
         productName: selectedMaterial?.productName || ''
       }
       setItems([...items, newItem])
@@ -199,6 +202,7 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
         quantity: materialForm.quantity,
         specification: materialForm.specification,
         remark: materialForm.remark,
+        unit: materialForm.unit,
         productName: newMaterialName
       }
       setItems([...items, newItem])
@@ -209,7 +213,8 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
       rawMaterialId: '',
       quantity: 1,
       specification: '',
-      remark: ''
+      remark: '',
+      unit: ''
     })
     setNewMaterialName('')
     setMaterialType('existing')
@@ -313,6 +318,11 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
           </Popconfirm>
         </Space>
       )
+    },
+    {
+      title: '单位',
+      dataIndex: 'unit',
+      key: 'unit'
     }
   ]
 
@@ -459,7 +469,18 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
                   </Form.Item>
                 </Col>
                 
-                <Col xs={24} sm={12} md={8}>
+                <Col xs={24} sm={12} md={3}>
+                  <Form.Item label="单位">
+                    <Input 
+                      value={materialForm.unit}
+                      onChange={(e) => handleMaterialFormChange('unit', e.target.value)}
+                      placeholder="请输入单位"
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                
+                <Col xs={24} sm={12} md={5}>
                   <Form.Item label="备注">
                     <Input 
                       value={materialForm.remark}

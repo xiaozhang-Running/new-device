@@ -51,11 +51,15 @@ const request = async (url, options = {}) => {
 
     // 检查响应是否为空
     const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return await response.json();
+    try {
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      }
+      return await response.text();
+    } catch (e) {
+      console.error('解析响应失败:', e);
+      return await response.text();
     }
-
-    return await response.text();
   } catch (error) {
     // 清除超时
     clearTimeout(timeoutId);
@@ -79,12 +83,27 @@ export const get = (url, options = {}) => {
 
 export const post = (url, data, options = {}) => {
   console.log('发送POST请求:', url);
-  console.log('请求数据:', JSON.stringify(data, null, 2));
-  return request(url, {
-    ...options,
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+  // 检查是否为FormData对象
+  if (data instanceof FormData) {
+    console.log('请求数据: FormData对象');
+    return request(url, {
+      ...options,
+      method: 'POST',
+      body: data,
+      // 移除Content-Type，让浏览器自动处理
+      headers: {
+        ...options.headers,
+        'Content-Type': undefined,
+      },
+    });
+  } else {
+    console.log('请求数据:', JSON.stringify(data, null, 2));
+    return request(url, {
+      ...options,
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 };
 
 export const put = (url, data, options = {}) => {

@@ -23,10 +23,21 @@ public class ProjectOutboundController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProjectOutbound>>> GetProjectOutbounds()
     {
-        return await _context.ProjectOutbounds
+        var projectOutbounds = await _context.ProjectOutbounds
             .Include(p => p.ProjectOutboundItems)
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
+
+        // 清除导航属性以避免循环引用
+        foreach (var outbound in projectOutbounds)
+        {
+            foreach (var item in outbound.ProjectOutboundItems)
+            {
+                item.Outbound = null!;
+            }
+        }
+
+        return projectOutbounds;
     }
 
     // GET: api/ProjectOutbound/5
@@ -40,6 +51,12 @@ public class ProjectOutboundController : ControllerBase
         if (projectOutbound == null)
         {
             return NotFound();
+        }
+
+        // 清除导航属性以避免循环引用
+        foreach (var item in projectOutbound.ProjectOutboundItems)
+        {
+            item.Outbound = null!;
         }
 
         return projectOutbound;
@@ -124,6 +141,21 @@ public class ProjectOutboundController : ControllerBase
                     int quantity = itemData.GetProperty("Quantity").GetInt32();
                     totalQuantity += quantity;
                     
+                    // 解析CreatedAt字段，处理ISO格式的日期字符串
+                    DateTime itemCreatedAt = DateTime.Now;
+                    if (itemData.TryGetProperty("CreatedAt", out var createdAtElement) && createdAtElement.ValueKind == JsonValueKind.String)
+                    {
+                        var createdAtString = createdAtElement.GetString();
+                        if (!string.IsNullOrEmpty(createdAtString))
+                        {
+                            if (!DateTime.TryParse(createdAtString, out itemCreatedAt))
+                            {
+                                // 如果解析失败，使用当前时间
+                                itemCreatedAt = DateTime.Now;
+                            }
+                        }
+                    }
+
                     var item = new ProjectOutboundItem
                     {
                         ItemType = itemData.GetProperty("ItemType").GetInt32(),
@@ -137,7 +169,7 @@ public class ProjectOutboundController : ControllerBase
                         Accessories = itemData.TryGetProperty("Accessories", out var accessoriesElement) ? accessoriesElement.GetString() : null,
                         Remark = itemData.TryGetProperty("Remark", out var itemRemarkElement) ? itemRemarkElement.GetString() : null,
                         DeviceStatus = itemData.TryGetProperty("DeviceStatus", out var deviceStatusElement) ? deviceStatusElement.GetString() : null,
-                        CreatedAt = itemData.GetProperty("CreatedAt").GetDateTime()
+                        CreatedAt = itemCreatedAt
                     };
                     newProjectOutbound.ProjectOutboundItems.Add(item);
                 }
@@ -147,7 +179,14 @@ public class ProjectOutboundController : ControllerBase
             _context.ProjectOutbounds.Add(newProjectOutbound);
             await _context.SaveChangesAsync();
 
+            // 清除导航属性以避免循环引用
+            foreach (var item in newProjectOutbound.ProjectOutboundItems)
+            {
+                item.Outbound = null!;
+            }
+
             return CreatedAtAction(nameof(GetProjectOutbound), new { id = newProjectOutbound.Id }, newProjectOutbound);
+            
         }
         catch (Exception ex)
         {
@@ -199,7 +238,17 @@ public class ProjectOutboundController : ControllerBase
                     _context.Entry(generalEquipment).State = EntityState.Modified;
                 }
             }
-            // 耗材不需要更新状态
+            else if (item.ItemType == 3) // 耗材
+            {
+                var consumable = await _context.Consumables.FindAsync(item.ItemId);
+                if (consumable != null)
+                {
+                    consumable.UsedQuantity += item.Quantity;
+                    consumable.RemainingQuantity -= item.Quantity;
+                    consumable.UpdatedAt = DateTime.Now;
+                    _context.Entry(consumable).State = EntityState.Modified;
+                }
+            }
         }
 
         try
@@ -259,10 +308,55 @@ public class ProjectOutboundController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProjectOutbound(int id)
     {
-        var projectOutbound = await _context.ProjectOutbounds.FindAsync(id);
+        var projectOutbound = await _context.ProjectOutbounds
+            .Include(p => p.ProjectOutboundItems)
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (projectOutbound == null)
         {
             return NotFound();
+        }
+
+        // 如果出库单已完成，需要恢复设备状态和耗材数量
+        if (projectOutbound.IsCompleted)
+        {
+            foreach (var item in projectOutbound.ProjectOutboundItems)
+            {
+                if (item.ItemType == 1) // 专用设备
+                {
+                    var specialEquipment = await _context.SpecialEquipments.FindAsync(item.ItemId);
+                    if (specialEquipment != null)
+                    {
+                        specialEquipment.UseStatus = 3; // 3表示未使用
+                        specialEquipment.ProjectName = null;
+                        specialEquipment.ProjectTime = null;
+                        specialEquipment.UpdatedAt = DateTime.Now;
+                        _context.Entry(specialEquipment).State = EntityState.Modified;
+                    }
+                }
+                else if (item.ItemType == 2) // 通用设备
+                {
+                    var generalEquipment = await _context.GeneralEquipments.FindAsync(item.ItemId);
+                    if (generalEquipment != null)
+                    {
+                        generalEquipment.UseStatus = 3; // 3表示未使用
+                        generalEquipment.ProjectName = null;
+                        generalEquipment.ProjectTime = null;
+                        generalEquipment.UpdatedAt = DateTime.Now;
+                        _context.Entry(generalEquipment).State = EntityState.Modified;
+                    }
+                }
+                else if (item.ItemType == 3) // 耗材
+                {
+                    var consumable = await _context.Consumables.FindAsync(item.ItemId);
+                    if (consumable != null)
+                    {
+                        consumable.UsedQuantity -= item.Quantity;
+                        consumable.RemainingQuantity += item.Quantity;
+                        consumable.UpdatedAt = DateTime.Now;
+                        _context.Entry(consumable).State = EntityState.Modified;
+                    }
+                }
+            }
         }
 
         _context.ProjectOutbounds.Remove(projectOutbound);

@@ -22,7 +22,7 @@ const { Option } = Select
 // API调用函数
 const fetchInboundHistory = async () => {
   try {
-    const response = await fetch('http://localhost:5054/api/InOutbound/consumable-purchase-inbounds');
+    const response = await fetch('http://localhost:5055/api/InOutbound/consumable-purchase-inbounds');
     if (!response.ok) {
       throw new Error('获取入库历史失败');
     }
@@ -35,7 +35,7 @@ const fetchInboundHistory = async () => {
       inboundPerson: item.inboundPerson || '未知入库人',
       inboundDate: item.inboundDate ? new Date(item.inboundDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       operator: item.handler || '未知操作人',
-      status: '已完成',
+      status: item.status || '待确认',
       items: item.items.map(item => ({
         type: '耗材',
         name: item.consumableName,
@@ -43,8 +43,7 @@ const fetchInboundHistory = async () => {
         model: item.model,
         unit: item.unit,
         inventory: item.inventory || 0,
-        quantity: item.quantity,
-        deviceId: `HC${item.consumableName}001` // 临时生成耗材编号
+        quantity: item.quantity
       }))
     }));
   } catch (error) {
@@ -56,28 +55,26 @@ const fetchInboundHistory = async () => {
 
 const createConsumablePurchaseInbound = async (data) => {
   try {
-    const response = await fetch('http://localhost:5054/api/InOutbound/consumable-purchase-inbounds', {
+    const response = await fetch('http://localhost:5055/api/InOutbound/consumable-purchase-inbounds', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        deliveryPerson: data.deliveryPerson,
-        inspector: data.inspector,
-        inboundPerson: data.inboundPerson,
-        inboundDate: data.inboundDate,
-        handler: data.inboundPerson, // 使用入库人作为操作人
-        warehouseKeeper: data.inspector, // 使用检验人员作为仓管员
-        remark: data.remark || '',
-        items: data.items.map(item => ({
-          consumableName: item.name,
-          brand: item.brand,
-          model: item.model,
-          unit: item.unit,
-          quantity: item.quantity,
-          status: item.status || '正常',
-          snCode: item.snCode || '',
-          accessories: item.accessories || ''
+        InboundNumber: data.orderNumber,
+        DeliveryPerson: data.deliveryPerson,
+        Inspector: data.inspector,
+        InboundPerson: data.inboundPerson,
+        InboundDate: data.inboundDate ? data.inboundDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0],
+        Handler: data.inboundPerson, // 使用入库人作为操作人
+        WarehouseKeeper: data.inspector, // 使用检验人员作为仓管员
+        Remark: data.remark || '',
+        Items: data.items.map(item => ({
+          ConsumableName: item.name,
+          Brand: item.brand,
+          Model: item.model,
+          Unit: item.unit,
+          Quantity: item.quantity
         }))
       })
     });
@@ -97,7 +94,11 @@ const createConsumablePurchaseInbound = async (data) => {
 // 生成耗材编号
 const generateConsumableId = async (name, brand, model) => {
   try {
-    const response = await fetch(`http://localhost:5054/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&deviceType=3`);
+    let url = `http://localhost:5055/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&deviceType=3`;
+    if (model) {
+      url += `&model=${encodeURIComponent(model)}`;
+    }
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error('生成耗材编号失败');
     }
@@ -122,7 +123,7 @@ const mockSuppliers = [
 // API调用函数 - 获取耗材列表
 const fetchConsumables = async () => {
   try {
-    const response = await fetch('http://localhost:5054/api/Consumable');
+    const response = await fetch('http://localhost:5055/api/Consumable');
     if (!response.ok) {
       throw new Error('获取耗材失败');
     }
@@ -239,16 +240,12 @@ function ConsumablePurchaseInbound() {
   };
 
   // 添加入库项
-  const addInboundItem = async () => {
+  const addInboundItem = () => {
     const { name, brand, model, unit, quantity } = deviceForm;
     
     // 详细验证每个字段
     if (!name) {
       message.error('请选择耗材名称');
-      return;
-    }
-    if (!brand) {
-      message.error('请填写品牌');
       return;
     }
     if (!unit) {
@@ -261,7 +258,6 @@ function ConsumablePurchaseInbound() {
     }
 
     // 耗材只添加一条数据
-    const deviceId = await generateConsumableId(name, brand, model);
     const newItem = {
       key: Date.now(),
       type: '耗材',
@@ -270,11 +266,7 @@ function ConsumablePurchaseInbound() {
       model,
       unit,
       inventory: deviceForm.inventory,
-      quantity,
-      deviceId,
-      snCode: '',
-      accessories: '',
-      status: '正常'
+      quantity
     };
     setInboundItems(prev => [...prev, newItem]);
 
@@ -295,6 +287,12 @@ function ConsumablePurchaseInbound() {
     setInboundItems(prev => prev.filter(item => item.key !== key));
   };
 
+  // 生成入库单号
+  const generateOrderNumber = () => {
+    const timestamp = Date.now().toString().slice(-6);
+    return `Con-IN-${timestamp}`;
+  };
+
   // 处理新建入库单
   const handleCreateInbound = () => {
     form.resetFields();
@@ -308,6 +306,9 @@ function ConsumablePurchaseInbound() {
       inventory: 0,
       quantity: 1
     });
+    // 生成并设置入库单号
+    const orderNumber = generateOrderNumber();
+    form.setFieldsValue({ orderNumber });
     setCreateModalVisible(true);
   };
 
@@ -321,6 +322,7 @@ function ConsumablePurchaseInbound() {
     setLoading(true);
     try {
       const result = await createConsumablePurchaseInbound({
+        orderNumber: values.orderNumber,
         deliveryPerson: values.deliveryPerson,
         inspector: values.inspector,
         inboundPerson: values.inboundPerson,
@@ -353,36 +355,69 @@ function ConsumablePurchaseInbound() {
     setDetailModalVisible(true);
   };
 
+  // 编辑入库单
+  const editInbound = (record) => {
+    // 实现编辑功能
+    message.info('编辑功能开发中');
+  };
+
+  // 确认入库
+  const confirmInbound = async (record) => {
+    // 实现确认入库功能
+    try {
+      // 调用API确认入库
+      const response = await fetch('http://localhost:5055/api/InOutbound/consumable-purchase-inbounds/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(record.id)
+      });
+      if (!response.ok) {
+        throw new Error('确认入库失败');
+      }
+      // 更新本地状态
+      const updatedHistory = inboundHistory.map(item => {
+        if (item.id === record.id) {
+          return { ...item, status: '已完成' };
+        }
+        return item;
+      });
+      setInboundHistory(updatedHistory);
+      message.success('确认入库成功');
+    } catch (error) {
+      console.error('确认入库失败:', error);
+      message.error('确认入库失败');
+    }
+  };
+
+  // 删除入库单
+  const deleteInbound = async (record) => {
+    // 实现删除功能
+    try {
+      // 调用API删除入库单
+      const response = await fetch(`http://localhost:5055/api/InOutbound/consumable-purchase-inbounds/${record.id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        throw new Error('删除入库单失败');
+      }
+      // 更新本地状态
+      const updatedHistory = inboundHistory.filter(item => item.id !== record.id);
+      setInboundHistory(updatedHistory);
+      message.success('删除入库单成功');
+    } catch (error) {
+      console.error('删除入库单失败:', error);
+      message.error('删除入库单失败');
+    }
+  };
+
   // 入库项表格列
   const inboundItemColumns = [
     {
       title: '耗材名称',
       dataIndex: 'name',
       key: 'name'
-    },
-    {
-      title: '耗材编号',
-      dataIndex: 'deviceId',
-      key: 'deviceId'
-    },
-    {
-      title: 'SN码',
-      dataIndex: 'snCode',
-      key: 'snCode',
-      render: (_, record) => (
-        <Input 
-          value={record.snCode || ''} 
-          onChange={(e) => {
-            const newItems = inboundItems.map(item => 
-              item.key === record.key 
-                ? { ...item, snCode: e.target.value }
-                : item
-            );
-            setInboundItems(newItems);
-          }}
-          placeholder="请输入SN码"
-        />
-      )
     },
     {
       title: '品牌',
@@ -403,48 +438,6 @@ function ConsumablePurchaseInbound() {
       title: '单位',
       dataIndex: 'unit',
       key: 'unit'
-    },
-    {
-      title: '配件',
-      dataIndex: 'accessories',
-      key: 'accessories',
-      render: (_, record) => (
-        <Input 
-          value={record.accessories || ''} 
-          onChange={(e) => {
-            const newItems = inboundItems.map(item => 
-              item.key === record.key 
-                ? { ...item, accessories: e.target.value }
-                : item
-            );
-            setInboundItems(newItems);
-          }}
-          placeholder="请输入配件"
-        />
-      )
-    },
-    {
-      title: '设备状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (_, record) => (
-        <Select 
-          value={record.status || '正常'} 
-          style={{ width: '100%' }}
-          onChange={(value) => {
-            const newItems = inboundItems.map(item => 
-              item.key === record.key 
-                ? { ...item, status: value }
-                : item
-            );
-            setInboundItems(newItems);
-          }}
-        >
-          <Option value="正常">正常</Option>
-          <Option value="待维修">待维修</Option>
-          <Option value="已报废">已报废</Option>
-        </Select>
-      )
     },
     {
       title: '操作',
@@ -502,7 +495,30 @@ function ConsumablePurchaseInbound() {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
+        <Space size="middle">
+          <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
+          <Button 
+            type="primary" 
+            onClick={() => editInbound(record)}
+            disabled={record.status === '已完成'}
+          >
+            编辑
+          </Button>
+          <Button 
+            type="danger" 
+            onClick={() => deleteInbound(record)}
+          >
+            删除
+          </Button>
+          {record.status !== '已完成' && (
+            <Button 
+              type="success" 
+              onClick={() => confirmInbound(record)}
+            >
+              确认入库
+            </Button>
+          )}
+        </Space>
       )
     }
   ];
@@ -551,8 +567,7 @@ function ConsumablePurchaseInbound() {
               <Form.Item 
                 name="orderNumber" 
                 label="入库单号" 
-                rules={[{ required: true, message: '请输入入库单号' }]}
-                initialValue="自动生成"
+                initialValue={`CON-IN-${new Date().getTime()}`}
               >
                 <Input disabled placeholder="自动生成" />
               </Form.Item>
@@ -630,16 +645,6 @@ function ConsumablePurchaseInbound() {
                         </Col>
                         
                         <Col xs={24} sm={12} md={2}>
-                          <Form.Item label="单位">
-                            <Input 
-                              value={deviceForm.unit}
-                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
-                              placeholder="请输入单位"
-                            />
-                          </Form.Item>
-                        </Col>
-                        
-                        <Col xs={24} sm={12} md={2}>
                           <Form.Item label="采购数量">
                             <InputNumber 
                               min={1} 
@@ -659,6 +664,16 @@ function ConsumablePurchaseInbound() {
                               style={{ width: '100%' }}
                               placeholder="库存数量"
                               disabled
+                            />
+                          </Form.Item>
+                        </Col>
+                        
+                        <Col xs={24} sm={12} md={2}>
+                          <Form.Item label="单位">
+                            <Input 
+                              value={deviceForm.unit}
+                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
+                              placeholder="请输入单位"
                             />
                           </Form.Item>
                         </Col>
@@ -699,16 +714,6 @@ function ConsumablePurchaseInbound() {
                         </Col>
                         
                         <Col xs={24} sm={12} md={2}>
-                          <Form.Item label="单位">
-                            <Input 
-                              value={deviceForm.unit}
-                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
-                              placeholder="请输入单位"
-                            />
-                          </Form.Item>
-                        </Col>
-                        
-                        <Col xs={24} sm={12} md={2}>
                           <Form.Item label="采购数量">
                             <InputNumber 
                               min={1} 
@@ -728,6 +733,16 @@ function ConsumablePurchaseInbound() {
                               style={{ width: '100%' }}
                               placeholder="库存数量"
                               disabled
+                            />
+                          </Form.Item>
+                        </Col>
+                        
+                        <Col xs={24} sm={12} md={2}>
+                          <Form.Item label="单位">
+                            <Input 
+                              value={deviceForm.unit}
+                              onChange={(e) => handleDeviceFormChange('unit', e.target.value)}
+                              placeholder="请输入单位"
                             />
                           </Form.Item>
                         </Col>
@@ -809,7 +824,7 @@ function ConsumablePurchaseInbound() {
 
           <Form.Item className="mt-4">
             <Button type="primary" htmlType="submit" style={{ marginRight: 16 }}>
-              确认入库
+              提交入库
             </Button>
             <Button onClick={() => {
               form.resetFields();
@@ -862,14 +877,10 @@ function ConsumablePurchaseInbound() {
             <Table 
               columns={[
                 { title: '耗材名称', dataIndex: 'name', key: 'name' },
-                { title: '耗材编号', dataIndex: 'deviceId', key: 'deviceId' },
-                { title: 'SN码', dataIndex: 'snCode', key: 'snCode' },
                 { title: '品牌', dataIndex: 'brand', key: 'brand' },
                 { title: '型号', dataIndex: 'model', key: 'model' },
                 { title: '数量', dataIndex: 'quantity', key: 'quantity' },
-                { title: '单位', dataIndex: 'unit', key: 'unit' },
-                { title: '配件', dataIndex: 'accessories', key: 'accessories' },
-                { title: '设备状态', dataIndex: 'status', key: 'status' }
+                { title: '单位', dataIndex: 'unit', key: 'unit' }
               ]} 
               dataSource={currentInboundDetail.items} 
               rowKey={(record, index) => index}

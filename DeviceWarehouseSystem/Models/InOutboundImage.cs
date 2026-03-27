@@ -17,4 +17,10 @@ public partial class InOutboundImage
     public int OrderIndex { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    // 图片二进制数据
+    public byte[]? ImageData { get; set; }
+
+    // 图片MIME类型
+    public string? ContentType { get; set; }
 }

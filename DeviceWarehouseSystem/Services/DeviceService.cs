@@ -32,7 +32,7 @@ namespace DeviceWarehouseSystem.Services
                 Warehouse = e.Warehouse ?? "主仓库", // 默认为主仓库
                 Company = e.Company,
                 Status = e.Status,
-                UseStatus = e.UseStatus == 1 ? "使用中" : e.UseStatus == 2 ? "停用" : "未使用",
+                UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
                 Location = e.Location,
                 Description = e.Remark,
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),
@@ -91,7 +91,7 @@ namespace DeviceWarehouseSystem.Services
                     Warehouse = e.Warehouse ?? "主仓库",
                     Company = e.Company,
                     Status = e.Status,
-                    UseStatus = e.UseStatus == 1 ? "使用中" : e.UseStatus == 2 ? "停用" : "未使用",
+                    UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
                     Location = e.Location,
                     Description = e.Remark,
                     PurchaseDate = e.PurchaseDate.HasValue ? e.PurchaseDate.Value.ToString("yyyy-MM-dd") : e.CreatedAt.ToString("yyyy-MM-dd"),
@@ -131,7 +131,7 @@ namespace DeviceWarehouseSystem.Services
                 Warehouse = equipment.Warehouse ?? "主仓库", // 默认为主仓库
                 Company = equipment.Company,
                 Status = equipment.Status,
-                UseStatus = equipment.UseStatus == 1 ? "使用中" : equipment.UseStatus == 2 ? "停用" : "未使用",
+                UseStatus = equipment.UseStatus == 1 ? "使用中" : "未使用",
                 Location = equipment.Location,
                 Description = equipment.Remark,
                 PurchaseDate = equipment.PurchaseDate?.ToString("yyyy-MM-dd") ?? equipment.CreatedAt.ToString("yyyy-MM-dd"),
@@ -183,7 +183,7 @@ namespace DeviceWarehouseSystem.Services
                 Warehouse = dto.Warehouse,
                 Company = dto.Company,
                 Status = string.IsNullOrEmpty(dto.Status) ? "正常" : dto.Status,
-                UseStatus = 3, // 3表示未使用
+                UseStatus = 0, // 0表示未使用
                 Location = dto.Location,
                 Remark = dto.Description,
                 PurchaseDate = purchaseDate,
@@ -262,7 +262,7 @@ namespace DeviceWarehouseSystem.Services
             equipment.Warehouse = dto.Warehouse;
             equipment.Company = dto.Company;
             equipment.Status = string.IsNullOrEmpty(dto.Status) ? "正常" : dto.Status;
-            equipment.UseStatus = dto.UseStatus == "使用中" ? 1 : dto.UseStatus == "停用" ? 2 : 3;
+            equipment.UseStatus = dto.UseStatus == "使用中" ? 1 : 0;
             equipment.Location = dto.Location;
             equipment.Remark = dto.Description;
             equipment.PurchasePrice = dto.PurchasePrice;
@@ -359,7 +359,7 @@ namespace DeviceWarehouseSystem.Services
                 Warehouse = e.Warehouse ?? "主仓库", // 默认为主仓库
                 Company = e.Company,
                 Status = e.Status,
-                UseStatus = e.UseStatus == 1 ? "使用中" : e.UseStatus == 2 ? "停用" : "未使用",
+                UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
                 Location = e.Location,
                 Description = e.Remark,
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),
@@ -418,7 +418,7 @@ namespace DeviceWarehouseSystem.Services
                     Warehouse = e.Warehouse ?? "主仓库",
                     Company = e.Company,
                     Status = e.Status,
-                    UseStatus = e.UseStatus == 1 ? "使用中" : e.UseStatus == 2 ? "停用" : "未使用",
+                    UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
                     Location = e.Location,
                     Description = e.Remark,
                     PurchaseDate = e.PurchaseDate.HasValue ? e.PurchaseDate.Value.ToString("yyyy-MM-dd") : e.CreatedAt.ToString("yyyy-MM-dd"),
@@ -458,7 +458,7 @@ namespace DeviceWarehouseSystem.Services
                 Warehouse = equipment.Warehouse ?? "主仓库", // 默认为主仓库
                 Company = equipment.Company,
                 Status = equipment.Status,
-                UseStatus = equipment.UseStatus == 1 ? "使用中" : equipment.UseStatus == 2 ? "停用" : "未使用",
+                UseStatus = equipment.UseStatus == 1 ? "使用中" : "未使用",
                 Location = equipment.Location,
                 Description = equipment.Remark,
                 PurchaseDate = equipment.PurchaseDate?.ToString("yyyy-MM-dd") ?? equipment.CreatedAt.ToString("yyyy-MM-dd"),
@@ -510,7 +510,7 @@ namespace DeviceWarehouseSystem.Services
                 Warehouse = dto.Warehouse,
                 Company = dto.Company,
                 Status = string.IsNullOrEmpty(dto.Status) ? "正常" : dto.Status,
-                UseStatus = 3, // 3表示未使用
+                UseStatus = 0, // 0表示未使用
                 Location = dto.Location,
                 Remark = dto.Description,
                 PurchaseDate = purchaseDate,
@@ -579,7 +579,7 @@ namespace DeviceWarehouseSystem.Services
             equipment.Warehouse = dto.Warehouse;
             equipment.Company = dto.Company;
             equipment.Status = string.IsNullOrEmpty(dto.Status) ? "正常" : dto.Status;
-            equipment.UseStatus = dto.UseStatus == "使用中" ? 1 : dto.UseStatus == "停用" ? 2 : 3;
+            equipment.UseStatus = dto.UseStatus == "使用中" ? 1 : 0;
             equipment.Location = dto.Location;
             equipment.Remark = dto.Description;
             equipment.PurchasePrice = dto.PurchasePrice;
@@ -800,7 +800,7 @@ namespace DeviceWarehouseSystem.Services
                 .Include(i => i.SpecialEquipment)
                 .Where(i => i.SpecialEquipmentId != null && i.SpecialEquipment != null && 
                             i.SpecialEquipment.DeviceStatus == 1 && // 1表示正常
-                            i.SpecialEquipment.UseStatus == 3) // 3表示未使用
+                            i.SpecialEquipment.UseStatus == 0) // 0表示未使用
                 .ToListAsync();
 
             // 按设备名称、品牌、型号分组汇总
@@ -835,7 +835,7 @@ namespace DeviceWarehouseSystem.Services
                 .Include(i => i.GeneralEquipment)
                 .Where(i => i.GeneralEquipmentId != null && i.GeneralEquipment != null && 
                             i.GeneralEquipment.DeviceStatus == 1 && // 1表示正常
-                            i.GeneralEquipment.UseStatus == 3) // 3表示未使用
+                            i.GeneralEquipment.UseStatus == 0) // 0表示未使用
                 .ToListAsync();
 
             // 按设备名称、品牌、型号分组汇总
@@ -869,7 +869,7 @@ namespace DeviceWarehouseSystem.Services
             var query = _context.SpecialEquipments
                 .Where(e => e.DeviceName == deviceName && 
                             e.DeviceStatus == 1 && // 1表示正常
-                            e.UseStatus == 3); // 3表示未使用
+                            e.UseStatus == 0); // 0表示未使用
 
             if (!string.IsNullOrEmpty(brand))
             {
@@ -892,7 +892,7 @@ namespace DeviceWarehouseSystem.Services
                 Warehouse = e.Warehouse ?? "主仓库",
                 Company = e.Company,
                 Status = e.Status,
-                UseStatus = e.UseStatus == 1 ? "使用中" : e.UseStatus == 2 ? "停用" : "未使用",
+                UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
                 Location = e.Location,
                 Description = e.Remark,
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),
@@ -906,7 +906,7 @@ namespace DeviceWarehouseSystem.Services
             var query = _context.GeneralEquipments
                 .Where(e => e.DeviceName == deviceName && 
                             e.DeviceStatus == 1 && // 1表示正常
-                            e.UseStatus == 3); // 3表示未使用
+                            e.UseStatus == 0); // 0表示未使用
 
             if (!string.IsNullOrEmpty(brand))
             {
@@ -929,7 +929,7 @@ namespace DeviceWarehouseSystem.Services
                 Warehouse = e.Warehouse ?? "主仓库",
                 Company = e.Company,
                 Status = e.Status,
-                UseStatus = e.UseStatus == 1 ? "使用中" : e.UseStatus == 2 ? "停用" : "未使用",
+                UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
                 Location = e.Location,
                 Description = e.Remark,
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),

@@ -78,7 +78,7 @@ const DeviceList = () => {
       warehouse: '主仓库',
       company: '科技有限公司',
       status: '待维修',
-      useStatus: '停用',
+      useStatus: '未使用',
       location: '机房A',
       description: '企业级路由器',
       purchaseDate: '2024-03-01',
@@ -138,7 +138,7 @@ const DeviceList = () => {
       warehouse: '主仓库',
       company: '科技有限公司',
       status: '待维修',
-      useStatus: '停用',
+      useStatus: '未使用',
       location: '机房A',
       description: '网络存储设备',
       purchaseDate: '2024-06-01',
@@ -621,12 +621,6 @@ const DeviceList = () => {
           case '使用中':
             color = 'green'
             break
-          case '停用':
-            color = 'orange'
-            break
-          case '闲置':
-            color = 'blue'
-            break
           case '未使用':
             color = 'gray'
             break
@@ -870,8 +864,7 @@ const DeviceList = () => {
                   </Descriptions.Item>
                   <Descriptions.Item label="使用状态" key="useStatus">
                     <Tag color={
-                      selectedDevice.useStatus === '使用中' ? 'green' :
-                      selectedDevice.useStatus === '停用' ? 'orange' : 'blue'
+                      selectedDevice.useStatus === '使用中' ? 'green' : 'gray'
                     } key="useStatus-tag">
                       {selectedDevice.useStatus}
                     </Tag>

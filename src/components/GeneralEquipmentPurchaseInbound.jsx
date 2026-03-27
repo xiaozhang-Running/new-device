@@ -22,7 +22,7 @@ const { Option } = Select
 // API调用函数
 const fetchInboundHistory = async () => {
   try {
-    const response = await fetch('http://localhost:5054/api/InOutbound/general-equipment-purchase-inbounds');
+    const response = await fetch('http://localhost:5055/api/InOutbound/general-equipment-purchase-inbounds');
     if (!response.ok) {
       throw new Error('获取入库历史失败');
     }
@@ -56,28 +56,30 @@ const fetchInboundHistory = async () => {
 
 const createGeneralEquipmentPurchaseInbound = async (data) => {
   try {
-    const response = await fetch('http://localhost:5054/api/InOutbound/general-equipment-purchase-inbounds', {
+    // 生成入库单号: GEN-IN-时间戳
+    const inboundNumber = `GEN-IN-${new Date().getTime()}`;
+    
+    const response = await fetch('http://localhost:5055/api/InOutbound/general-equipment-purchase-inbounds', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        deliveryPerson: data.deliveryPerson,
-        inspector: data.inspector,
-        inboundPerson: data.inboundPerson,
-        inboundDate: data.inboundDate,
-        handler: data.inboundPerson, // 使用入库人作为操作人
-        warehouseKeeper: data.inspector, // 使用检验人员作为仓管员
-        remark: data.remark || '',
-        items: data.items.map(item => ({
-          equipmentName: item.name,
-          brand: item.brand,
-          model: item.model,
-          unit: item.unit,
-          quantity: item.quantity,
-          status: item.status || '正常',
-          snCode: item.snCode || '',
-          accessories: item.accessories || ''
+        InboundNumber: inboundNumber,
+        DeliveryPerson: data.deliveryPerson,
+        Inspector: data.inspector,
+        InboundPerson: data.inboundPerson,
+        InboundDate: data.inboundDate ? data.inboundDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0],
+        Handler: data.inboundPerson, // 使用入库人作为操作人
+        WarehouseKeeper: data.inspector, // 使用检验人员作为仓管员
+        Remark: data.remark || '',
+        Items: data.items.map(item => ({
+          EquipmentName: item.name,
+          Brand: item.brand,
+          Model: item.model,
+          Unit: item.unit,
+          Quantity: item.quantity,
+          Status: item.status || '正常'
         }))
       })
     });
@@ -97,7 +99,11 @@ const createGeneralEquipmentPurchaseInbound = async (data) => {
 // 生成设备编号
 const generateDeviceId = async (name, brand, model) => {
   try {
-    const response = await fetch(`http://localhost:5054/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&model=${encodeURIComponent(model)}&deviceType=2`);
+    let url = `http://localhost:5055/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&deviceType=2`;
+    if (model) {
+      url += `&model=${encodeURIComponent(model)}`;
+    }
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error('生成设备编号失败');
     }
@@ -122,7 +128,7 @@ const mockSuppliers = [
 // API调用函数 - 获取通用设备列表
 const fetchGeneralEquipments = async () => {
   try {
-    const response = await fetch('http://localhost:5054/api/Device/general-equipments');
+    const response = await fetch('http://localhost:5055/api/Device/general-equipments');
     if (!response.ok) {
       throw new Error('获取通用设备失败');
     }
@@ -430,11 +436,6 @@ function GeneralEquipmentPurchaseInbound() {
       key: 'quantity'
     },
     {
-      title: '单位',
-      dataIndex: 'unit',
-      key: 'unit'
-    },
-    {
       title: '配件',
       dataIndex: 'accessories',
       key: 'accessories',
@@ -488,6 +489,11 @@ function GeneralEquipmentPurchaseInbound() {
           移除
         </Button>
       )
+    },
+    {
+      title: '单位',
+      dataIndex: 'unit',
+      key: 'unit'
     }
   ];
 

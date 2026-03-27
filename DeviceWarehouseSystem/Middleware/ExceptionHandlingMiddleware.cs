@@ -34,6 +34,7 @@ namespace DeviceWarehouseSystem.Middleware
         {
             context.Response.ContentType = "application/json";
 
+            HttpStatusCode statusCode;
             var response = exception switch
             {
                 KeyNotFoundException => CreateErrorResponse(
@@ -62,8 +63,21 @@ namespace DeviceWarehouseSystem.Middleware
                     "处理请求时发生错误，请稍后重试")
             };
 
+            // 根据异常类型确定状态码
+            statusCode = exception switch
+            {
+                KeyNotFoundException => HttpStatusCode.NotFound,
+                UnauthorizedAccessException => HttpStatusCode.Unauthorized,
+                ArgumentException => HttpStatusCode.BadRequest,
+                InvalidOperationException => HttpStatusCode.BadRequest,
+                _ => HttpStatusCode.InternalServerError
+            };
+
+            // 设置响应状态码
+            context.Response.StatusCode = (int)statusCode;
+
             // 记录日志
-            if (context.Response.StatusCode >= 500)
+            if (statusCode >= HttpStatusCode.InternalServerError)
             {
                 _logger.LogError(exception, "服务器错误: {Message}", exception.Message);
             }
@@ -71,8 +85,6 @@ namespace DeviceWarehouseSystem.Middleware
             {
                 _logger.LogWarning(exception, "客户端错误: {Message}", exception.Message);
             }
-
-            context.Response.StatusCode = (int)HttpStatusCode.OK; // 始终返回200，错误信息在响应体中
 
             var options = new JsonSerializerOptions
             {
@@ -84,7 +96,7 @@ namespace DeviceWarehouseSystem.Middleware
 
         private static ApiResponse CreateErrorResponse(HttpStatusCode statusCode, string message, string error)
         {
-            return ApiResponse.ErrorResponse(message, error);
+            return ApiResponse.ErrorResponse(message, new List<string> { error });
         }
     }
 

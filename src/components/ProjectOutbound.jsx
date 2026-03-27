@@ -182,6 +182,33 @@ function ProjectOutbound() {
     fetchDevices()
   }, [])
 
+  // 从后端获取出库记录
+  useEffect(() => {
+    const fetchOutboundHistory = async () => {
+      try {
+        const response = await projectOutboundApi.getProjectOutbounds()
+        console.log('出库记录:', response)
+        // 转换数据格式以匹配表格列定义
+        const formattedHistory = response.map(item => ({
+          id: item.id,
+          outboundId: item.outboundNumber,
+          projectName: item.projectName,
+          projectTime: item.projectTime,
+          recipient: item.recipient,
+          outboundDate: item.outboundDate ? new Date(item.outboundDate).toISOString().split('T')[0] : '',
+          status: item.isCompleted ? '已完成' : '待确认',
+          items: item.projectOutboundItems || []
+        }))
+        setOutboundHistory(formattedHistory)
+      } catch (error) {
+        console.error('获取出库记录失败:', error)
+        message.error('获取出库记录失败')
+      }
+    }
+
+    fetchOutboundHistory()
+  }, [])
+
   // 打开设备详情模态框
   const openDeviceDetailModal = async (device, deviceType) => {
     setCurrentDeviceType(deviceType)
@@ -483,8 +510,8 @@ function ProjectOutbound() {
   const historyColumns = [
     {
       title: '出库单号',
-      dataIndex: 'id',
-      key: 'id'
+      dataIndex: 'outboundId',
+      key: 'outboundId'
     },
     {
       title: '项目名称',
@@ -497,16 +524,21 @@ function ProjectOutbound() {
       key: 'outboundDate'
     },
     {
-      title: '操作人',
-      dataIndex: 'operator',
-      key: 'operator'
+      title: '项目时间',
+      dataIndex: 'projectTime',
+      key: 'projectTime'
+    },
+    {
+      title: '领用人',
+      dataIndex: 'recipient',
+      key: 'recipient'
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       render: (text, record) => (
-        <div title={`项目名称: ${record.projectName}\n项目时间: ${record['项目时间']}`}>
+        <div title={`项目名称: ${record.projectName}\n项目时间: ${record.projectTime}`}>
           {text}
         </div>
       )
@@ -592,15 +624,25 @@ function ProjectOutbound() {
   const confirmOutbound = async (outboundId) => {
     try {
       await projectOutboundApi.completeProjectOutbound(outboundId)
-      setOutboundHistory(prev => prev.map(item => {
-        if (item.id === outboundId) {
-          return { ...item, status: '已完成' }
-        }
-        return item
-      }))
+      
+      // 重新获取出库记录，确保项目名称和项目时间正确显示
+      const updatedOutbounds = await projectOutboundApi.getProjectOutbounds(false);
+      const outboundHistoryData = updatedOutbounds.map(outbound => ({
+        id: outbound.id,
+        outboundId: outbound.outboundNumber,
+        projectName: outbound.projectName,
+        projectTime: outbound.projectTime,
+        recipient: outbound.recipient,
+        outboundDate: outbound.outboundDate ? new Date(outbound.outboundDate).toISOString().split('T')[0] : '',
+        status: outbound.isCompleted ? '已完成' : '待确认',
+        items: [] // 简化处理，实际应用中可以从outbound.ProjectOutboundItems获取
+      }));
+      setOutboundHistory(outboundHistoryData);
+      
       message.success('出库确认成功')
     } catch (error) {
-      message.error('出库确认失败：' + error.message)
+      console.error('确认出库失败:', error);
+      message.error('出库确认失败：' + (error.message || '未知错误'))
     }
   }
 
@@ -621,6 +663,7 @@ function ProjectOutbound() {
 
   // 处理表单提交
   const handleSubmit = async (values) => {
+    console.log('开始提交出库单:', values);
     const now = new Date().toISOString();
     const projectOutboundItems = [
       ...selectedSpecialDevices.map(item => ({
@@ -667,17 +710,34 @@ function ProjectOutbound() {
       }))
     ]
 
+    console.log('已选物品数量:', projectOutboundItems.length);
     if (projectOutboundItems.length === 0) {
       message.error('请至少选择一项设备或耗材')
       return
     }
 
     try {
+      // 检查项目名称是否重复
+      console.log('开始检查项目名称重复');
+      let projectName = values['项目名称'] || '未知项目';
+      console.log('原始项目名称:', projectName);
+      const existingOutbounds = await projectOutboundApi.getProjectOutbounds();
+      console.log('已存在的出库单数量:', existingOutbounds.length);
+      const isDuplicate = existingOutbounds.some(outbound => 
+        outbound.ProjectName === projectName && !outbound.ProjectName.includes('补发')
+      );
+      console.log('是否重复:', isDuplicate);
+      
+      if (isDuplicate) {
+        projectName += ' 补发';
+        console.log('修改后的项目名称:', projectName);
+      }
+
       // 先创建出库单，不包含图片
       const outboundData = {
         OutboundNumber: 'temp', // 临时值，后端会覆盖
         OutboundDate: values['出库时间'] ? values['出库时间'].toISOString() : new Date().toISOString(),
-        ProjectName: values['项目名称'] || '未知项目',
+        ProjectName: projectName,
         ProjectTime: values['项目时间'] || '',
         ProjectManager: values['项目负责人'] || '',
         Recipient: values['领用人'] || '',
@@ -698,18 +758,20 @@ function ProjectOutbound() {
             DeviceCode: item.DeviceCode || '',
             Brand: item.Brand || '',
             Model: item.Model || '',
-            Quantity: item.quantity || 1,
-            Unit: item.unit || '',
-            Accessories: item.accessories || '',
-            Remark: item.remark || '',
-            DeviceStatus: item.status || '',
+            Quantity: item.Quantity || 1,
+            Unit: item.Unit || '',
+            Accessories: item.Accessories || '',
+            Remark: item.Remark || '',
+            DeviceStatus: item.DeviceStatus || '',
             CreatedAt: item.CreatedAt
           };
         })
       }
 
       console.log('发送出库单数据:', outboundData);
-      const response = await projectOutboundApi.createProjectOutbound(outboundData)
+      console.log('开始调用createProjectOutbound');
+      const createResponse = await projectOutboundApi.createProjectOutbound(outboundData);
+      console.log('createProjectOutbound响应:', createResponse);
       
       // 上传图片
       let imageUrls = ''
@@ -719,8 +781,8 @@ function ProjectOutbound() {
           const formData = new FormData()
           formData.append('file', image)
           try {
-            const response = await imageApi.uploadInOutboundImage(response.id, 'outbound', formData)
-            return response
+            const uploadResponse = await imageApi.uploadInOutboundImage(createResponse.id, 'outbound', formData)
+            return uploadResponse
           } catch (error) {
             console.error('上传图片失败:', error)
             return null
@@ -733,27 +795,19 @@ function ProjectOutbound() {
         
         // 更新出库单，添加图片URL
         if (imageUrls) {
-          await projectOutboundApi.updateProjectOutbound(response.id, {
+          await projectOutboundApi.updateProjectOutbound(createResponse.id, {
             OutboundImages: imageUrls
           })
         }
       }
 
       const newOutbound = {
-        id: response.id,
-        outboundId: response.outboundNumber,
-        projectName: response.projectName,
-        领用方式: response.outboundType,
-        物流方式: response.logisticsMethod,
-        项目时间: response.projectTime,
-        使用地: response.usageLocation,
-        项目负责人: response.projectManager,
-        联系电话: response.contactPhone,
-        预计归还时间: response.returnDate ? new Date(response.returnDate).toISOString().split('T')[0] : '',
-        领用人: response.recipient,
-        库管: response.warehouseKeeper,
-        出库时间: response.outboundDate ? new Date(response.outboundDate).toISOString().split('T')[0] : '',
-        remark: response.remark,
+        id: createResponse.id,
+        outboundId: createResponse.outboundNumber,
+        projectName: createResponse.projectName,
+        projectTime: createResponse.projectTime,
+        recipient: createResponse.recipient,
+        outboundDate: createResponse.outboundDate ? new Date(createResponse.outboundDate).toISOString().split('T')[0] : '',
         status: '待确认',
         items: projectOutboundItems
       }
@@ -769,7 +823,8 @@ function ProjectOutbound() {
       setSelectedImages([])
       setCreateModalVisible(false)
     } catch (error) {
-      message.error('项目出库单提交失败：' + error.message)
+      console.error('提交出库单失败:', error);
+      message.error('项目出库单提交失败：' + (error.message || '未知错误'))
     }
   }
 

@@ -205,8 +205,7 @@ const DeviceForm = ({ device, onSave, onCancel }) => {
           >
             <Select placeholder="请选择使用状态">
               <Option value="使用中">使用中</Option>
-              <Option value="停用">停用</Option>
-              <Option value="闲置">闲置</Option>
+              <Option value="未使用">未使用</Option>
             </Select>
           </Form.Item>
         </Col>

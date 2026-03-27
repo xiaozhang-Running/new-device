@@ -168,6 +168,8 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Error creating special equipment purchase inbound: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -234,9 +236,69 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
+        // POST: api/InOutbound/consumable-purchase-inbounds/confirm
+        [HttpPost("consumable-purchase-inbounds/confirm")]
+        public async Task<ActionResult<ConsumablePurchaseInboundDTO>> ConfirmConsumablePurchaseInbound([FromBody] int id)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.ConfirmConsumablePurchaseInboundAsync(id);
+                return Ok(inbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // DELETE: api/InOutbound/consumable-purchase-inbounds/{id}
+        [HttpDelete("consumable-purchase-inbounds/{id}")]
+        public async Task<ActionResult<bool>> DeleteConsumablePurchaseInbound(int id)
+        {
+            try
+            {
+                await _inOutboundService.DeleteConsumablePurchaseInboundAsync(id);
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // DELETE: api/InOutbound/special-equipment-purchase-inbounds/{id}
+        [HttpDelete("special-equipment-purchase-inbounds/{id}")]
+        public async Task<ActionResult<bool>> DeleteSpecialEquipmentPurchaseInbound(int id)
+        {
+            try
+            {
+                await _inOutboundService.DeleteSpecialEquipmentPurchaseInboundAsync(id);
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // DELETE: api/InOutbound/general-equipment-purchase-inbounds/{id}
+        [HttpDelete("general-equipment-purchase-inbounds/{id}")]
+        public async Task<ActionResult<bool>> DeleteGeneralEquipmentPurchaseInbound(int id)
+        {
+            try
+            {
+                await _inOutboundService.DeleteGeneralEquipmentPurchaseInboundAsync(id);
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // GET: api/InOutbound/generate-device-code
         [HttpGet("generate-device-code")]
-        public async Task<ActionResult<string>> GenerateDeviceCode(string deviceName, string brand, string model, int deviceType)
+        public async Task<ActionResult<string>> GenerateDeviceCode(string deviceName, string brand, int deviceType, string model = null)
         {
             try
             {

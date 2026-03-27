@@ -142,7 +142,7 @@ const ConsumableList = () => {
     const fetchConsumables = async () => {
       setLoading(true)
       try {
-        const response = await fetch('http://localhost:5054/api/Consumable')
+        const response = await fetch('http://localhost:5055/api/Consumable')
         if (response.ok) {
           const data = await response.json()
           // 确保每个对象都有唯一的key属性
@@ -170,7 +170,7 @@ const ConsumableList = () => {
     const fetchFilteredConsumables = async () => {
       setLoading(true)
       try {
-        let url = 'http://localhost:5054/api/Consumable?'
+        let url = 'http://localhost:5055/api/Consumable?'
         let params = []
         
         if (searchText) {
@@ -229,7 +229,7 @@ const ConsumableList = () => {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5054/api/Consumable/${id}`, {
+      const response = await fetch(`http://localhost:5055/api/Consumable/${id}`, {
         method: 'DELETE'
       })
       

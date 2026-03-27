@@ -17,4 +17,8 @@ public partial class EquipmentImage
     public int OrderIndex { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public byte[] ImageData { get; set; } = null!;
+
+    public string ContentType { get; set; } = null!;
 }

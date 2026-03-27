@@ -138,7 +138,7 @@ const GeneralDeviceList = () => {
       warehouse: '主仓库',
       company: '科技有限公司',
       status: '待维修',
-      useStatus: '停用',
+      useStatus: '未使用',
       location: '打印室',
       description: '激光打印机',
       purchaseDate: '2024-06-01',
@@ -621,12 +621,6 @@ const GeneralDeviceList = () => {
           case '使用中':
             color = 'green'
             break
-          case '停用':
-            color = 'orange'
-            break
-          case '闲置':
-            color = 'blue'
-            break
           case '未使用':
             color = 'gray'
             break
@@ -870,8 +864,7 @@ const GeneralDeviceList = () => {
                   </Descriptions.Item>
                   <Descriptions.Item label="使用状态" key="useStatus">
                     <Tag color={
-                      selectedDevice.useStatus === '使用中' ? 'green' :
-                      selectedDevice.useStatus === '停用' ? 'orange' : 'blue'
+                      selectedDevice.useStatus === '使用中' ? 'green' : 'gray'
                     } key="useStatus-tag">
                       {selectedDevice.useStatus}
                     </Tag>

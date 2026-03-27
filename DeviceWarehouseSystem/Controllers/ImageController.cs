@@ -27,23 +27,6 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var imagePaths = await _imageService.UploadEquipmentImages(files, equipmentId);
-                
-                // 保存图片记录到数据库
-                int orderIndex = 0;
-                foreach (var path in imagePaths)
-                {
-                    var image = new EquipmentImage
-                    {
-                        EquipmentId = equipmentId,
-                        EquipmentType = equipmentType,
-                        ImagePath = path,
-                        ImageName = System.IO.Path.GetFileName(path),
-                        OrderIndex = orderIndex++
-                    };
-                    _context.EquipmentImages.Add(image);
-                }
-                await _context.SaveChangesAsync();
-
                 return Ok(imagePaths);
             }
             catch (System.Exception ex)
@@ -54,28 +37,11 @@ namespace DeviceWarehouseSystem.Controllers
 
         // 上传出入库图片
         [HttpPost("in-outbound")]
-        public async Task<ActionResult<List<string>>> UploadInOutboundImages([FromForm] int orderId, [FromForm] int orderType, IFormFileCollection files)
+        public async Task<ActionResult<List<string>>> UploadInOutboundImages([FromForm] IFormFileCollection files, [FromForm] int orderId, [FromForm] int orderType)
         {
             try
             {
                 var imagePaths = await _imageService.UploadInOutboundImages(files, orderId);
-                
-                // 保存图片记录到数据库
-                int orderIndex = 0;
-                foreach (var path in imagePaths)
-                {
-                    var image = new InOutboundImage
-                    {
-                        OrderId = orderId,
-                        OrderType = orderType,
-                        ImagePath = path,
-                        ImageName = System.IO.Path.GetFileName(path),
-                        OrderIndex = orderIndex++
-                    };
-                    _context.InOutboundImages.Add(image);
-                }
-                await _context.SaveChangesAsync();
-
                 return Ok(imagePaths);
             }
             catch (System.Exception ex)
@@ -86,14 +52,14 @@ namespace DeviceWarehouseSystem.Controllers
 
         // 获取设备图片列表
         [HttpGet("equipment/{equipmentId}")]
-        public ActionResult<List<string>> GetEquipmentImages(int equipmentId, [FromQuery] int equipmentType)
+        public ActionResult<List<object>> GetEquipmentImages(int equipmentId, [FromQuery] int equipmentType)
         {
             try
             {
                 var images = _context.EquipmentImages
                     .Where(img => img.EquipmentId == equipmentId && img.EquipmentType == equipmentType)
                     .OrderBy(img => img.OrderIndex)
-                    .Select(img => img.ImagePath)
+                    .Select(img => new { img.Id, img.ImagePath, img.ImageName })
                     .ToList();
                 return Ok(images);
             }
@@ -105,16 +71,35 @@ namespace DeviceWarehouseSystem.Controllers
 
         // 获取出入库图片列表
         [HttpGet("in-outbound/{orderId}")]
-        public ActionResult<List<string>> GetInOutboundImages(int orderId, [FromQuery] int orderType)
+        public ActionResult<List<object>> GetInOutboundImages(int orderId, [FromQuery] int orderType)
         {
             try
             {
                 var images = _context.InOutboundImages
                     .Where(img => img.OrderId == orderId && img.OrderType == orderType)
                     .OrderBy(img => img.OrderIndex)
-                    .Select(img => img.ImagePath)
+                    .Select(img => new { img.Id, img.ImagePath, img.ImageName })
                     .ToList();
                 return Ok(images);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // 获取图片数据（用于直接显示）
+        [HttpGet("data/{imageId}")]
+        public async Task<IActionResult> GetImageData(int imageId)
+        {
+            try
+            {
+                var (data, contentType) = await _imageService.GetImageAsync(imageId);
+                if (data == null)
+                {
+                    return NotFound();
+                }
+                return File(data, contentType ?? "image/jpeg");
             }
             catch (System.Exception ex)
             {
@@ -128,13 +113,9 @@ namespace DeviceWarehouseSystem.Controllers
         {
             try
             {
-                // 查找图片记录
-                var equipmentImage = await _context.EquipmentImages.FindAsync(imageId);
-                if (equipmentImage != null)
+                var result = await _imageService.DeleteImageAsync(imageId);
+                if (result)
                 {
-                    _imageService.DeleteImage(equipmentImage.ImagePath);
-                    _context.EquipmentImages.Remove(equipmentImage);
-                    await _context.SaveChangesAsync();
                     return Ok();
                 }
                 else
@@ -154,13 +135,9 @@ namespace DeviceWarehouseSystem.Controllers
         {
             try
             {
-                // 查找图片记录
-                var inOutboundImage = await _context.InOutboundImages.FindAsync(imageId);
-                if (inOutboundImage != null)
+                var result = await _imageService.DeleteImageAsync(imageId);
+                if (result)
                 {
-                    _imageService.DeleteImage(inOutboundImage.ImagePath);
-                    _context.InOutboundImages.Remove(inOutboundImage);
-                    await _context.SaveChangesAsync();
                     return Ok();
                 }
                 else
