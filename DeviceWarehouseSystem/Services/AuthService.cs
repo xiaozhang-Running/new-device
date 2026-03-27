@@ -22,6 +22,10 @@ namespace DeviceWarehouseSystem.Services
         public async Task<TokenDTO> LoginAsync(LoginDTO loginDTO)
         {
             // 查找用户
+            if (_context.Users == null)
+            {
+                throw new Exception("用户不存在");
+            }
             var user = _context.Users.FirstOrDefault(u => u.Username == loginDTO.Username);
             if (user == null)
             {
@@ -44,14 +48,14 @@ namespace DeviceWarehouseSystem.Services
             {
                 Token = token,
                 Username = user.Username,
-                Role = user.Role
+                Role = user.Role ?? "User"
             };
         }
 
         public async Task<UserDTO> RegisterAsync(RegisterDTO registerDTO)
         {
             // 检查用户名是否已存在
-            if (_context.Users.Any(u => u.Username == registerDTO.Username))
+            if (_context.Users != null && _context.Users.Any(u => u.Username == registerDTO.Username))
             {
                 throw new Exception("用户名已存在");
             }
@@ -68,8 +72,11 @@ namespace DeviceWarehouseSystem.Services
                 CreatedAt = DateTime.Now
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            if (_context.Users != null)
+            {
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+            }
 
             return new UserDTO
             {

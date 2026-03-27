@@ -19,24 +19,28 @@ public class ConsumableService
     // 获取所有耗材
     public async Task<IEnumerable<ConsumableDTO>> GetAllConsumablesAsync()
     {
+        if (_context.Consumables == null)
+        {
+            return new List<ConsumableDTO>();
+        }
         return await _context.Consumables
             .Select(c => new ConsumableDTO
             {
                 id = c.Id,
-                name = c.Name,
-                brand = c.Brand,
-                modelSpecification = c.ModelSpecification,
+                name = c.Name ?? "",
+                brand = c.Brand ?? "",
+                modelSpecification = c.ModelSpecification ?? "",
                 totalQuantity = c.TotalQuantity,
                 originalQuantity = c.OriginalQuantity,
                 usedQuantity = c.UsedQuantity,
                 remainingQuantity = c.RemainingQuantity,
-                unit = c.Unit,
-                company = c.Company,
-                status = c.Status,
-                accessories = c.Accessories,
-                remark = c.Remark,
-                image = c.Image,
-                location = c.Location,
+                unit = c.Unit ?? "",
+                company = c.Company ?? "",
+                status = c.Status ?? "",
+                accessories = c.Accessories ?? "",
+                remark = c.Remark ?? "",
+                image = c.Image ?? "",
+                location = c.Location ?? "",
                 createdAt = c.CreatedAt,
                 updatedAt = c.UpdatedAt
             })
@@ -46,6 +50,10 @@ public class ConsumableService
     // 根据ID获取耗材
     public async Task<ConsumableDTO?> GetConsumableByIdAsync(int id)
     {
+        if (_context.Consumables == null)
+        {
+            return null;
+        }
         var consumable = await _context.Consumables.FindAsync(id);
         if (consumable == null)
         {
@@ -55,20 +63,20 @@ public class ConsumableService
         return new ConsumableDTO
         {
             id = consumable.Id,
-            name = consumable.Name,
-            brand = consumable.Brand,
-            modelSpecification = consumable.ModelSpecification,
+            name = consumable.Name ?? "",
+            brand = consumable.Brand ?? "",
+            modelSpecification = consumable.ModelSpecification ?? "",
             totalQuantity = consumable.TotalQuantity,
             originalQuantity = consumable.OriginalQuantity,
             usedQuantity = consumable.UsedQuantity,
             remainingQuantity = consumable.RemainingQuantity,
-            unit = consumable.Unit,
-            company = consumable.Company,
-            status = consumable.Status,
-            accessories = consumable.Accessories,
-            remark = consumable.Remark,
-            image = consumable.Image,
-            location = consumable.Location,
+            unit = consumable.Unit ?? "",
+            company = consumable.Company ?? "",
+            status = consumable.Status ?? "",
+            accessories = consumable.Accessories ?? "",
+            remark = consumable.Remark ?? "",
+            image = consumable.Image ?? "",
+            location = consumable.Location ?? "",
             createdAt = consumable.CreatedAt,
             updatedAt = consumable.UpdatedAt
         };
@@ -95,24 +103,28 @@ public class ConsumableService
 
         var consumable = new Consumable
         {
-            Name = dto.name,
-            Brand = dto.brand,
-            ModelSpecification = dto.modelSpecification,
+            Name = dto.name ?? "",
+            Brand = dto.brand ?? "",
+            ModelSpecification = dto.modelSpecification ?? "",
             TotalQuantity = totalQuantity,
             OriginalQuantity = dto.originalQuantity,
             UsedQuantity = usedQuantity,
             RemainingQuantity = remainingQuantity,
-            Unit = dto.unit,
-            Company = dto.company,
+            Unit = dto.unit ?? "",
+            Company = dto.company ?? "",
             Status = status,
-            Accessories = dto.accessories,
-            Remark = dto.remark,
-            Image = dto.image,
-            Location = dto.location,
+            Accessories = dto.accessories ?? "",
+            Remark = dto.remark ?? "",
+            Image = dto.image ?? "",
+            Location = dto.location ?? "",
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now
         };
 
+        if (_context.Consumables == null)
+        {
+            throw new Exception("Consumables DbSet is null");
+        }
         _context.Consumables.Add(consumable);
         await _context.SaveChangesAsync();
 
@@ -141,6 +153,10 @@ public class ConsumableService
     // 更新耗材
     public async Task<ConsumableDTO?> UpdateConsumableAsync(int id, ConsumableUpdateDTO dto)
     {
+        if (_context.Consumables == null)
+        {
+            return null;
+        }
         var consumable = await _context.Consumables.FindAsync(id);
         if (consumable == null)
         {
@@ -205,6 +221,10 @@ public class ConsumableService
     // 删除耗材
     public async Task<bool> DeleteConsumableAsync(int id)
     {
+        if (_context.Consumables == null)
+        {
+            return false;
+        }
         var consumable = await _context.Consumables.FindAsync(id);
         if (consumable == null)
         {
@@ -219,28 +239,32 @@ public class ConsumableService
     // 搜索耗材
     public async Task<IEnumerable<ConsumableDTO>> SearchConsumablesAsync(string searchText)
     {
-        searchText = searchText.ToLower();
+        if (_context.Consumables == null)
+        {
+            return new List<ConsumableDTO>();
+        }
+        searchText = searchText?.ToLower() ?? "";
         return await _context.Consumables
-            .Where(c => c.Name.ToLower().Contains(searchText) ||
+            .Where(c => (c.Name != null && c.Name.ToLower().Contains(searchText)) ||
                         (c.Brand != null && c.Brand.ToLower().Contains(searchText)) ||
                         (c.ModelSpecification != null && c.ModelSpecification.ToLower().Contains(searchText)))
             .Select(c => new ConsumableDTO
             {
                 id = c.Id,
-                name = c.Name,
-                brand = c.Brand,
-                modelSpecification = c.ModelSpecification,
+                name = c.Name ?? "",
+                brand = c.Brand ?? "",
+                modelSpecification = c.ModelSpecification ?? "",
                 totalQuantity = c.TotalQuantity,
                 originalQuantity = c.OriginalQuantity,
                 usedQuantity = c.UsedQuantity,
                 remainingQuantity = c.RemainingQuantity,
-                unit = c.Unit,
-                company = c.Company,
-                status = c.Status,
-                accessories = c.Accessories,
-                remark = c.Remark,
-                image = c.Image,
-                location = c.Location,
+                unit = c.Unit ?? "",
+                company = c.Company ?? "",
+                status = c.Status ?? "",
+                accessories = c.Accessories ?? "",
+                remark = c.Remark ?? "",
+                image = c.Image ?? "",
+                location = c.Location ?? "",
                 createdAt = c.CreatedAt,
                 updatedAt = c.UpdatedAt
             })
@@ -250,25 +274,29 @@ public class ConsumableService
     // 按状态筛选耗材
     public async Task<IEnumerable<ConsumableDTO>> FilterConsumablesByStatusAsync(string status)
     {
+        if (_context.Consumables == null)
+        {
+            return new List<ConsumableDTO>();
+        }
         return await _context.Consumables
             .Where(c => c.Status == status)
             .Select(c => new ConsumableDTO
             {
                 id = c.Id,
-                name = c.Name,
-                brand = c.Brand,
-                modelSpecification = c.ModelSpecification,
+                name = c.Name ?? "",
+                brand = c.Brand ?? "",
+                modelSpecification = c.ModelSpecification ?? "",
                 totalQuantity = c.TotalQuantity,
                 originalQuantity = c.OriginalQuantity,
                 usedQuantity = c.UsedQuantity,
                 remainingQuantity = c.RemainingQuantity,
-                unit = c.Unit,
-                company = c.Company,
-                status = c.Status,
-                accessories = c.Accessories,
-                remark = c.Remark,
-                image = c.Image,
-                location = c.Location,
+                unit = c.Unit ?? "",
+                company = c.Company ?? "",
+                status = c.Status ?? "",
+                accessories = c.Accessories ?? "",
+                remark = c.Remark ?? "",
+                image = c.Image ?? "",
+                location = c.Location ?? "",
                 createdAt = c.CreatedAt,
                 updatedAt = c.UpdatedAt
             })
@@ -278,25 +306,29 @@ public class ConsumableService
     // 按仓库筛选耗材
     public async Task<IEnumerable<ConsumableDTO>> FilterConsumablesByLocationAsync(string location)
     {
+        if (_context.Consumables == null)
+        {
+            return new List<ConsumableDTO>();
+        }
         return await _context.Consumables
             .Where(c => c.Location == location)
             .Select(c => new ConsumableDTO
             {
                 id = c.Id,
-                name = c.Name,
-                brand = c.Brand,
-                modelSpecification = c.ModelSpecification,
+                name = c.Name ?? "",
+                brand = c.Brand ?? "",
+                modelSpecification = c.ModelSpecification ?? "",
                 totalQuantity = c.TotalQuantity,
                 originalQuantity = c.OriginalQuantity,
                 usedQuantity = c.UsedQuantity,
                 remainingQuantity = c.RemainingQuantity,
-                unit = c.Unit,
-                company = c.Company,
-                status = c.Status,
-                accessories = c.Accessories,
-                remark = c.Remark,
-                image = c.Image,
-                location = c.Location,
+                unit = c.Unit ?? "",
+                company = c.Company ?? "",
+                status = c.Status ?? "",
+                accessories = c.Accessories ?? "",
+                remark = c.Remark ?? "",
+                image = c.Image ?? "",
+                location = c.Location ?? "",
                 createdAt = c.CreatedAt,
                 updatedAt = c.UpdatedAt
             })
@@ -306,6 +338,10 @@ public class ConsumableService
     // 删除所有耗材
     public async Task<bool> DeleteAllConsumablesAsync()
     {
+        if (_context.Consumables == null)
+        {
+            return false;
+        }
         _context.Consumables.RemoveRange(_context.Consumables);
         await _context.SaveChangesAsync();
         return true;

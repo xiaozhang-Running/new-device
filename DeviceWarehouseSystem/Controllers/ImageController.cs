@@ -56,6 +56,10 @@ namespace DeviceWarehouseSystem.Controllers
         {
             try
             {
+                if (_context.EquipmentImages == null)
+                {
+                    return Ok(new List<object>());
+                }
                 var images = _context.EquipmentImages
                     .Where(img => img.EquipmentId == equipmentId && img.EquipmentType == equipmentType)
                     .OrderBy(img => img.OrderIndex)
@@ -75,6 +79,10 @@ namespace DeviceWarehouseSystem.Controllers
         {
             try
             {
+                if (_context.InOutboundImages == null)
+                {
+                    return Ok(new List<object>());
+                }
                 var images = _context.InOutboundImages
                     .Where(img => img.OrderId == orderId && img.OrderType == orderType)
                     .OrderBy(img => img.OrderIndex)

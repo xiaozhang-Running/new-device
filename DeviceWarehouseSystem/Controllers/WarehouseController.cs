@@ -19,6 +19,10 @@ namespace DeviceWarehouseSystem.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Warehouse>>> GetWarehouses()
         {
+            if (_context.Warehouses == null)
+            {
+                return NotFound();
+            }
             return await _context.Warehouses.ToListAsync();
         }
 
@@ -26,6 +30,10 @@ namespace DeviceWarehouseSystem.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Warehouse>> GetWarehouse(int id)
         {
+            if (_context.Warehouses == null)
+            {
+                return NotFound();
+            }
             var warehouse = await _context.Warehouses.FindAsync(id);
 
             if (warehouse == null)
@@ -40,6 +48,10 @@ namespace DeviceWarehouseSystem.Controllers
         [HttpPost]
         public async Task<ActionResult<Warehouse>> PostWarehouse(Warehouse warehouse)
         {
+            if (_context.Warehouses == null)
+            {
+                return Problem("Entity set 'DeviceWarehouseContext.Warehouses'  is null.");
+            }
             _context.Warehouses.Add(warehouse);
             await _context.SaveChangesAsync();
 
@@ -81,6 +93,10 @@ namespace DeviceWarehouseSystem.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteWarehouse(int id)
         {
+            if (_context.Warehouses == null)
+            {
+                return NotFound();
+            }
             var warehouse = await _context.Warehouses.FindAsync(id);
             if (warehouse == null)
             {
@@ -95,6 +111,10 @@ namespace DeviceWarehouseSystem.Controllers
 
         private bool WarehouseExists(int id)
         {
+            if (_context.Warehouses == null)
+            {
+                return false;
+            }
             return _context.Warehouses.Any(e => e.Id == id);
         }
     }

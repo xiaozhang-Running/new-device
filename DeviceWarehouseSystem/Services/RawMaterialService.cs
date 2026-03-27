@@ -16,17 +16,21 @@ public class RawMaterialService : IRawMaterialService
         _context = context;
     }
 
-    public async Task<IEnumerable<RawMaterialDTO>> GetRawMaterials(string search, string location)
+    public async Task<IEnumerable<RawMaterialDTO>> GetRawMaterials(string? search, string? location)
     {
+        if (_context.RawMaterials == null)
+        {
+            return Enumerable.Empty<RawMaterialDTO>();
+        }
         var query = _context.RawMaterials.AsQueryable();
 
         if (!string.IsNullOrEmpty(search))
         {
             query = query.Where(r => 
-                r.ProductName.Contains(search) ||
-                r.Brand.Contains(search) ||
-                r.Specification.Contains(search) ||
-                r.Supplier.Contains(search)
+                (r.ProductName != null && r.ProductName.Contains(search)) ||
+                (r.Brand != null && r.Brand.Contains(search)) ||
+                (r.Specification != null && r.Specification.Contains(search)) ||
+                (r.Supplier != null && r.Supplier.Contains(search))
             );
         }
 
@@ -38,27 +42,31 @@ public class RawMaterialService : IRawMaterialService
         return await query.Select(r => new RawMaterialDTO
         {
             Id = r.Id,
-            productName = r.ProductName,
-            brand = r.Brand,
-            specification = r.Specification,
+            productName = r.ProductName ?? "",
+            brand = r.Brand ?? "",
+            specification = r.Specification ?? "",
             totalQuantity = r.TotalQuantity,
             usedQuantity = r.UsedQuantity,
             remainingQuantity = r.RemainingQuantity,
-            unit = r.Unit,
-            supplier = r.Supplier,
-            location = r.Location,
-            company = r.Company,
-            remark = r.Remark,
-            image = r.Image,
+            unit = r.Unit ?? "",
+            supplier = r.Supplier ?? "",
+            location = r.Location ?? "",
+            company = r.Company ?? "",
+            remark = r.Remark ?? "",
+            image = r.Image ?? "",
             createdAt = r.CreatedAt,
             updatedAt = r.UpdatedAt,
-            createdBy = r.CreatedBy,
-            updatedBy = r.UpdatedBy
+            createdBy = r.CreatedBy ?? "",
+            updatedBy = r.UpdatedBy ?? ""
         }).ToListAsync();
     }
 
     public async Task<RawMaterialDTO> GetRawMaterialById(int id)
     {
+        if (_context.RawMaterials == null)
+        {
+            return null;
+        }
         var rawMaterial = await _context.RawMaterials.FindAsync(id);
         if (rawMaterial == null)
         {
@@ -68,27 +76,31 @@ public class RawMaterialService : IRawMaterialService
         return new RawMaterialDTO
         {
             Id = rawMaterial.Id,
-            productName = rawMaterial.ProductName,
-            brand = rawMaterial.Brand,
-            specification = rawMaterial.Specification,
+            productName = rawMaterial.ProductName ?? "",
+            brand = rawMaterial.Brand ?? "",
+            specification = rawMaterial.Specification ?? "",
             totalQuantity = rawMaterial.TotalQuantity,
             usedQuantity = rawMaterial.UsedQuantity,
             remainingQuantity = rawMaterial.RemainingQuantity,
-            unit = rawMaterial.Unit,
-            supplier = rawMaterial.Supplier,
-            location = rawMaterial.Location,
-            company = rawMaterial.Company,
-            remark = rawMaterial.Remark,
-            image = rawMaterial.Image,
+            unit = rawMaterial.Unit ?? "",
+            supplier = rawMaterial.Supplier ?? "",
+            location = rawMaterial.Location ?? "",
+            company = rawMaterial.Company ?? "",
+            remark = rawMaterial.Remark ?? "",
+            image = rawMaterial.Image ?? "",
             createdAt = rawMaterial.CreatedAt,
             updatedAt = rawMaterial.UpdatedAt,
-            createdBy = rawMaterial.CreatedBy,
-            updatedBy = rawMaterial.UpdatedBy
+            createdBy = rawMaterial.CreatedBy ?? "",
+            updatedBy = rawMaterial.UpdatedBy ?? ""
         };
     }
 
     public async Task<RawMaterialDTO> CreateRawMaterial(RawMaterialCreateDTO rawMaterialCreateDTO)
     {
+        if (_context.RawMaterials == null)
+        {
+            throw new Exception("RawMaterials context is null");
+        }
         var totalQuantity = rawMaterialCreateDTO.totalQuantity ?? 0;
         var usedQuantity = rawMaterialCreateDTO.usedQuantity ?? 0;
         var remainingQuantity = totalQuantity - usedQuantity;
@@ -96,18 +108,18 @@ public class RawMaterialService : IRawMaterialService
         var rawMaterial = new RawMaterial
         {
             SortOrder = 0,
-            ProductName = rawMaterialCreateDTO.productName,
-            Brand = rawMaterialCreateDTO.brand,
-            Specification = rawMaterialCreateDTO.specification,
+            ProductName = rawMaterialCreateDTO.productName ?? "",
+            Brand = rawMaterialCreateDTO.brand ?? "",
+            Specification = rawMaterialCreateDTO.specification ?? "",
             TotalQuantity = totalQuantity,
             UsedQuantity = usedQuantity,
             RemainingQuantity = remainingQuantity,
-            Unit = rawMaterialCreateDTO.unit,
-            Supplier = rawMaterialCreateDTO.supplier,
-            Location = rawMaterialCreateDTO.location,
-            Company = rawMaterialCreateDTO.company,
-            Remark = rawMaterialCreateDTO.remark,
-            Image = rawMaterialCreateDTO.image,
+            Unit = rawMaterialCreateDTO.unit ?? "",
+            Supplier = rawMaterialCreateDTO.supplier ?? "",
+            Location = rawMaterialCreateDTO.location ?? "",
+            Company = rawMaterialCreateDTO.company ?? "",
+            Remark = rawMaterialCreateDTO.remark ?? "",
+            Image = rawMaterialCreateDTO.image ?? "",
             CreatedAt = System.DateTime.Now,
             CreatedBy = rawMaterialCreateDTO.createdBy ?? "System"
         };
@@ -118,27 +130,31 @@ public class RawMaterialService : IRawMaterialService
         return new RawMaterialDTO
         {
             Id = rawMaterial.Id,
-            productName = rawMaterial.ProductName,
-            brand = rawMaterial.Brand,
-            specification = rawMaterial.Specification,
+            productName = rawMaterial.ProductName ?? "",
+            brand = rawMaterial.Brand ?? "",
+            specification = rawMaterial.Specification ?? "",
             totalQuantity = rawMaterial.TotalQuantity,
             usedQuantity = rawMaterial.UsedQuantity,
             remainingQuantity = rawMaterial.RemainingQuantity,
-            unit = rawMaterial.Unit,
-            supplier = rawMaterial.Supplier,
-            location = rawMaterial.Location,
-            company = rawMaterial.Company,
-            remark = rawMaterial.Remark,
-            image = rawMaterial.Image,
+            unit = rawMaterial.Unit ?? "",
+            supplier = rawMaterial.Supplier ?? "",
+            location = rawMaterial.Location ?? "",
+            company = rawMaterial.Company ?? "",
+            remark = rawMaterial.Remark ?? "",
+            image = rawMaterial.Image ?? "",
             createdAt = rawMaterial.CreatedAt,
             updatedAt = rawMaterial.UpdatedAt,
-            createdBy = rawMaterial.CreatedBy,
-            updatedBy = rawMaterial.UpdatedBy
+            createdBy = rawMaterial.CreatedBy ?? "",
+            updatedBy = rawMaterial.UpdatedBy ?? ""
         };
     }
 
     public async Task<RawMaterialDTO> UpdateRawMaterial(int id, RawMaterialUpdateDTO rawMaterialUpdateDTO)
     {
+        if (_context.RawMaterials == null)
+        {
+            return null;
+        }
         var rawMaterial = await _context.RawMaterials.FindAsync(id);
         if (rawMaterial == null)
         {
@@ -149,47 +165,51 @@ public class RawMaterialService : IRawMaterialService
         var usedQuantity = rawMaterialUpdateDTO.usedQuantity ?? 0;
         var remainingQuantity = totalQuantity - usedQuantity;
 
-        rawMaterial.ProductName = rawMaterialUpdateDTO.productName;
-        rawMaterial.Brand = rawMaterialUpdateDTO.brand;
-        rawMaterial.Specification = rawMaterialUpdateDTO.specification;
+        rawMaterial.ProductName = rawMaterialUpdateDTO.productName ?? "";
+        rawMaterial.Brand = rawMaterialUpdateDTO.brand ?? "";
+        rawMaterial.Specification = rawMaterialUpdateDTO.specification ?? "";
         rawMaterial.TotalQuantity = totalQuantity;
         rawMaterial.UsedQuantity = usedQuantity;
         rawMaterial.RemainingQuantity = remainingQuantity;
-        rawMaterial.Unit = rawMaterialUpdateDTO.unit;
-        rawMaterial.Supplier = rawMaterialUpdateDTO.supplier;
-        rawMaterial.Location = rawMaterialUpdateDTO.location;
-        rawMaterial.Company = rawMaterialUpdateDTO.company;
-        rawMaterial.Remark = rawMaterialUpdateDTO.remark;
-        rawMaterial.Image = rawMaterialUpdateDTO.image;
+        rawMaterial.Unit = rawMaterialUpdateDTO.unit ?? "";
+        rawMaterial.Supplier = rawMaterialUpdateDTO.supplier ?? "";
+        rawMaterial.Location = rawMaterialUpdateDTO.location ?? "";
+        rawMaterial.Company = rawMaterialUpdateDTO.company ?? "";
+        rawMaterial.Remark = rawMaterialUpdateDTO.remark ?? "";
+        rawMaterial.Image = rawMaterialUpdateDTO.image ?? "";
         rawMaterial.UpdatedAt = System.DateTime.Now;
-        rawMaterial.UpdatedBy = rawMaterialUpdateDTO.updatedBy;
+        rawMaterial.UpdatedBy = rawMaterialUpdateDTO.updatedBy ?? "";
 
         await _context.SaveChangesAsync();
 
         return new RawMaterialDTO
         {
             Id = rawMaterial.Id,
-            productName = rawMaterial.ProductName,
-            brand = rawMaterial.Brand,
-            specification = rawMaterial.Specification,
+            productName = rawMaterial.ProductName ?? "",
+            brand = rawMaterial.Brand ?? "",
+            specification = rawMaterial.Specification ?? "",
             totalQuantity = rawMaterial.TotalQuantity,
             usedQuantity = rawMaterial.UsedQuantity,
             remainingQuantity = rawMaterial.RemainingQuantity,
-            unit = rawMaterial.Unit,
-            supplier = rawMaterial.Supplier,
-            location = rawMaterial.Location,
-            company = rawMaterial.Company,
-            remark = rawMaterial.Remark,
-            image = rawMaterial.Image,
+            unit = rawMaterial.Unit ?? "",
+            supplier = rawMaterial.Supplier ?? "",
+            location = rawMaterial.Location ?? "",
+            company = rawMaterial.Company ?? "",
+            remark = rawMaterial.Remark ?? "",
+            image = rawMaterial.Image ?? "",
             createdAt = rawMaterial.CreatedAt,
             updatedAt = rawMaterial.UpdatedAt,
-            createdBy = rawMaterial.CreatedBy,
-            updatedBy = rawMaterial.UpdatedBy
+            createdBy = rawMaterial.CreatedBy ?? "",
+            updatedBy = rawMaterial.UpdatedBy ?? ""
         };
     }
 
     public async Task<bool> DeleteRawMaterial(int id)
     {
+        if (_context.RawMaterials == null)
+        {
+            return false;
+        }
         var rawMaterial = await _context.RawMaterials.FindAsync(id);
         if (rawMaterial == null)
         {
@@ -203,6 +223,10 @@ public class RawMaterialService : IRawMaterialService
 
     public async Task<int> ImportRawMaterials(List<RawMaterialCreateDTO> rawMaterials)
     {
+        if (_context.RawMaterials == null)
+        {
+            return 0;
+        }
         var count = 0;
         foreach (var rawMaterialCreateDTO in rawMaterials)
         {
@@ -213,18 +237,18 @@ public class RawMaterialService : IRawMaterialService
             var rawMaterial = new RawMaterial
             {
                 SortOrder = 0,
-                ProductName = rawMaterialCreateDTO.productName,
-                Brand = rawMaterialCreateDTO.brand,
-                Specification = rawMaterialCreateDTO.specification,
+                ProductName = rawMaterialCreateDTO.productName ?? "",
+                Brand = rawMaterialCreateDTO.brand ?? "",
+                Specification = rawMaterialCreateDTO.specification ?? "",
                 TotalQuantity = totalQuantity,
                 UsedQuantity = usedQuantity,
                 RemainingQuantity = remainingQuantity,
-                Unit = rawMaterialCreateDTO.unit,
-                Supplier = rawMaterialCreateDTO.supplier,
-                Location = rawMaterialCreateDTO.location,
-                Company = rawMaterialCreateDTO.company,
-                Remark = rawMaterialCreateDTO.remark,
-                Image = rawMaterialCreateDTO.image,
+                Unit = rawMaterialCreateDTO.unit ?? "",
+                Supplier = rawMaterialCreateDTO.supplier ?? "",
+                Location = rawMaterialCreateDTO.location ?? "",
+                Company = rawMaterialCreateDTO.company ?? "",
+                Remark = rawMaterialCreateDTO.remark ?? "",
+                Image = rawMaterialCreateDTO.image ?? "",
                 CreatedAt = System.DateTime.Now,
                 CreatedBy = rawMaterialCreateDTO.createdBy ?? "System"
             };
@@ -239,6 +263,16 @@ public class RawMaterialService : IRawMaterialService
 
     public async Task<RawMaterialStatsDTO> GetRawMaterialStats()
     {
+        if (_context.RawMaterials == null)
+        {
+            return new RawMaterialStatsDTO
+            {
+                TotalCount = 0,
+                TotalQuantity = 0,
+                UsedQuantity = 0,
+                RemainingQuantity = 0
+            };
+        }
         var stats = await _context.RawMaterials
             .Select(r => new { r.TotalQuantity, r.UsedQuantity, r.RemainingQuantity })
             .ToListAsync();
@@ -254,8 +288,11 @@ public class RawMaterialService : IRawMaterialService
 
     public async Task DeleteAllRawMaterials()
     {
-        var rawMaterials = await _context.RawMaterials.ToListAsync();
-        _context.RawMaterials.RemoveRange(rawMaterials);
-        await _context.SaveChangesAsync();
+        if (_context.RawMaterials != null)
+        {
+            var rawMaterials = await _context.RawMaterials.ToListAsync();
+            _context.RawMaterials.RemoveRange(rawMaterials);
+            await _context.SaveChangesAsync();
+        }
     }
 }

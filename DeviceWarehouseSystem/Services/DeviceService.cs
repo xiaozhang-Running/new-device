@@ -16,27 +16,31 @@ namespace DeviceWarehouseSystem.Services
         // 专用设备管理
         public async Task<List<SpecialEquipmentDTO>> GetSpecialEquipmentsAsync()
         {
+            if (_context.SpecialEquipments == null)
+            {
+                return new List<SpecialEquipmentDTO>();
+            }
             var equipments = await _context.SpecialEquipments.ToListAsync();
             return equipments.Select(e => new SpecialEquipmentDTO
             {
                 Id = e.Id,
-                Name = e.DeviceName,
-                DeviceCode = e.DeviceCode,
-                SerialNumber = e.SerialNumber,
-                Brand = e.Brand,
-                Model = e.Model,
+                Name = e.DeviceName ?? "",
+                DeviceCode = e.DeviceCode ?? "",
+                SerialNumber = e.SerialNumber ?? "",
+                Brand = e.Brand ?? "",
+                Model = e.Model ?? "",
                 Quantity = e.Quantity,
-                Unit = e.Unit,
-                Accessories = e.Accessories,
-                ImageUrl = e.ImageUrl,
+                Unit = e.Unit ?? "",
+                Accessories = e.Accessories ?? "",
+                ImageUrl = e.ImageUrl ?? "",
                 Warehouse = e.Warehouse ?? "主仓库", // 默认为主仓库
-                Company = e.Company,
-                Status = e.Status,
+                Company = e.Company ?? "",
+                Status = e.Status ?? "",
                 UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
-                ProjectName = e.ProjectName,
+                ProjectName = e.ProjectName ?? "",
                 ProjectTime = e.ProjectTime,
-                Location = e.Location,
-                Description = e.Remark,
+                Location = e.Location ?? "",
+                Description = e.Remark ?? "",
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),
                 PurchasePrice = e.PurchasePrice ?? 0
             }).ToList();
@@ -47,6 +51,16 @@ namespace DeviceWarehouseSystem.Services
         /// </summary>
         public async Task<PagedResult<SpecialEquipmentDTO>> GetPagedSpecialEquipmentsAsync(PaginationParams parameters)
         {
+            if (_context.SpecialEquipments == null)
+            {
+                return new PagedResult<SpecialEquipmentDTO>
+                {
+                    Items = new List<SpecialEquipmentDTO>(),
+                    TotalCount = 0,
+                    PageNumber = parameters.PageNumber,
+                    PageSize = parameters.PageSize
+                };
+            }
             var query = _context.SpecialEquipments.AsQueryable();
 
             // 应用搜索过滤
@@ -54,7 +68,7 @@ namespace DeviceWarehouseSystem.Services
             {
                 var search = parameters.Search.ToLower();
                 query = query.Where(e =>
-                    e.DeviceName.ToLower().Contains(search) ||
+                    (e.DeviceName != null && e.DeviceName.ToLower().Contains(search)) ||
                     (e.Brand != null && e.Brand.ToLower().Contains(search)) ||
                     (e.Model != null && e.Model.ToLower().Contains(search)) ||
                     (e.DeviceCode != null && e.DeviceCode.ToLower().Contains(search)));
@@ -81,23 +95,23 @@ namespace DeviceWarehouseSystem.Services
                 .Select(e => new SpecialEquipmentDTO
                 {
                     Id = e.Id,
-                    Name = e.DeviceName,
-                    DeviceCode = e.DeviceCode,
-                    SerialNumber = e.SerialNumber,
-                    Brand = e.Brand,
-                    Model = e.Model,
+                    Name = e.DeviceName ?? "",
+                    DeviceCode = e.DeviceCode ?? "",
+                    SerialNumber = e.SerialNumber ?? "",
+                    Brand = e.Brand ?? "",
+                    Model = e.Model ?? "",
                     Quantity = e.Quantity,
-                    Unit = e.Unit,
-                    Accessories = e.Accessories,
-                    ImageUrl = e.ImageUrl,
+                    Unit = e.Unit ?? "",
+                    Accessories = e.Accessories ?? "",
+                    ImageUrl = e.ImageUrl ?? "",
                     Warehouse = e.Warehouse ?? "主仓库",
-                    Company = e.Company,
-                    Status = e.Status,
+                    Company = e.Company ?? "",
+                    Status = e.Status ?? "",
                     UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
-                    ProjectName = e.ProjectName,
+                    ProjectName = e.ProjectName ?? "",
                     ProjectTime = e.ProjectTime,
-                    Location = e.Location,
-                    Description = e.Remark,
+                    Location = e.Location ?? "",
+                    Description = e.Remark ?? "",
                     PurchaseDate = e.PurchaseDate.HasValue ? e.PurchaseDate.Value.ToString("yyyy-MM-dd") : e.CreatedAt.ToString("yyyy-MM-dd"),
                     PurchasePrice = e.PurchasePrice ?? 0
                 })
@@ -114,6 +128,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<SpecialEquipmentDTO> GetSpecialEquipmentByIdAsync(int id)
         {
+            if (_context.SpecialEquipments == null)
+            {
+                throw new Exception("设备不存在");
+            }
             var equipment = await _context.SpecialEquipments.FindAsync(id);
             if (equipment == null)
             {
@@ -123,23 +141,23 @@ namespace DeviceWarehouseSystem.Services
             return new SpecialEquipmentDTO
             {
                 Id = equipment.Id,
-                Name = equipment.DeviceName,
-                DeviceCode = equipment.DeviceCode,
-                SerialNumber = equipment.SerialNumber,
-                Brand = equipment.Brand,
-                Model = equipment.Model,
+                Name = equipment.DeviceName ?? "",
+                DeviceCode = equipment.DeviceCode ?? "",
+                SerialNumber = equipment.SerialNumber ?? "",
+                Brand = equipment.Brand ?? "",
+                Model = equipment.Model ?? "",
                 Quantity = equipment.Quantity,
-                Unit = equipment.Unit,
-                Accessories = equipment.Accessories,
-                ImageUrl = equipment.ImageUrl,
+                Unit = equipment.Unit ?? "",
+                Accessories = equipment.Accessories ?? "",
+                ImageUrl = equipment.ImageUrl ?? "",
                 Warehouse = equipment.Warehouse ?? "主仓库", // 默认为主仓库
-                Company = equipment.Company,
-                Status = equipment.Status,
+                Company = equipment.Company ?? "",
+                Status = equipment.Status ?? "",
                 UseStatus = equipment.UseStatus == 1 ? "使用中" : "未使用",
-                ProjectName = equipment.ProjectName,
+                ProjectName = equipment.ProjectName ?? "",
                 ProjectTime = equipment.ProjectTime,
-                Location = equipment.Location,
-                Description = equipment.Remark,
+                Location = equipment.Location ?? "",
+                Description = equipment.Remark ?? "",
                 PurchaseDate = equipment.PurchaseDate?.ToString("yyyy-MM-dd") ?? equipment.CreatedAt.ToString("yyyy-MM-dd"),
                 PurchasePrice = equipment.PurchasePrice ?? 0
             };
@@ -201,31 +219,37 @@ namespace DeviceWarehouseSystem.Services
                 NameSequence = 0 // 默认序列
             };
 
-            _context.SpecialEquipments.Add(equipment);
-            await _context.SaveChangesAsync();
-
-            // 更新库存
-            var inventory = await _context.Inventories
-                .FirstOrDefaultAsync(i => i.SpecialEquipmentId == equipment.Id);
-            
-            if (inventory == null)
+            if (_context.SpecialEquipments != null)
             {
-                // 创建新的库存记录
-                inventory = new Inventory
+                _context.SpecialEquipments.Add(equipment);
+                await _context.SaveChangesAsync();
+
+                // 更新库存
+                if (_context.Inventories != null)
                 {
-                    SpecialEquipmentId = equipment.Id,
-                    CurrentQuantity = equipment.Quantity,
-                    AlertMinQuantity = 1,
-                    AlertMaxQuantity = 100,
-                    LastUpdated = DateTime.Now
-                };
-                _context.Inventories.Add(inventory);
-            } else {
-                // 更新现有库存记录
-                inventory.CurrentQuantity += equipment.Quantity;
-                inventory.LastUpdated = DateTime.Now;
+                    var inventory = await _context.Inventories
+                        .FirstOrDefaultAsync(i => i.SpecialEquipmentId == equipment.Id);
+                    
+                    if (inventory == null)
+                    {
+                        // 创建新的库存记录
+                        inventory = new Inventory
+                        {
+                            SpecialEquipmentId = equipment.Id,
+                            CurrentQuantity = equipment.Quantity,
+                            AlertMinQuantity = 1,
+                            AlertMaxQuantity = 100,
+                            LastUpdated = DateTime.Now
+                        };
+                        _context.Inventories.Add(inventory);
+                    } else {
+                        // 更新现有库存记录
+                        inventory.CurrentQuantity += equipment.Quantity;
+                        inventory.LastUpdated = DateTime.Now;
+                    }
+                    await _context.SaveChangesAsync();
+                }
             }
-            await _context.SaveChangesAsync();
 
             dto.Id = equipment.Id;
             dto.Warehouse = equipment.Warehouse ?? "主仓库";
@@ -237,6 +261,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<SpecialEquipmentDTO> UpdateSpecialEquipmentAsync(int id, SpecialEquipmentDTO dto)
         {
+            if (_context.SpecialEquipments == null)
+            {
+                throw new Exception("设备不存在");
+            }
             var equipment = await _context.SpecialEquipments.FindAsync(id);
             if (equipment == null)
             {
@@ -256,8 +284,8 @@ namespace DeviceWarehouseSystem.Services
                 }
             }
 
-            equipment.DeviceName = dto.Name;
-            equipment.DeviceCode = dto.DeviceCode;
+            equipment.DeviceName = dto.Name ?? "";
+equipment.DeviceCode = dto.DeviceCode ?? "";
             equipment.Brand = dto.Brand;
             equipment.Model = dto.Model;
             equipment.SerialNumber = dto.SerialNumber;
@@ -288,15 +316,18 @@ namespace DeviceWarehouseSystem.Services
             await _context.SaveChangesAsync();
 
             // 更新库存
-            var inventory = await _context.Inventories
-                .FirstOrDefaultAsync(i => i.SpecialEquipmentId == equipment.Id);
-            
-            if (inventory != null)
+            if (_context.Inventories != null)
             {
-                // 更新库存数量
-                inventory.CurrentQuantity = inventory.CurrentQuantity - oldQuantity + equipment.Quantity;
-                inventory.LastUpdated = DateTime.Now;
-                await _context.SaveChangesAsync();
+                var inventory = await _context.Inventories
+                    .FirstOrDefaultAsync(i => i.SpecialEquipmentId == equipment.Id);
+                
+                if (inventory != null)
+                {
+                    // 更新库存数量
+                    inventory.CurrentQuantity = inventory.CurrentQuantity - oldQuantity + equipment.Quantity;
+                    inventory.LastUpdated = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
             }
 
             dto.Warehouse = equipment.Warehouse ?? "主仓库";
@@ -307,6 +338,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task DeleteSpecialEquipmentAsync(int id)
         {
+            if (_context.SpecialEquipments == null)
+            {
+                throw new Exception("设备不存在");
+            }
             var equipment = await _context.SpecialEquipments.FindAsync(id);
             if (equipment == null)
             {
@@ -314,12 +349,15 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 删除相关的库存记录
-            var inventory = await _context.Inventories
-                .FirstOrDefaultAsync(i => i.SpecialEquipmentId == equipment.Id);
-            
-            if (inventory != null)
+            if (_context.Inventories != null)
             {
-                _context.Inventories.Remove(inventory);
+                var inventory = await _context.Inventories
+                    .FirstOrDefaultAsync(i => i.SpecialEquipmentId == equipment.Id);
+                
+                if (inventory != null)
+                {
+                    _context.Inventories.Remove(inventory);
+                }
             }
 
             _context.SpecialEquipments.Remove(equipment);
@@ -329,47 +367,54 @@ namespace DeviceWarehouseSystem.Services
         public async Task ClearAllSpecialEquipmentsAsync()
         {
             // 获取所有专用设备
-            var specialEquipments = await _context.SpecialEquipments.ToListAsync();
-            
-            // 获取相关的库存记录
-            var inventoryIds = specialEquipments.Select(e => (int?)e.Id).ToList();
-            var inventories = await _context.Inventories
-                .Where(i => i.SpecialEquipmentId != null && inventoryIds.Contains(i.SpecialEquipmentId))
-                .ToListAsync();
-            
-            // 删除库存记录
-            _context.Inventories.RemoveRange(inventories);
-            
-            // 删除专用设备
-            _context.SpecialEquipments.RemoveRange(specialEquipments);
-            
-            await _context.SaveChangesAsync();
+            if (_context.SpecialEquipments != null && _context.Inventories != null)
+            {
+                var specialEquipments = await _context.SpecialEquipments.ToListAsync();
+                
+                // 获取相关的库存记录
+                var inventoryIds = specialEquipments.Select(e => (int?)e.Id).ToList();
+                var inventories = await _context.Inventories
+                    .Where(i => i.SpecialEquipmentId != null && inventoryIds.Contains(i.SpecialEquipmentId))
+                    .ToListAsync();
+                
+                // 删除库存记录
+                _context.Inventories.RemoveRange(inventories);
+                
+                // 删除专用设备
+                _context.SpecialEquipments.RemoveRange(specialEquipments);
+                
+                await _context.SaveChangesAsync();
+            }
         }
 
         // 通用设备管理
         public async Task<List<GeneralEquipmentDTO>> GetGeneralEquipmentsAsync()
         {
+            if (_context.GeneralEquipments == null)
+            {
+                return new List<GeneralEquipmentDTO>();
+            }
             var equipments = await _context.GeneralEquipments.ToListAsync();
             return equipments.Select(e => new GeneralEquipmentDTO
             {
                 Id = e.Id,
-                Name = e.DeviceName,
-                DeviceCode = e.DeviceCode,
-                SerialNumber = e.SerialNumber,
-                Brand = e.Brand,
-                Model = e.Model,
+                Name = e.DeviceName ?? "",
+                DeviceCode = e.DeviceCode ?? "",
+                SerialNumber = e.SerialNumber ?? "",
+                Brand = e.Brand ?? "",
+                Model = e.Model ?? "",
                 Quantity = e.Quantity,
-                Unit = e.Unit,
-                Accessories = e.Accessories,
-                ImageUrl = e.ImageUrl,
+                Unit = e.Unit ?? "",
+                Accessories = e.Accessories ?? "",
+                ImageUrl = e.ImageUrl ?? "",
                 Warehouse = e.Warehouse ?? "主仓库", // 默认为主仓库
-                Company = e.Company,
-                Status = e.Status,
+                Company = e.Company ?? "",
+                Status = e.Status ?? "",
                 UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
-                ProjectName = e.ProjectName,
+                ProjectName = e.ProjectName ?? "",
                 ProjectTime = e.ProjectTime,
-                Location = e.Location,
-                Description = e.Remark,
+                Location = e.Location ?? "",
+                Description = e.Remark ?? "",
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),
                 PurchasePrice = e.PurchasePrice ?? 0
             }).ToList();
@@ -380,6 +425,16 @@ namespace DeviceWarehouseSystem.Services
         /// </summary>
         public async Task<PagedResult<GeneralEquipmentDTO>> GetPagedGeneralEquipmentsAsync(PaginationParams parameters)
         {
+            if (_context.GeneralEquipments == null)
+            {
+                return new PagedResult<GeneralEquipmentDTO>
+                {
+                    Items = new List<GeneralEquipmentDTO>(),
+                    TotalCount = 0,
+                    PageNumber = parameters.PageNumber,
+                    PageSize = parameters.PageSize
+                };
+            }
             var query = _context.GeneralEquipments.AsQueryable();
 
             // 应用搜索过滤
@@ -387,7 +442,7 @@ namespace DeviceWarehouseSystem.Services
             {
                 var search = parameters.Search.ToLower();
                 query = query.Where(e =>
-                    e.DeviceName.ToLower().Contains(search) ||
+                    (e.DeviceName != null && e.DeviceName.ToLower().Contains(search)) ||
                     (e.Brand != null && e.Brand.ToLower().Contains(search)) ||
                     (e.Model != null && e.Model.ToLower().Contains(search)) ||
                     (e.DeviceCode != null && e.DeviceCode.ToLower().Contains(search)));
@@ -414,23 +469,23 @@ namespace DeviceWarehouseSystem.Services
                 .Select(e => new GeneralEquipmentDTO
                 {
                     Id = e.Id,
-                    Name = e.DeviceName,
-                    DeviceCode = e.DeviceCode,
-                    SerialNumber = e.SerialNumber,
-                    Brand = e.Brand,
-                    Model = e.Model,
+                    Name = e.DeviceName ?? "",
+                    DeviceCode = e.DeviceCode ?? "",
+                    SerialNumber = e.SerialNumber ?? "",
+                    Brand = e.Brand ?? "",
+                    Model = e.Model ?? "",
                     Quantity = e.Quantity,
-                    Unit = e.Unit,
-                    Accessories = e.Accessories,
-                    ImageUrl = e.ImageUrl,
+                    Unit = e.Unit ?? "",
+                    Accessories = e.Accessories ?? "",
+                    ImageUrl = e.ImageUrl ?? "",
                     Warehouse = e.Warehouse ?? "主仓库",
-                    Company = e.Company,
-                    Status = e.Status,
+                    Company = e.Company ?? "",
+                    Status = e.Status ?? "",
                     UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
-                    ProjectName = e.ProjectName,
+                    ProjectName = e.ProjectName ?? "",
                     ProjectTime = e.ProjectTime,
-                    Location = e.Location,
-                    Description = e.Remark,
+                    Location = e.Location ?? "",
+                    Description = e.Remark ?? "",
                     PurchaseDate = e.PurchaseDate.HasValue ? e.PurchaseDate.Value.ToString("yyyy-MM-dd") : e.CreatedAt.ToString("yyyy-MM-dd"),
                     PurchasePrice = e.PurchasePrice ?? 0
                 })
@@ -447,6 +502,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<GeneralEquipmentDTO> GetGeneralEquipmentByIdAsync(int id)
         {
+            if (_context.GeneralEquipments == null)
+            {
+                throw new Exception("设备不存在");
+            }
             var equipment = await _context.GeneralEquipments.FindAsync(id);
             if (equipment == null)
             {
@@ -456,23 +515,23 @@ namespace DeviceWarehouseSystem.Services
             return new GeneralEquipmentDTO
             {
                 Id = equipment.Id,
-                Name = equipment.DeviceName,
-                DeviceCode = equipment.DeviceCode,
-                SerialNumber = equipment.SerialNumber,
-                Brand = equipment.Brand,
-                Model = equipment.Model,
+                Name = equipment.DeviceName ?? "",
+                DeviceCode = equipment.DeviceCode ?? "",
+                SerialNumber = equipment.SerialNumber ?? "",
+                Brand = equipment.Brand ?? "",
+                Model = equipment.Model ?? "",
                 Quantity = equipment.Quantity,
-                Unit = equipment.Unit,
-                Accessories = equipment.Accessories,
-                ImageUrl = equipment.ImageUrl,
+                Unit = equipment.Unit ?? "",
+                Accessories = equipment.Accessories ?? "",
+                ImageUrl = equipment.ImageUrl ?? "",
                 Warehouse = equipment.Warehouse ?? "主仓库", // 默认为主仓库
-                Company = equipment.Company,
-                Status = equipment.Status,
+                Company = equipment.Company ?? "",
+                Status = equipment.Status ?? "",
                 UseStatus = equipment.UseStatus == 1 ? "使用中" : "未使用",
-                ProjectName = equipment.ProjectName,
+                ProjectName = equipment.ProjectName ?? "",
                 ProjectTime = equipment.ProjectTime,
-                Location = equipment.Location,
-                Description = equipment.Remark,
+                Location = equipment.Location ?? "",
+                Description = equipment.Remark ?? "",
                 PurchaseDate = equipment.PurchaseDate?.ToString("yyyy-MM-dd") ?? equipment.CreatedAt.ToString("yyyy-MM-dd"),
                 PurchasePrice = equipment.PurchasePrice ?? 0
             };
@@ -534,31 +593,37 @@ namespace DeviceWarehouseSystem.Services
                 NameSequence = 0 // 默认序列
             };
 
-            _context.GeneralEquipments.Add(equipment);
-            await _context.SaveChangesAsync();
-
-            // 更新库存
-            var inventory = await _context.Inventories
-                .FirstOrDefaultAsync(i => i.GeneralEquipmentId == equipment.Id);
-            
-            if (inventory == null)
+            if (_context.GeneralEquipments != null)
             {
-                // 创建新的库存记录
-                inventory = new Inventory
+                _context.GeneralEquipments.Add(equipment);
+                await _context.SaveChangesAsync();
+
+                // 更新库存
+                if (_context.Inventories != null)
                 {
-                    GeneralEquipmentId = equipment.Id,
-                    CurrentQuantity = equipment.Quantity,
-                    AlertMinQuantity = 1,
-                    AlertMaxQuantity = 100,
-                    LastUpdated = DateTime.Now
-                };
-                _context.Inventories.Add(inventory);
-            } else {
-                // 更新现有库存记录
-                inventory.CurrentQuantity += equipment.Quantity;
-                inventory.LastUpdated = DateTime.Now;
+                    var inventory = await _context.Inventories
+                        .FirstOrDefaultAsync(i => i.GeneralEquipmentId == equipment.Id);
+                    
+                    if (inventory == null)
+                    {
+                        // 创建新的库存记录
+                        inventory = new Inventory
+                        {
+                            GeneralEquipmentId = equipment.Id,
+                            CurrentQuantity = equipment.Quantity,
+                            AlertMinQuantity = 1,
+                            AlertMaxQuantity = 100,
+                            LastUpdated = DateTime.Now
+                        };
+                        _context.Inventories.Add(inventory);
+                    } else {
+                        // 更新现有库存记录
+                        inventory.CurrentQuantity += equipment.Quantity;
+                        inventory.LastUpdated = DateTime.Now;
+                    }
+                    await _context.SaveChangesAsync();
+                }
             }
-            await _context.SaveChangesAsync();
 
             dto.Id = equipment.Id;
             dto.Warehouse = equipment.Warehouse ?? "主仓库";
@@ -570,6 +635,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<GeneralEquipmentDTO> UpdateGeneralEquipmentAsync(int id, GeneralEquipmentDTO dto)
         {
+            if (_context.GeneralEquipments == null)
+            {
+                throw new Exception("设备不存在");
+            }
             var equipment = await _context.GeneralEquipments.FindAsync(id);
             if (equipment == null)
             {
@@ -579,8 +648,8 @@ namespace DeviceWarehouseSystem.Services
             // 保存旧数量，用于更新库存
             int oldQuantity = equipment.Quantity;
 
-            equipment.DeviceName = dto.Name;
-            equipment.DeviceCode = dto.DeviceCode;
+            equipment.DeviceName = dto.Name ?? "";
+equipment.DeviceCode = dto.DeviceCode ?? "";
             equipment.Brand = dto.Brand;
             equipment.Model = dto.Model;
             equipment.SerialNumber = dto.SerialNumber;
@@ -611,15 +680,18 @@ namespace DeviceWarehouseSystem.Services
             await _context.SaveChangesAsync();
 
             // 更新库存
-            var inventory = await _context.Inventories
-                .FirstOrDefaultAsync(i => i.GeneralEquipmentId == equipment.Id);
-            
-            if (inventory != null)
+            if (_context.Inventories != null)
             {
-                // 更新库存数量
-                inventory.CurrentQuantity = inventory.CurrentQuantity - oldQuantity + equipment.Quantity;
-                inventory.LastUpdated = DateTime.Now;
-                await _context.SaveChangesAsync();
+                var inventory = await _context.Inventories
+                    .FirstOrDefaultAsync(i => i.GeneralEquipmentId == equipment.Id);
+                
+                if (inventory != null)
+                {
+                    // 更新库存数量
+                    inventory.CurrentQuantity = inventory.CurrentQuantity - oldQuantity + equipment.Quantity;
+                    inventory.LastUpdated = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
             }
 
             dto.Warehouse = equipment.Warehouse ?? "主仓库";
@@ -630,6 +702,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task DeleteGeneralEquipmentAsync(int id)
         {
+            if (_context.GeneralEquipments == null)
+            {
+                throw new Exception("设备不存在");
+            }
             var equipment = await _context.GeneralEquipments.FindAsync(id);
             if (equipment == null)
             {
@@ -637,12 +713,15 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 删除相关的库存记录
-            var inventory = await _context.Inventories
-                .FirstOrDefaultAsync(i => i.GeneralEquipmentId == equipment.Id);
-            
-            if (inventory != null)
+            if (_context.Inventories != null)
             {
-                _context.Inventories.Remove(inventory);
+                var inventory = await _context.Inventories
+                    .FirstOrDefaultAsync(i => i.GeneralEquipmentId == equipment.Id);
+                
+                if (inventory != null)
+                {
+                    _context.Inventories.Remove(inventory);
+                }
             }
 
             _context.GeneralEquipments.Remove(equipment);
@@ -652,63 +731,72 @@ namespace DeviceWarehouseSystem.Services
         public async Task ClearAllGeneralEquipmentsAsync()
         {
             // 获取所有通用设备
-            var generalEquipments = await _context.GeneralEquipments.ToListAsync();
-            
-            // 获取相关的库存记录
-            var inventoryIds = generalEquipments.Select(e => (int?)e.Id).ToList();
-            var inventories = await _context.Inventories
-                .Where(i => i.GeneralEquipmentId != null && inventoryIds.Contains(i.GeneralEquipmentId))
-                .ToListAsync();
-            
-            // 删除库存记录
-            _context.Inventories.RemoveRange(inventories);
-            
-            // 删除通用设备
-            _context.GeneralEquipments.RemoveRange(generalEquipments);
-            
-            await _context.SaveChangesAsync();
+            if (_context.GeneralEquipments != null && _context.Inventories != null)
+            {
+                var generalEquipments = await _context.GeneralEquipments.ToListAsync();
+                
+                // 获取相关的库存记录
+                var inventoryIds = generalEquipments.Select(e => (int?)e.Id).ToList();
+                var inventories = await _context.Inventories
+                    .Where(i => i.GeneralEquipmentId != null && inventoryIds.Contains(i.GeneralEquipmentId))
+                    .ToListAsync();
+                
+                // 删除库存记录
+                _context.Inventories.RemoveRange(inventories);
+                
+                // 删除通用设备
+                _context.GeneralEquipments.RemoveRange(generalEquipments);
+                
+                await _context.SaveChangesAsync();
+            }
         }
 
         // 待维修设备管理
         public async Task<List<RepairEquipmentDTO>> GetRepairEquipmentsAsync()
         {
-            // 从专用设备和通用设备中筛选出待维修状态的设备
-            var specialEquipments = await _context.SpecialEquipments
-                .Where(e => e.RepairStatus == 1) // 假设1表示待维修
-                .ToListAsync();
-
-            var generalEquipments = await _context.GeneralEquipments
-                .Where(e => e.RepairStatus == 1) // 假设1表示待维修
-                .ToListAsync();
-
             var repairEquipments = new List<RepairEquipmentDTO>();
-
-            foreach (var equipment in specialEquipments)
+            
+            // 从专用设备和通用设备中筛选出待维修状态的设备
+            if (_context.SpecialEquipments != null)
             {
-                repairEquipments.Add(new RepairEquipmentDTO
+                var specialEquipments = await _context.SpecialEquipments
+                    .Where(e => e.RepairStatus == 1) // 假设1表示待维修
+                    .ToListAsync();
+
+                foreach (var equipment in specialEquipments)
                 {
-                    Id = equipment.Id,
-                    EquipmentId = equipment.Id,
-                    EquipmentName = equipment.DeviceName,
-                    ProblemDescription = equipment.FaultReason,
-                    RepairDate = equipment.RepairDate ?? DateTime.Now,
-                    RepairStatus = equipment.RepairStatus.ToString(),
-                    RepairResult = ""
-                });
+                    repairEquipments.Add(new RepairEquipmentDTO
+                    {
+                        Id = equipment.Id,
+                        EquipmentId = equipment.Id,
+                        EquipmentName = equipment.DeviceName ?? "",
+                        ProblemDescription = equipment.FaultReason ?? "",
+                        RepairDate = equipment.RepairDate ?? DateTime.Now,
+                        RepairStatus = equipment.RepairStatus.ToString(),
+                        RepairResult = ""
+                    });
+                }
             }
 
-            foreach (var equipment in generalEquipments)
+            if (_context.GeneralEquipments != null)
             {
-                repairEquipments.Add(new RepairEquipmentDTO
+                var generalEquipments = await _context.GeneralEquipments
+                    .Where(e => e.RepairStatus == 1) // 假设1表示待维修
+                    .ToListAsync();
+
+                foreach (var equipment in generalEquipments)
                 {
-                    Id = equipment.Id,
-                    EquipmentId = equipment.Id,
-                    EquipmentName = equipment.DeviceName,
-                    ProblemDescription = equipment.FaultReason,
-                    RepairDate = equipment.RepairDate ?? DateTime.Now,
-                    RepairStatus = equipment.RepairStatus.ToString(),
-                    RepairResult = ""
-                });
+                    repairEquipments.Add(new RepairEquipmentDTO
+                    {
+                        Id = equipment.Id,
+                        EquipmentId = equipment.Id,
+                        EquipmentName = equipment.DeviceName ?? "",
+                        ProblemDescription = equipment.FaultReason ?? "",
+                        RepairDate = equipment.RepairDate ?? DateTime.Now,
+                        RepairStatus = equipment.RepairStatus.ToString(),
+                        RepairResult = ""
+                    });
+                }
             }
 
             return repairEquipments;
@@ -717,13 +805,17 @@ namespace DeviceWarehouseSystem.Services
         // 报废设备管理
         public async Task<List<ScrapEquipmentDTO>> GetScrapEquipmentsAsync()
         {
+            if (_context.ScrapEquipments == null)
+            {
+                return new List<ScrapEquipmentDTO>();
+            }
             var equipments = await _context.ScrapEquipments.ToListAsync();
             return equipments.Select(e => new ScrapEquipmentDTO
             {
                 Id = e.Id,
                 EquipmentId = e.SpecialEquipmentId ?? e.GeneralEquipmentId ?? 0,
                 EquipmentName = e.SpecialEquipment?.DeviceName ?? e.GeneralEquipment?.DeviceName ?? "",
-                ScrapReason = e.Remark,
+                ScrapReason = e.Remark ?? "",
                 ScrapDate = e.ScrapDate,
                 ScrapStatus = "已报废"
             }).ToList();
@@ -732,8 +824,18 @@ namespace DeviceWarehouseSystem.Services
         public async Task<ScrapEquipmentDTO> CreateScrapEquipmentAsync(ScrapEquipmentDTO dto)
         {
             // 查找原设备（专用设备或通用设备）
-            var specialEquipment = await _context.SpecialEquipments.FindAsync(dto.EquipmentId);
-            var generalEquipment = await _context.GeneralEquipments.FindAsync(dto.EquipmentId);
+            SpecialEquipment? specialEquipment = null;
+            GeneralEquipment? generalEquipment = null;
+            
+            if (_context.SpecialEquipments != null)
+            {
+                specialEquipment = await _context.SpecialEquipments.FindAsync(dto.EquipmentId);
+            }
+            
+            if (_context.GeneralEquipments != null)
+            {
+                generalEquipment = await _context.GeneralEquipments.FindAsync(dto.EquipmentId);
+            }
 
             if (specialEquipment == null && generalEquipment == null)
             {
@@ -758,15 +860,18 @@ namespace DeviceWarehouseSystem.Services
                 Location = specialEquipment?.Location ?? generalEquipment?.Location,
                 Company = specialEquipment?.Company ?? generalEquipment?.Company,
                 Accessories = specialEquipment?.Accessories ?? generalEquipment?.Accessories,
-                ScrapReason = dto.ScrapReason,
+                ScrapReason = dto.ScrapReason ?? "",
                 ScrapDate = dto.ScrapDate,
                 ScrappedBy = "系统", // 可根据实际用户信息修改
-                Remark = dto.ScrapReason,
+                Remark = dto.ScrapReason ?? "",
                 CreatedAt = DateTime.Now
             };
 
-            _context.ScrapEquipments.Add(scrapEquipment);
-            await _context.SaveChangesAsync();
+            if (_context.ScrapEquipments != null)
+            {
+                _context.ScrapEquipments.Add(scrapEquipment);
+                await _context.SaveChangesAsync();
+            }
 
             dto.Id = scrapEquipment.Id;
             dto.EquipmentName = scrapEquipment.DeviceName;
@@ -776,6 +881,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<ScrapEquipmentDTO> GetScrapEquipmentByIdAsync(int id)
         {
+            if (_context.ScrapEquipments == null)
+            {
+                throw new Exception("报废设备不存在");
+            }
             var equipment = await _context.ScrapEquipments.FindAsync(id);
             if (equipment == null)
             {
@@ -787,7 +896,7 @@ namespace DeviceWarehouseSystem.Services
                 Id = equipment.Id,
                 EquipmentId = equipment.SpecialEquipmentId ?? equipment.GeneralEquipmentId ?? 0,
                 EquipmentName = equipment.SpecialEquipment?.DeviceName ?? equipment.GeneralEquipment?.DeviceName ?? "",
-                ScrapReason = equipment.Remark,
+                ScrapReason = equipment.Remark ?? "",
                 ScrapDate = equipment.ScrapDate,
                 ScrapStatus = "已报废"
             };
@@ -795,6 +904,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task DeleteScrapEquipmentAsync(int id)
         {
+            if (_context.ScrapEquipments == null)
+            {
+                throw new Exception("报废设备不存在");
+            }
             var equipment = await _context.ScrapEquipments.FindAsync(id);
             if (equipment == null)
             {
@@ -808,6 +921,10 @@ namespace DeviceWarehouseSystem.Services
         // 从设备表获取专用设备（用于出库单选择）- 按设备名称、品牌汇总，只包含正常未使用设备
         public async Task<List<InventoryDeviceDTO>> GetSpecialInventoryDevicesAsync()
         {
+            if (_context.SpecialEquipments == null)
+            {
+                return new List<InventoryDeviceDTO>();
+            }
             var equipments = await _context.SpecialEquipments
                 .Where(e => e.DeviceStatus == 1 && // 1表示正常
                             e.UseStatus == 0) // 0表示未使用
@@ -816,7 +933,7 @@ namespace DeviceWarehouseSystem.Services
             // 按设备名称、品牌分组汇总
             var groupedDevices = equipments
                 .GroupBy(e => new 
-                { 
+                {
                     e.DeviceName, 
                     e.Brand
                 })
@@ -825,11 +942,11 @@ namespace DeviceWarehouseSystem.Services
                     Id = index + 1,
                     EquipmentId = g.First().Id,
                     Name = g.Key.DeviceName ?? "未知设备",
-                    Brand = g.Key.Brand,
-                    Model = g.First().Model,
-                    Specification = g.First().Specification,
+                    Brand = g.Key.Brand ?? "",
+                    Model = g.First().Model ?? "",
+                    Specification = g.First().Specification ?? "",
                     InventoryQuantity = g.Count(), // 未使用设备的数量
-                    Unit = g.First().Unit,
+                    Unit = g.First().Unit ?? "",
                     Warehouse = g.First().Warehouse ?? "主仓库"
                 })
                 .ToList();
@@ -840,6 +957,10 @@ namespace DeviceWarehouseSystem.Services
         // 从设备表获取通用设备（用于出库单选择）- 按设备名称、品牌汇总，只包含正常未使用设备
         public async Task<List<InventoryDeviceDTO>> GetGeneralInventoryDevicesAsync()
         {
+            if (_context.GeneralEquipments == null)
+            {
+                return new List<InventoryDeviceDTO>();
+            }
             var equipments = await _context.GeneralEquipments
                 .Where(e => e.DeviceStatus == 1 && // 1表示正常
                             e.UseStatus == 0) // 0表示未使用
@@ -848,7 +969,7 @@ namespace DeviceWarehouseSystem.Services
             // 按设备名称、品牌分组汇总
             var groupedDevices = equipments
                 .GroupBy(e => new 
-                { 
+                {
                     e.DeviceName, 
                     e.Brand
                 })
@@ -857,11 +978,11 @@ namespace DeviceWarehouseSystem.Services
                     Id = index + 1,
                     EquipmentId = g.First().Id,
                     Name = g.Key.DeviceName ?? "未知设备",
-                    Brand = g.Key.Brand,
-                    Model = g.First().Model,
-                    Specification = g.First().Specification,
+                    Brand = g.Key.Brand ?? "",
+                    Model = g.First().Model ?? "",
+                    Specification = g.First().Specification ?? "",
                     InventoryQuantity = g.Count(), // 未使用设备的数量
-                    Unit = g.First().Unit,
+                    Unit = g.First().Unit ?? "",
                     Warehouse = g.First().Warehouse ?? "主仓库"
                 })
                 .ToList();
@@ -872,6 +993,10 @@ namespace DeviceWarehouseSystem.Services
         // 获取专用设备详细清单（用于出库单选择）
         public async Task<List<SpecialEquipmentDTO>> GetSpecialEquipmentDetailsAsync(string deviceName, string? brand = null)
         {
+            if (_context.SpecialEquipments == null)
+            {
+                return new List<SpecialEquipmentDTO>();
+            }
             var query = _context.SpecialEquipments
                 .Where(e => e.DeviceName == deviceName && 
                             e.DeviceStatus == 1 && // 1表示正常
@@ -886,21 +1011,21 @@ namespace DeviceWarehouseSystem.Services
             return equipments.Select(e => new SpecialEquipmentDTO
             {
                 Id = e.Id,
-                Name = e.DeviceName,
-                DeviceCode = e.DeviceCode,
-                SerialNumber = e.SerialNumber,
-                Brand = e.Brand,
-                Model = e.Model,
+                Name = e.DeviceName ?? "",
+                DeviceCode = e.DeviceCode ?? "",
+                SerialNumber = e.SerialNumber ?? "",
+                Brand = e.Brand ?? "",
+                Model = e.Model ?? "",
                 Quantity = e.Quantity,
-                Unit = e.Unit,
-                Accessories = e.Accessories,
-                ImageUrl = e.ImageUrl,
+                Unit = e.Unit ?? "",
+                Accessories = e.Accessories ?? "",
+                ImageUrl = e.ImageUrl ?? "",
                 Warehouse = e.Warehouse ?? "主仓库",
-                Company = e.Company,
-                Status = e.Status,
+                Company = e.Company ?? "",
+                Status = e.Status ?? "",
                 UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
-                Location = e.Location,
-                Description = e.Remark,
+                Location = e.Location ?? "",
+                Description = e.Remark ?? "",
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),
                 PurchasePrice = e.PurchasePrice ?? 0
             }).ToList();
@@ -909,6 +1034,10 @@ namespace DeviceWarehouseSystem.Services
         // 获取通用设备详细清单（用于出库单选择）
         public async Task<List<GeneralEquipmentDTO>> GetGeneralEquipmentDetailsAsync(string deviceName, string? brand = null)
         {
+            if (_context.GeneralEquipments == null)
+            {
+                return new List<GeneralEquipmentDTO>();
+            }
             var query = _context.GeneralEquipments
                 .Where(e => e.DeviceName == deviceName && 
                             e.DeviceStatus == 1 && // 1表示正常
@@ -923,21 +1052,21 @@ namespace DeviceWarehouseSystem.Services
             return equipments.Select(e => new GeneralEquipmentDTO
             {
                 Id = e.Id,
-                Name = e.DeviceName,
-                DeviceCode = e.DeviceCode,
-                SerialNumber = e.SerialNumber,
-                Brand = e.Brand,
-                Model = e.Model,
+                Name = e.DeviceName ?? "",
+                DeviceCode = e.DeviceCode ?? "",
+                SerialNumber = e.SerialNumber ?? "",
+                Brand = e.Brand ?? "",
+                Model = e.Model ?? "",
                 Quantity = e.Quantity,
-                Unit = e.Unit,
-                Accessories = e.Accessories,
-                ImageUrl = e.ImageUrl,
+                Unit = e.Unit ?? "",
+                Accessories = e.Accessories ?? "",
+                ImageUrl = e.ImageUrl ?? "",
                 Warehouse = e.Warehouse ?? "主仓库",
-                Company = e.Company,
-                Status = e.Status,
+                Company = e.Company ?? "",
+                Status = e.Status ?? "",
                 UseStatus = e.UseStatus == 1 ? "使用中" : "未使用",
-                Location = e.Location,
-                Description = e.Remark,
+                Location = e.Location ?? "",
+                Description = e.Remark ?? "",
                 PurchaseDate = e.PurchaseDate?.ToString("yyyy-MM-dd") ?? e.CreatedAt.ToString("yyyy-MM-dd"),
                 PurchasePrice = e.PurchasePrice ?? 0
             }).ToList();

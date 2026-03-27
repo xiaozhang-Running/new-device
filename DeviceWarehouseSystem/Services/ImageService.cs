@@ -53,8 +53,11 @@ namespace DeviceWarehouseSystem.Services
                         CreatedAt = DateTime.Now
                     };
 
-                    _context.EquipmentImages.Add(image);
-                    imagePaths.Add(relativePath);
+                    if (_context.EquipmentImages != null)
+                    {
+                        _context.EquipmentImages.Add(image);
+                        imagePaths.Add(relativePath);
+                    }
                 }
             }
 
@@ -98,8 +101,11 @@ namespace DeviceWarehouseSystem.Services
                         CreatedAt = DateTime.Now
                     };
 
-                    _context.InOutboundImages.Add(image);
-                    imagePaths.Add(relativePath);
+                    if (_context.InOutboundImages != null)
+                    {
+                        _context.InOutboundImages.Add(image);
+                        imagePaths.Add(relativePath);
+                    }
                 }
             }
 
@@ -113,17 +119,23 @@ namespace DeviceWarehouseSystem.Services
         public async Task<(byte[]? data, string? contentType)> GetImageAsync(int imageId)
         {
             // 先从设备图片表查找
-            var equipmentImage = await _context.EquipmentImages.FindAsync(imageId);
-            if (equipmentImage != null)
+            if (_context.EquipmentImages != null)
             {
-                return (equipmentImage.ImageData, equipmentImage.ContentType);
+                var equipmentImage = await _context.EquipmentImages.FindAsync(imageId);
+                if (equipmentImage != null)
+                {
+                    return (equipmentImage.ImageData, equipmentImage.ContentType);
+                }
             }
 
             // 再从出入库图片表查找
-            var inOutboundImage = await _context.InOutboundImages.FindAsync(imageId);
-            if (inOutboundImage != null)
+            if (_context.InOutboundImages != null)
             {
-                return (inOutboundImage.ImageData, inOutboundImage.ContentType);
+                var inOutboundImage = await _context.InOutboundImages.FindAsync(imageId);
+                if (inOutboundImage != null)
+                {
+                    return (inOutboundImage.ImageData, inOutboundImage.ContentType);
+                }
             }
 
             return (null, null);
@@ -134,6 +146,10 @@ namespace DeviceWarehouseSystem.Services
         /// </summary>
         public async Task<List<InOutboundImage>> GetImagesByOrderIdAsync(int orderId)
         {
+            if (_context.InOutboundImages == null)
+            {
+                return new List<InOutboundImage>();
+            }
             return await _context.InOutboundImages
                 .Where(i => i.OrderId == orderId)
                 .OrderBy(i => i.OrderIndex)
@@ -146,21 +162,27 @@ namespace DeviceWarehouseSystem.Services
         public async Task<bool> DeleteImageAsync(int imageId)
         {
             // 先从设备图片表查找
-            var equipmentImage = await _context.EquipmentImages.FindAsync(imageId);
-            if (equipmentImage != null)
+            if (_context.EquipmentImages != null)
             {
-                _context.EquipmentImages.Remove(equipmentImage);
-                await _context.SaveChangesAsync();
-                return true;
+                var equipmentImage = await _context.EquipmentImages.FindAsync(imageId);
+                if (equipmentImage != null)
+                {
+                    _context.EquipmentImages.Remove(equipmentImage);
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
             }
 
             // 再从出入库图片表查找
-            var inOutboundImage = await _context.InOutboundImages.FindAsync(imageId);
-            if (inOutboundImage != null)
+            if (_context.InOutboundImages != null)
             {
-                _context.InOutboundImages.Remove(inOutboundImage);
-                await _context.SaveChangesAsync();
-                return true;
+                var inOutboundImage = await _context.InOutboundImages.FindAsync(imageId);
+                if (inOutboundImage != null)
+                {
+                    _context.InOutboundImages.Remove(inOutboundImage);
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
             }
 
             return false;
@@ -171,12 +193,15 @@ namespace DeviceWarehouseSystem.Services
         /// </summary>
         public async Task DeleteImagesByOrderIdAsync(int orderId)
         {
-            var images = await _context.InOutboundImages
-                .Where(i => i.OrderId == orderId)
-                .ToListAsync();
+            if (_context.InOutboundImages != null)
+            {
+                var images = await _context.InOutboundImages
+                    .Where(i => i.OrderId == orderId)
+                    .ToListAsync();
 
-            _context.InOutboundImages.RemoveRange(images);
-            await _context.SaveChangesAsync();
+                _context.InOutboundImages.RemoveRange(images);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

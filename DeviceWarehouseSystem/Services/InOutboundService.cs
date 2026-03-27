@@ -16,35 +16,39 @@ namespace DeviceWarehouseSystem.Services
         // 项目出库管理
         public async Task<List<ProjectOutboundDTO>> GetProjectOutboundsAsync()
         {
+            if (_context.ProjectOutbounds == null)
+            {
+                return new List<ProjectOutboundDTO>();
+            }
             var outbounds = await _context.ProjectOutbounds.Include(o => o.ProjectOutboundItems).ToListAsync();
             return outbounds.Select(o => new ProjectOutboundDTO
             {
                 Id = o.Id,
-                OutboundNumber = o.OutboundNumber,
-                ProjectName = o.ProjectName,
-                ProjectManager = o.ProjectManager,
-                ContactPhone = o.ContactPhone,
+                OutboundNumber = o.OutboundNumber ?? "",
+                ProjectName = o.ProjectName ?? "",
+                ProjectManager = o.ProjectManager ?? "",
+                ContactPhone = o.ContactPhone ?? "",
                 ProjectTime = o.ProjectTime,
                 ReturnDate = o.ReturnDate,
-                UsageLocation = o.UsageLocation,
-                Recipient = o.Recipient,
-                Handler = o.Handler,
-                WarehouseKeeper = o.WarehouseKeeper,
-                Remark = o.Remark,
+                UsageLocation = o.UsageLocation ?? "",
+                Recipient = o.Recipient ?? "",
+                Handler = o.Handler ?? "",
+                WarehouseKeeper = o.WarehouseKeeper ?? "",
+                Remark = o.Remark ?? "",
                 IsCompleted = o.IsCompleted,
                 CompletedAt = o.CompletedAt,
-                Items = o.ProjectOutboundItems.Select(i => new ProjectOutboundItemDTO
+                Items = o.ProjectOutboundItems?.Select(i => new ProjectOutboundItemDTO
                 {
                     Id = i.Id,
                     ProjectOutboundId = i.OutboundId,
                     EquipmentId = i.ItemId,
-                    EquipmentName = i.ItemName,
-                    Brand = i.Brand,
-                    Model = i.Model,
+                    EquipmentName = i.ItemName ?? "",
+                    Brand = i.Brand ?? "",
+                    Model = i.Model ?? "",
                     Quantity = i.Quantity,
-                    Unit = i.Unit,
-                    Status = i.DeviceStatus
-                }).ToList()
+                    Unit = i.Unit ?? "",
+                    Status = i.DeviceStatus ?? ""
+                }).ToList() ?? new List<ProjectOutboundItemDTO>()
             }).ToList();
         }
 
@@ -71,30 +75,33 @@ namespace DeviceWarehouseSystem.Services
                 CreatedAt = DateTime.Now
             };
 
-            _context.ProjectOutbounds.Add(outbound);
-            await _context.SaveChangesAsync();
-
-            // 添加出库明细
-            if (dto.Items != null && dto.Items.Count > 0)
+            if (_context.ProjectOutbounds != null)
             {
-                foreach (var item in dto.Items)
-                {
-                    var outboundItem = new ProjectOutboundItem
-                    {
-                        OutboundId = outbound.Id,
-                        ItemType = 1, // 假设1表示设备
-                        ItemId = item.EquipmentId,
-                        ItemName = item.EquipmentName,
-                        Brand = item.Brand,
-                        Model = item.Model,
-                        Quantity = item.Quantity,
-                        Unit = item.Unit,
-                        DeviceStatus = item.Status,
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.ProjectOutboundItems.Add(outboundItem);
-                }
+                _context.ProjectOutbounds.Add(outbound);
                 await _context.SaveChangesAsync();
+
+                // 添加出库明细
+                if (dto.Items != null && dto.Items.Count > 0 && _context.ProjectOutboundItems != null)
+                {
+                    foreach (var item in dto.Items)
+                    {
+                        var outboundItem = new ProjectOutboundItem
+                        {
+                            OutboundId = outbound.Id,
+                            ItemType = 1, // 假设1表示设备
+                            ItemId = item.EquipmentId,
+                            ItemName = item.EquipmentName,
+                            Brand = item.Brand,
+                            Model = item.Model,
+                            Quantity = item.Quantity,
+                            Unit = item.Unit,
+                            DeviceStatus = item.Status,
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.ProjectOutboundItems.Add(outboundItem);
+                    }
+                    await _context.SaveChangesAsync();
+                }
             }
 
             dto.Id = outbound.Id;
@@ -105,53 +112,61 @@ namespace DeviceWarehouseSystem.Services
         // 原材料出库管理
         public async Task<List<RawMaterialOutboundDTO>> GetRawMaterialOutboundsAsync()
         {
+            if (_context.RawMaterialOutbounds == null)
+            {
+                return new List<RawMaterialOutboundDTO>();
+            }
             var outbounds = await _context.RawMaterialOutbounds.Include(o => o.RawMaterialOutboundItems).ToListAsync();
             return outbounds.Select(o => new RawMaterialOutboundDTO
             {
                 Id = o.Id,
-                OutboundNumber = o.OutboundNumber,
-                Recipient = o.Recipient,
-                Operator = o.Operator,
-                Status = o.Status,
-                Remark = o.Remark,
+                OutboundNumber = o.OutboundNumber ?? "",
+                Recipient = o.Recipient ?? "",
+                Operator = o.Operator ?? "",
+                Status = o.Status ?? "",
+                Remark = o.Remark ?? "",
                 OutboundDate = o.OutboundDate,
-                Items = o.RawMaterialOutboundItems.Select(i => new RawMaterialOutboundItemDTO
+                Items = o.RawMaterialOutboundItems?.Select(i => new RawMaterialOutboundItemDTO
                 {
                     Id = i.Id,
                     RawMaterialId = i.RawMaterialId,
                     Quantity = i.Quantity,
-                    Remark = i.Remark
-                }).ToList()
+                    Remark = i.Remark ?? ""
+                }).ToList() ?? new List<RawMaterialOutboundItemDTO>()
             }).ToList();
         }
 
         // 项目入库管理
         public async Task<List<ProjectInboundDTO>> GetProjectInboundsAsync()
         {
+            if (_context.ProjectInbounds == null)
+            {
+                return new List<ProjectInboundDTO>();
+            }
             var inbounds = await _context.ProjectInbounds.Include(i => i.ProjectInboundItems).ToListAsync();
             return inbounds.Select(i => new ProjectInboundDTO
             {
                 Id = i.Id,
-                InboundNumber = i.InboundNumber,
-                ProjectName = i.ProjectName,
-                ProjectManager = i.ProjectManager,
-                ContactPhone = i.ContactPhone,
-                Handler = i.Handler,
-                WarehouseKeeper = i.WarehouseKeeper,
-                Remark = i.Remark,
-                Status = i.Status,
-                Items = i.ProjectInboundItems.Select(item => new ProjectInboundItemDTO
+                InboundNumber = i.InboundNumber ?? "",
+                ProjectName = i.ProjectName ?? "",
+                ProjectManager = i.ProjectManager ?? "",
+                ContactPhone = i.ContactPhone ?? "",
+                Handler = i.Handler ?? "",
+                WarehouseKeeper = i.WarehouseKeeper ?? "",
+                Remark = i.Remark ?? "",
+                Status = i.Status ?? "",
+                Items = i.ProjectInboundItems?.Select(item => new ProjectInboundItemDTO
                 {
                     Id = item.Id,
                     ProjectInboundId = item.InboundId,
                     EquipmentId = item.ItemId,
-                    EquipmentName = item.ItemName,
-                    Brand = item.Brand,
-                    Model = item.Model,
+                    EquipmentName = item.ItemName ?? "",
+                    Brand = item.Brand ?? "",
+                    Model = item.Model ?? "",
                     Quantity = item.Quantity,
-                    Unit = item.Unit,
-                    Status = item.DeviceStatus
-                }).ToList()
+                    Unit = item.Unit ?? "",
+                    Status = item.DeviceStatus ?? ""
+                }).ToList() ?? new List<ProjectInboundItemDTO>()
             }).ToList();
         }
 
@@ -160,23 +175,27 @@ namespace DeviceWarehouseSystem.Services
         // 原材料入库管理
         public async Task<List<RawMaterialInboundDTO>> GetRawMaterialInboundsAsync()
         {
+            if (_context.RawMaterialInbounds == null)
+            {
+                return new List<RawMaterialInboundDTO>();
+            }
             var inbounds = await _context.RawMaterialInbounds.Include(i => i.RawMaterialInboundItems).ToListAsync();
             return inbounds.Select(i => new RawMaterialInboundDTO
             {
                 Id = i.Id,
-                InboundNumber = i.InboundNumber,
-                Supplier = i.Supplier,
-                Handler = i.Operator,
-                WarehouseKeeper = i.Operator, // 临时使用Operator作为WarehouseKeeper
-                Remark = i.Remark,
-                Status = i.Status,
-                Items = i.RawMaterialInboundItems.Select(item => new RawMaterialInboundItemDTO
+                InboundNumber = i.InboundNumber ?? "",
+                Supplier = i.Supplier ?? "",
+                Handler = i.Operator ?? "",
+                WarehouseKeeper = i.Operator ?? "", // 临时使用Operator作为WarehouseKeeper
+                Remark = i.Remark ?? "",
+                Status = i.Status ?? "",
+                Items = i.RawMaterialInboundItems?.Select(item => new RawMaterialInboundItemDTO
                 {
                     Id = item.Id,
                     RawMaterialId = item.RawMaterialId,
                     Quantity = item.Quantity,
-                    Remark = item.Remark
-                }).ToList()
+                    Remark = item.Remark ?? ""
+                }).ToList() ?? new List<RawMaterialInboundItemDTO>()
             }).ToList();
         }
 
@@ -196,84 +215,90 @@ namespace DeviceWarehouseSystem.Services
                 CreatedAt = DateTime.Now
             };
 
-            _context.RawMaterialInbounds.Add(inbound);
-            await _context.SaveChangesAsync();
+            if (_context.RawMaterialInbounds != null)
+            {
+                _context.RawMaterialInbounds.Add(inbound);
+                await _context.SaveChangesAsync();
 
-            // 添加入库明细
-            if (dto.Items != null && dto.Items.Count > 0)
-            {
-                foreach (var item in dto.Items)
+                // 添加入库明细
+                if (dto.Items != null && dto.Items.Count > 0)
                 {
-                    int rawMaterialId = item.RawMaterialId;
-                    
-                    // 处理新原材料的情况
-            if (rawMaterialId <= 0) // 前端可能发送0或负数表示新原材料
-            {
-                // 尝试从备注中提取名称、规格和单位
-                string productName = "新原材料";
-                string specification = "";
-                string unit = "个"; // 默认单位
-                
-                if (item.Remark != null)
-                {
-                    // 尝试从备注中提取名称
-                    if (item.Remark.Contains("名称:"))
+                    foreach (var item in dto.Items)
                     {
-                        productName = item.Remark.Split("名称:")[1].Split(';')[0].Trim();
+                        int rawMaterialId = item.RawMaterialId;
+                        
+                        // 处理新原材料的情况
+                        if (rawMaterialId <= 0 && _context.RawMaterials != null) // 前端可能发送0或负数表示新原材料
+                        {
+                            // 尝试从备注中提取名称、规格和单位
+                            string productName = "新原材料";
+                            string specification = "";
+                            string unit = "个"; // 默认单位
+                            
+                            if (item.Remark != null)
+                            {
+                                // 尝试从备注中提取名称
+                                if (item.Remark.Contains("名称:"))
+                                {
+                                    productName = item.Remark.Split("名称:")[1].Split(';')[0].Trim();
+                                }
+                                // 尝试从备注中提取规格
+                                if (item.Remark.Contains("规格:"))
+                                {
+                                    specification = item.Remark.Split("规格:")[1].Split(';')[0].Trim();
+                                }
+                                // 尝试从备注中提取单位
+                                if (item.Remark.Contains("单位:"))
+                                {
+                                    unit = item.Remark.Split("单位:")[1].Split(';')[0].Trim();
+                                }
+                            }
+                            
+                            // 验证必要信息
+                            if (string.IsNullOrEmpty(productName))
+                            {
+                                throw new Exception("新原材料必须提供名称");
+                            }
+                            if (string.IsNullOrEmpty(specification))
+                            {
+                                throw new Exception("新原材料必须提供规格信息");
+                            }
+                            
+                            // 创建新的原材料记录
+                            var newRawMaterial = new RawMaterial
+                            {
+                                SortOrder = 0,
+                                ProductName = productName,
+                                Specification = specification,
+                                TotalQuantity = 0,
+                                UsedQuantity = 0,
+                                RemainingQuantity = 0,
+                                Unit = unit,
+                                Supplier = dto.Supplier,
+                                CreatedAt = DateTime.Now
+                            };
+                            
+                            _context.RawMaterials.Add(newRawMaterial);
+                            await _context.SaveChangesAsync();
+                            
+                            rawMaterialId = newRawMaterial.Id;
+                        }
+                        
+                        if (_context.RawMaterialInboundItems != null)
+                        {
+                            var inboundItem = new RawMaterialInboundItem
+                            {
+                                InboundId = inbound.Id,
+                                RawMaterialId = rawMaterialId,
+                                Quantity = item.Quantity,
+                                Remark = item.Remark,
+                                CreatedAt = DateTime.Now
+                            };
+                            _context.RawMaterialInboundItems.Add(inboundItem);
+                        }
                     }
-                    // 尝试从备注中提取规格
-                    if (item.Remark.Contains("规格:"))
-                    {
-                        specification = item.Remark.Split("规格:")[1].Split(';')[0].Trim();
-                    }
-                    // 尝试从备注中提取单位
-                    if (item.Remark.Contains("单位:"))
-                    {
-                        unit = item.Remark.Split("单位:")[1].Split(';')[0].Trim();
-                    }
+                    await _context.SaveChangesAsync();
                 }
-                
-                // 验证必要信息
-                if (string.IsNullOrEmpty(productName))
-                {
-                    throw new Exception("新原材料必须提供名称");
-                }
-                if (string.IsNullOrEmpty(specification))
-                {
-                    throw new Exception("新原材料必须提供规格信息");
-                }
-                
-                // 创建新的原材料记录
-                var newRawMaterial = new RawMaterial
-                {
-                    SortOrder = 0,
-                    ProductName = productName,
-                    Specification = specification,
-                    TotalQuantity = 0,
-                    UsedQuantity = 0,
-                    RemainingQuantity = 0,
-                    Unit = unit,
-                    Supplier = dto.Supplier,
-                    CreatedAt = DateTime.Now
-                };
-                
-                _context.RawMaterials.Add(newRawMaterial);
-                await _context.SaveChangesAsync();
-                
-                rawMaterialId = newRawMaterial.Id;
-            }
-                    
-                    var inboundItem = new RawMaterialInboundItem
-                    {
-                        InboundId = inbound.Id,
-                        RawMaterialId = rawMaterialId,
-                        Quantity = item.Quantity,
-                        Remark = item.Remark,
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.RawMaterialInboundItems.Add(inboundItem);
-                }
-                await _context.SaveChangesAsync();
             }
 
             dto.Id = inbound.Id;
@@ -284,6 +309,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<RawMaterialInboundDTO> ConfirmRawMaterialInboundAsync(int id)
         {
+            if (_context.RawMaterialInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
             var inbound = await _context.RawMaterialInbounds.Include(i => i.RawMaterialInboundItems).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
@@ -295,13 +324,16 @@ namespace DeviceWarehouseSystem.Services
             inbound.UpdatedAt = DateTime.Now;
 
             // 更新原材料库存
-            foreach (var item in inbound.RawMaterialInboundItems)
+            if (inbound.RawMaterialInboundItems != null && _context.RawMaterials != null)
             {
-                var rawMaterial = await _context.RawMaterials.FirstOrDefaultAsync(m => m.Id == item.RawMaterialId);
-                if (rawMaterial != null)
+                foreach (var item in inbound.RawMaterialInboundItems)
                 {
-                    rawMaterial.RemainingQuantity += item.Quantity;
-                    rawMaterial.TotalQuantity += item.Quantity;
+                    var rawMaterial = await _context.RawMaterials.FirstOrDefaultAsync(m => m.Id == item.RawMaterialId);
+                    if (rawMaterial != null)
+                    {
+                        rawMaterial.RemainingQuantity += item.Quantity;
+                        rawMaterial.TotalQuantity += item.Quantity;
+                    }
                 }
             }
 
@@ -317,18 +349,22 @@ namespace DeviceWarehouseSystem.Services
                 WarehouseKeeper = inbound.Operator,
                 Remark = inbound.Remark,
                 Status = inbound.Status,
-                Items = inbound.RawMaterialInboundItems.Select(item => new RawMaterialInboundItemDTO
+                Items = inbound.RawMaterialInboundItems?.Select(item => new RawMaterialInboundItemDTO
                 {
                     Id = item.Id,
                     RawMaterialId = item.RawMaterialId,
                     Quantity = item.Quantity,
                     Remark = item.Remark
-                }).ToList()
+                }).ToList() ?? new List<RawMaterialInboundItemDTO>()
             };
         }
 
         public async Task DeleteRawMaterialInboundAsync(int id)
         {
+            if (_context.RawMaterialInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
             var inbound = await _context.RawMaterialInbounds.Include(i => i.RawMaterialInboundItems).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
@@ -336,7 +372,7 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 如果入库记录已完成，需要减少原材料库存
-            if (inbound.Status == "已完成")
+            if (inbound.Status == "已完成" && inbound.RawMaterialInboundItems != null && _context.RawMaterials != null)
             {
                 foreach (var item in inbound.RawMaterialInboundItems)
                 {
@@ -350,7 +386,10 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 删除入库明细
-            _context.RawMaterialInboundItems.RemoveRange(inbound.RawMaterialInboundItems);
+            if (_context.RawMaterialInboundItems != null && inbound.RawMaterialInboundItems != null)
+            {
+                _context.RawMaterialInboundItems.RemoveRange(inbound.RawMaterialInboundItems);
+            }
             // 删除入库记录
             _context.RawMaterialInbounds.Remove(inbound);
             
@@ -360,31 +399,35 @@ namespace DeviceWarehouseSystem.Services
         // 专用设备采购入库管理
         public async Task<List<SpecialEquipmentPurchaseInboundDTO>> GetSpecialEquipmentPurchaseInboundsAsync()
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                return new List<SpecialEquipmentPurchaseInboundDTO>();
+            }
             var inbounds = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 1).Include(i => i.EquipmentInboundItems).ToListAsync();
             return inbounds.Select(i => new SpecialEquipmentPurchaseInboundDTO
             {
                 Id = i.Id,
-                InboundNumber = i.InboundNumber,
-                DeliveryPerson = i.DeliveryPerson,
-                Inspector = i.Inspector,
-                InboundPerson = i.InboundPerson,
+                InboundNumber = i.InboundNumber ?? "",
+                DeliveryPerson = i.DeliveryPerson ?? "",
+                Inspector = i.Inspector ?? "",
+                InboundPerson = i.InboundPerson ?? "",
                 InboundDate = i.InboundDate,
-                Handler = i.Operator,
-                WarehouseKeeper = i.Operator, // 临时使用Operator作为WarehouseKeeper
-                Remark = i.Remark,
-                Status = i.Status,
-                Items = i.EquipmentInboundItems.Select(item => new SpecialEquipmentPurchaseInboundItemDTO
+                Handler = i.Operator ?? "",
+                WarehouseKeeper = i.Operator ?? "", // 临时使用Operator作为WarehouseKeeper
+                Remark = i.Remark ?? "",
+                Status = i.Status ?? "",
+                Items = i.EquipmentInboundItems?.Select(item => new SpecialEquipmentPurchaseInboundItemDTO
                 {
                     Id = item.Id,
                     EquipmentId = 0, // 需要根据实际情况设置
-                    EquipmentName = item.DeviceName,
-                    Brand = item.Brand,
-                    Model = item.Model,
-                    Unit = item.Unit,
+                    EquipmentName = item.DeviceName ?? "",
+                    Brand = item.Brand ?? "",
+                    Model = item.Model ?? "",
+                    Unit = item.Unit ?? "",
                     Inventory = 0, // 需要根据实际情况计算
                     Quantity = item.Quantity,
-                    Status = item.Status
-                }).ToList()
+                    Status = item.Status ?? ""
+                }).ToList() ?? new List<SpecialEquipmentPurchaseInboundItemDTO>()
             }).ToList();
         }
 
@@ -405,64 +448,67 @@ namespace DeviceWarehouseSystem.Services
                     InboundNumber = inboundNumber,
                     InboundDate = dto.InboundDate,
                     EquipmentType = 1, // 1表示专用设备采购入库
-                    DeliveryPerson = dto.DeliveryPerson,
-                    Inspector = dto.Inspector,
-                    InboundPerson = dto.InboundPerson,
-                    Operator = dto.Handler,
-                    Remark = dto.Remark,
+                    DeliveryPerson = dto.DeliveryPerson ?? "",
+                    Inspector = dto.Inspector ?? "",
+                    InboundPerson = dto.InboundPerson ?? "",
+                    Operator = dto.Handler ?? "",
+                    Remark = dto.Remark ?? "",
                     Status = "待确认",
                     CreatedAt = DateTime.Now
                 };
 
                 Console.WriteLine("准备保存入库单");
-                _context.EquipmentInbounds.Add(inbound);
-                await _context.SaveChangesAsync();
-                Console.WriteLine($"入库单创建成功，ID: {inbound.Id}");
-
-                // 添加入库明细
-                if (dto.Items != null && dto.Items.Count > 0)
+                if (_context.EquipmentInbounds != null)
                 {
-                    Console.WriteLine("开始添加入库明细");
-                    foreach (var item in dto.Items)
+                    _context.EquipmentInbounds.Add(inbound);
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"入库单创建成功，ID: {inbound.Id}");
+
+                    // 添加入库明细
+                    if (dto.Items != null && dto.Items.Count > 0 && _context.EquipmentInboundItems != null)
                     {
-                        Console.WriteLine($"处理入库明细: EquipmentName={item.EquipmentName}, Brand={item.Brand}, Model={item.Model}, Quantity={item.Quantity}, DeviceCode={item.DeviceCode}");
-                        // 使用前端发送的设备编号
-                        var deviceCode = item.DeviceCode;
-                        Console.WriteLine($"使用的设备编号: {deviceCode}");
-                        
-                        var inboundItem = new EquipmentInboundItem
+                        Console.WriteLine("开始添加入库明细");
+                        foreach (var item in dto.Items)
                         {
-                            InboundId = inbound.Id,
-                            DeviceName = item.EquipmentName,
-                            DeviceCode = deviceCode,
-                            Brand = item.Brand,
-                            Model = item.Model,
-                            Unit = item.Unit,
-                            Quantity = item.Quantity,
-                            Status = item.Status,
-                            EquipmentType = 1,
-                            CreatedAt = DateTime.Now
-                        };
-                        _context.EquipmentInboundItems.Add(inboundItem);
-                    }
-                    Console.WriteLine("准备保存入库明细");
-                    try
-                    {
-                        await _context.SaveChangesAsync();
-                        Console.WriteLine("入库明细添加成功");
-                    }
-                    catch (Exception saveError)
-                    {
-                        Console.WriteLine($"保存入库明细时发生错误: {saveError.Message}");
-                        if (saveError.InnerException != null)
-                        {
-                            Console.WriteLine($"保存错误的内部错误: {saveError.InnerException.Message}");
-                            if (saveError.InnerException.InnerException != null)
+                            Console.WriteLine($"处理入库明细: EquipmentName={item.EquipmentName}, Brand={item.Brand}, Model={item.Model}, Quantity={item.Quantity}, DeviceCode={item.DeviceCode}");
+                            // 使用前端发送的设备编号
+                            var deviceCode = item.DeviceCode;
+                            Console.WriteLine($"使用的设备编号: {deviceCode}");
+                            
+                            var inboundItem = new EquipmentInboundItem
                             {
-                                Console.WriteLine($"保存错误的内部内部错误: {saveError.InnerException.InnerException.Message}");
-                            }
+                                InboundId = inbound.Id,
+                                DeviceName = item.EquipmentName ?? "",
+                                DeviceCode = deviceCode ?? "",
+                                Brand = item.Brand,
+                                Model = item.Model,
+                                Unit = item.Unit,
+                                Quantity = item.Quantity,
+                                Status = item.Status,
+                                EquipmentType = 1,
+                                CreatedAt = DateTime.Now
+                            };
+                            _context.EquipmentInboundItems.Add(inboundItem);
                         }
-                        throw;
+                        Console.WriteLine("准备保存入库明细");
+                        try
+                        {
+                            await _context.SaveChangesAsync();
+                            Console.WriteLine("入库明细添加成功");
+                        }
+                        catch (Exception saveError)
+                        {
+                            Console.WriteLine($"保存入库明细时发生错误: {saveError.Message}");
+                            if (saveError.InnerException != null)
+                            {
+                                Console.WriteLine($"保存错误的内部错误: {saveError.InnerException.Message}");
+                                if (saveError.InnerException.InnerException != null)
+                                {
+                                    Console.WriteLine($"保存错误的内部内部错误: {saveError.InnerException.InnerException.Message}");
+                                }
+                            }
+                            throw;
+                        }
                     }
                 }
 
@@ -490,6 +536,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<SpecialEquipmentPurchaseInboundDTO> ConfirmSpecialEquipmentPurchaseInboundAsync(int id)
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
             var inbound = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 1).Include(i => i.EquipmentInboundItems).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
@@ -504,29 +554,32 @@ namespace DeviceWarehouseSystem.Services
                 inbound.UpdatedAt = DateTime.Now;
 
                 // 创建设备记录
-                foreach (var item in inbound.EquipmentInboundItems)
+                if (inbound.EquipmentInboundItems != null && _context.SpecialEquipments != null)
                 {
-                    // 创建新的专用设备记录
-                    var specialEquipment = new SpecialEquipment
+                    foreach (var item in inbound.EquipmentInboundItems)
                     {
-                        SortOrder = 0, // 默认排序
-                        DeviceType = 1, // 1表示专用设备
-                        DeviceName = item.DeviceName,
-                        DeviceCode = item.DeviceCode,
-                        Brand = item.Brand,
-                        Model = item.Model,
-                        Unit = item.Unit,
-                        Quantity = 1,
-                        DeviceStatus = 1, // 1表示正常
-                        UseStatus = 0, // 0表示未使用
-                        Status = item.Status,
-                        Location = "主仓库", // 默认位置
-                        Company = "", // 默认公司
-                        Warehouse = "主仓库", // 默认仓库
-                        NameSequence = 0, // 默认序列号
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.SpecialEquipments.Add(specialEquipment);
+                        // 创建新的专用设备记录
+                        var specialEquipment = new SpecialEquipment
+                        {
+                            SortOrder = 0, // 默认排序
+                            DeviceType = 1, // 1表示专用设备
+                            DeviceName = item.DeviceName ?? "",
+                            DeviceCode = item.DeviceCode ?? "",
+                            Brand = item.Brand ?? "",
+                            Model = item.Model ?? "",
+                            Unit = item.Unit ?? "",
+                            Quantity = 1,
+                            DeviceStatus = 1, // 1表示正常
+                            UseStatus = 0, // 0表示未使用
+                            Status = item.Status ?? "",
+                            Location = "主仓库", // 默认位置
+                            Company = "", // 默认公司
+                            Warehouse = "主仓库", // 默认仓库
+                            NameSequence = 0, // 默认序列号
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.SpecialEquipments.Add(specialEquipment);
+                    }
                 }
 
                 await _context.SaveChangesAsync();
@@ -551,7 +604,7 @@ namespace DeviceWarehouseSystem.Services
                 WarehouseKeeper = inbound.Operator,
                 Remark = inbound.Remark,
                 Status = inbound.Status,
-                Items = inbound.EquipmentInboundItems.Select(item => new SpecialEquipmentPurchaseInboundItemDTO
+                Items = inbound.EquipmentInboundItems?.Select(item => new SpecialEquipmentPurchaseInboundItemDTO
                 {
                     Id = item.Id,
                     EquipmentId = 0,
@@ -562,38 +615,42 @@ namespace DeviceWarehouseSystem.Services
                     Inventory = 0,
                     Quantity = item.Quantity,
                     Status = item.Status
-                }).ToList()
+                }).ToList() ?? new List<SpecialEquipmentPurchaseInboundItemDTO>()
             };
         }
 
         // 通用设备采购入库管理
         public async Task<List<GeneralEquipmentPurchaseInboundDTO>> GetGeneralEquipmentPurchaseInboundsAsync()
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                return new List<GeneralEquipmentPurchaseInboundDTO>();
+            }
             var inbounds = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 2).Include(i => i.EquipmentInboundItems).ToListAsync();
             return inbounds.Select(i => new GeneralEquipmentPurchaseInboundDTO
             {
                 Id = i.Id,
-                InboundNumber = i.InboundNumber,
-                DeliveryPerson = i.DeliveryPerson,
-                Inspector = i.Inspector,
-                InboundPerson = i.InboundPerson,
+                InboundNumber = i.InboundNumber ?? "",
+                DeliveryPerson = i.DeliveryPerson ?? "",
+                Inspector = i.Inspector ?? "",
+                InboundPerson = i.InboundPerson ?? "",
                 InboundDate = i.InboundDate,
-                Handler = i.Operator,
-                WarehouseKeeper = i.Operator, // 临时使用Operator作为WarehouseKeeper
-                Remark = i.Remark,
-                Status = i.Status,
-                Items = i.EquipmentInboundItems.Select(item => new GeneralEquipmentPurchaseInboundItemDTO
+                Handler = i.Operator ?? "",
+                WarehouseKeeper = i.Operator ?? "", // 临时使用Operator作为WarehouseKeeper
+                Remark = i.Remark ?? "",
+                Status = i.Status ?? "",
+                Items = i.EquipmentInboundItems?.Select(item => new GeneralEquipmentPurchaseInboundItemDTO
                 {
                     Id = item.Id,
                     EquipmentId = 0, // 需要根据实际情况设置
-                    EquipmentName = item.DeviceName,
-                    Brand = item.Brand,
-                    Model = item.Model,
-                    Unit = item.Unit,
+                    EquipmentName = item.DeviceName ?? "",
+                    Brand = item.Brand ?? "",
+                    Model = item.Model ?? "",
+                    Unit = item.Unit ?? "",
                     Inventory = 0, // 需要根据实际情况计算
                     Quantity = item.Quantity,
-                    Status = item.Status
-                }).ToList()
+                    Status = item.Status ?? ""
+                }).ToList() ?? new List<GeneralEquipmentPurchaseInboundItemDTO>()
             }).ToList();
         }
 
@@ -607,42 +664,45 @@ namespace DeviceWarehouseSystem.Services
                 InboundNumber = inboundNumber,
                 InboundDate = dto.InboundDate,
                 EquipmentType = 2, // 2表示通用设备采购入库
-                DeliveryPerson = dto.DeliveryPerson,
-                Inspector = dto.Inspector,
-                InboundPerson = dto.InboundPerson,
-                Operator = dto.Handler,
-                Remark = dto.Remark,
+                DeliveryPerson = dto.DeliveryPerson ?? "",
+                Inspector = dto.Inspector ?? "",
+                InboundPerson = dto.InboundPerson ?? "",
+                Operator = dto.Handler ?? "",
+                Remark = dto.Remark ?? "",
                 Status = "待确认",
                 CreatedAt = DateTime.Now
             };
 
-            _context.EquipmentInbounds.Add(inbound);
-            await _context.SaveChangesAsync();
-
-            // 添加入库明细
-            if (dto.Items != null && dto.Items.Count > 0)
+            if (_context.EquipmentInbounds != null)
             {
-                foreach (var item in dto.Items)
-                {
-                    // 使用前端发送的设备编号
-                    var deviceCode = item.DeviceCode;
-                    
-                    var inboundItem = new EquipmentInboundItem
-                    {
-                        InboundId = inbound.Id,
-                        DeviceName = item.EquipmentName,
-                        DeviceCode = deviceCode,
-                        Brand = item.Brand,
-                        Model = item.Model,
-                        Unit = item.Unit,
-                        Quantity = item.Quantity,
-                        Status = item.Status,
-                        EquipmentType = 2,
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.EquipmentInboundItems.Add(inboundItem);
-                }
+                _context.EquipmentInbounds.Add(inbound);
                 await _context.SaveChangesAsync();
+
+                // 添加入库明细
+                if (dto.Items != null && dto.Items.Count > 0 && _context.EquipmentInboundItems != null)
+                {
+                    foreach (var item in dto.Items)
+                    {
+                        // 使用前端发送的设备编号
+                        var deviceCode = item.DeviceCode;
+                        
+                        var inboundItem = new EquipmentInboundItem
+                        {
+                            InboundId = inbound.Id,
+                            DeviceName = item.EquipmentName ?? "",
+                            DeviceCode = deviceCode ?? "",
+                            Brand = item.Brand,
+                            Model = item.Model,
+                            Unit = item.Unit,
+                            Quantity = item.Quantity,
+                            Status = item.Status,
+                            EquipmentType = 2,
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.EquipmentInboundItems.Add(inboundItem);
+                    }
+                    await _context.SaveChangesAsync();
+                }
             }
 
             dto.Id = inbound.Id;
@@ -653,6 +713,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<GeneralEquipmentPurchaseInboundDTO> ConfirmGeneralEquipmentPurchaseInboundAsync(int id)
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
             var inbound = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 2).Include(i => i.EquipmentInboundItems).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
@@ -664,27 +728,30 @@ namespace DeviceWarehouseSystem.Services
             inbound.UpdatedAt = DateTime.Now;
 
             // 创建设备记录
-            foreach (var item in inbound.EquipmentInboundItems)
-            {
-                // 创建新的通用设备记录
-                var generalEquipment = new GeneralEquipment
+                if (inbound.EquipmentInboundItems != null && _context.GeneralEquipments != null)
                 {
-                    SortOrder = 0, // 默认排序
-                    DeviceType = 2, // 2表示通用设备
-                    DeviceName = item.DeviceName,
-                    DeviceCode = item.DeviceCode,
-                    Brand = item.Brand,
-                    Model = item.Model,
-                    Unit = item.Unit,
-                    Quantity = 1,
-                    DeviceStatus = 1, // 1表示正常
-                    UseStatus = 0, // 0表示未使用
-                    Status = item.Status,
-                    NameSequence = 0, // 默认序列号
-                    CreatedAt = DateTime.Now
-                };
-                _context.GeneralEquipments.Add(generalEquipment);
-            }
+                    foreach (var item in inbound.EquipmentInboundItems)
+                    {
+                        // 创建新的通用设备记录
+                        var generalEquipment = new GeneralEquipment
+                        {
+                            SortOrder = 0, // 默认排序
+                            DeviceType = 2, // 2表示通用设备
+                            DeviceName = item.DeviceName ?? "",
+                            DeviceCode = item.DeviceCode ?? "",
+                            Brand = item.Brand ?? "",
+                            Model = item.Model ?? "",
+                            Unit = item.Unit ?? "",
+                            Quantity = 1,
+                            DeviceStatus = 1, // 1表示正常
+                            UseStatus = 0, // 0表示未使用
+                            Status = item.Status ?? "",
+                            NameSequence = 0, // 默认序列号
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.GeneralEquipments.Add(generalEquipment);
+                    }
+                }
 
             await _context.SaveChangesAsync();
 
@@ -701,7 +768,7 @@ namespace DeviceWarehouseSystem.Services
                 WarehouseKeeper = inbound.Operator,
                 Remark = inbound.Remark,
                 Status = inbound.Status,
-                Items = inbound.EquipmentInboundItems.Select(item => new GeneralEquipmentPurchaseInboundItemDTO
+                Items = inbound.EquipmentInboundItems?.Select(item => new GeneralEquipmentPurchaseInboundItemDTO
                 {
                     Id = item.Id,
                     EquipmentId = 0,
@@ -712,37 +779,41 @@ namespace DeviceWarehouseSystem.Services
                     Inventory = 0,
                     Quantity = item.Quantity,
                     Status = item.Status
-                }).ToList()
+                }).ToList() ?? new List<GeneralEquipmentPurchaseInboundItemDTO>()
             };
         }
 
         // 耗材采购入库管理
         public async Task<List<ConsumablePurchaseInboundDTO>> GetConsumablePurchaseInboundsAsync()
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                return new List<ConsumablePurchaseInboundDTO>();
+            }
             var inbounds = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 3).Include(i => i.EquipmentInboundItems).ToListAsync();
             return inbounds.Select(i => new ConsumablePurchaseInboundDTO
             {
                 Id = i.Id,
-                InboundNumber = i.InboundNumber,
-                DeliveryPerson = i.DeliveryPerson,
-                Inspector = i.Inspector,
-                InboundPerson = i.InboundPerson,
+                InboundNumber = i.InboundNumber ?? "",
+                DeliveryPerson = i.DeliveryPerson ?? "",
+                Inspector = i.Inspector ?? "",
+                InboundPerson = i.InboundPerson ?? "",
                 InboundDate = i.InboundDate,
-                Handler = i.Operator,
-                WarehouseKeeper = i.Operator, // 临时使用Operator作为WarehouseKeeper
-                Remark = i.Remark,
-                Items = i.EquipmentInboundItems.Select(item => new ConsumablePurchaseInboundItemDTO
+                Handler = i.Operator ?? "",
+                WarehouseKeeper = i.Operator ?? "", // 临时使用Operator作为WarehouseKeeper
+                Remark = i.Remark ?? "",
+                Items = i.EquipmentInboundItems?.Select(item => new ConsumablePurchaseInboundItemDTO
                 {
                     Id = item.Id,
                     ConsumableId = 0, // 需要根据实际情况设置
-                    ConsumableName = item.DeviceName,
-                    Brand = item.Brand,
-                    Model = item.Model,
-                    Unit = item.Unit,
+                    ConsumableName = item.DeviceName ?? "",
+                    Brand = item.Brand ?? "",
+                    Model = item.Model ?? "",
+                    Unit = item.Unit ?? "",
                     Inventory = 0, // 需要根据实际情况计算
                     Quantity = item.Quantity,
-                    Status = item.Status
-                }).ToList()
+                    Status = item.Status ?? ""
+                }).ToList() ?? new List<ConsumablePurchaseInboundItemDTO>()
             }).ToList();
         }
 
@@ -756,42 +827,45 @@ namespace DeviceWarehouseSystem.Services
                 InboundNumber = inboundNumber,
                 InboundDate = dto.InboundDate,
                 EquipmentType = 3, // 3表示耗材采购入库
-                DeliveryPerson = dto.DeliveryPerson,
-                Inspector = dto.Inspector,
-                InboundPerson = dto.InboundPerson,
-                Operator = dto.Handler,
-                Remark = dto.Remark,
+                DeliveryPerson = dto.DeliveryPerson ?? "",
+                Inspector = dto.Inspector ?? "",
+                InboundPerson = dto.InboundPerson ?? "",
+                Operator = dto.Handler ?? "",
+                Remark = dto.Remark ?? "",
                 Status = "待确认",
                 CreatedAt = DateTime.Now
             };
 
-            _context.EquipmentInbounds.Add(inbound);
-            await _context.SaveChangesAsync();
-
-            // 添加入库明细
-            if (dto.Items != null && dto.Items.Count > 0)
+            if (_context.EquipmentInbounds != null)
             {
-                foreach (var item in dto.Items)
-                {
-                    // 生成耗材编号
-                    var deviceCode = await GenerateDeviceCodeAsync(item.ConsumableName, item.Brand, item.Model, 3);
-                    
-                    var inboundItem = new EquipmentInboundItem
-                    {
-                        InboundId = inbound.Id,
-                        DeviceName = item.ConsumableName,
-                        DeviceCode = deviceCode,
-                        Brand = item.Brand,
-                        Model = item.Model,
-                        Unit = item.Unit,
-                        Quantity = item.Quantity,
-                        Status = item.Status,
-                        EquipmentType = 3,
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.EquipmentInboundItems.Add(inboundItem);
-                }
+                _context.EquipmentInbounds.Add(inbound);
                 await _context.SaveChangesAsync();
+
+                // 添加入库明细
+                if (dto.Items != null && dto.Items.Count > 0 && _context.EquipmentInboundItems != null)
+                {
+                    foreach (var item in dto.Items)
+                    {
+                        // 生成耗材编号
+                        var deviceCode = await GenerateDeviceCodeAsync(item.ConsumableName ?? "", item.Brand ?? "", item.Model ?? "", 3);
+                        
+                        var inboundItem = new EquipmentInboundItem
+                        {
+                            InboundId = inbound.Id,
+                            DeviceName = item.ConsumableName ?? "",
+                            DeviceCode = deviceCode,
+                            Brand = item.Brand,
+                            Model = item.Model,
+                            Unit = item.Unit,
+                            Quantity = item.Quantity,
+                            Status = item.Status,
+                            EquipmentType = 3,
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.EquipmentInboundItems.Add(inboundItem);
+                    }
+                    await _context.SaveChangesAsync();
+                }
             }
 
             dto.Id = inbound.Id;
@@ -802,6 +876,10 @@ namespace DeviceWarehouseSystem.Services
 
         public async Task<ConsumablePurchaseInboundDTO> ConfirmConsumablePurchaseInboundAsync(int id)
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
             var inbound = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 3).Include(i => i.EquipmentInboundItems).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
@@ -813,33 +891,36 @@ namespace DeviceWarehouseSystem.Services
             inbound.UpdatedAt = DateTime.Now;
 
             // 更新耗材库存
-            foreach (var item in inbound.EquipmentInboundItems)
+            if (inbound.EquipmentInboundItems != null && _context.Consumables != null)
             {
-                // 查找或创建耗材
-                var consumable = await _context.Consumables.FirstOrDefaultAsync(c => 
-                    c.Name == item.DeviceName && 
-                    (c.Brand == item.Brand || (c.Brand == null && item.Brand == "")) && 
-                    (c.ModelSpecification == item.Model || (c.ModelSpecification == null && item.Model == ""))
-                );
-                if (consumable == null)
+                foreach (var item in inbound.EquipmentInboundItems)
                 {
-                    // 创建新耗材
-                    consumable = new Consumable
+                    // 查找或创建耗材
+                    var consumable = await _context.Consumables.FirstOrDefaultAsync(c => 
+                        c.Name == item.DeviceName && 
+                        (c.Brand == item.Brand || (c.Brand == null && (item.Brand == null || item.Brand == ""))) && 
+                        (c.ModelSpecification == item.Model || (c.ModelSpecification == null && (item.Model == null || item.Model == "")))
+                    );
+                    if (consumable == null)
                     {
-                        Name = item.DeviceName,
-                        Brand = string.IsNullOrEmpty(item.Brand) ? null : item.Brand,
-                        ModelSpecification = string.IsNullOrEmpty(item.Model) ? null : item.Model,
-                        Unit = item.Unit,
-                        TotalQuantity = item.Quantity,
-                        RemainingQuantity = item.Quantity,
-                        Status = "正常",
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.Consumables.Add(consumable);
-                } else {
-                    // 更新现有耗材库存
-                    consumable.RemainingQuantity += item.Quantity;
-                    consumable.TotalQuantity += item.Quantity;
+                        // 创建新耗材
+                        consumable = new Consumable
+                        {
+                            Name = item.DeviceName,
+                            Brand = string.IsNullOrEmpty(item.Brand) ? null : item.Brand,
+                            ModelSpecification = string.IsNullOrEmpty(item.Model) ? null : item.Model,
+                            Unit = item.Unit,
+                            TotalQuantity = item.Quantity,
+                            RemainingQuantity = item.Quantity,
+                            Status = "正常",
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.Consumables.Add(consumable);
+                    } else {
+                        // 更新现有耗材库存
+                        consumable.RemainingQuantity += item.Quantity;
+                        consumable.TotalQuantity += item.Quantity;
+                    }
                 }
             }
 
@@ -858,7 +939,7 @@ namespace DeviceWarehouseSystem.Services
                 WarehouseKeeper = inbound.Operator,
                 Remark = inbound.Remark,
                 Status = inbound.Status,
-                Items = inbound.EquipmentInboundItems.Select(item => new ConsumablePurchaseInboundItemDTO
+                Items = inbound.EquipmentInboundItems?.Select(item => new ConsumablePurchaseInboundItemDTO
                 {
                     Id = item.Id,
                     ConsumableId = 0,
@@ -869,12 +950,16 @@ namespace DeviceWarehouseSystem.Services
                     Inventory = 0,
                     Quantity = item.Quantity,
                     Status = item.Status
-                }).ToList()
+                }).ToList() ?? new List<ConsumablePurchaseInboundItemDTO>()
             };
         }
 
         public async Task DeleteConsumablePurchaseInboundAsync(int id)
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
             var inbound = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 3).Include(i => i.EquipmentInboundItems).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
@@ -882,14 +967,14 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 如果入库记录已完成，需要减少消耗品库存
-            if (inbound.Status == "已完成")
+            if (inbound.Status == "已完成" && inbound.EquipmentInboundItems != null && _context.Consumables != null)
             {
                 foreach (var item in inbound.EquipmentInboundItems)
                 {
                     var consumable = await _context.Consumables.FirstOrDefaultAsync(c => 
                         c.Name == item.DeviceName && 
-                        (c.Brand == item.Brand || (c.Brand == null && item.Brand == "")) && 
-                        (c.ModelSpecification == item.Model || (c.ModelSpecification == null && item.Model == ""))
+                        (c.Brand == item.Brand || (c.Brand == null && (item.Brand == null || item.Brand == ""))) && 
+                        (c.ModelSpecification == item.Model || (c.ModelSpecification == null && (item.Model == null || item.Model == "")))
                     );
                     if (consumable != null)
                     {
@@ -900,7 +985,10 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 删除入库明细
-            _context.EquipmentInboundItems.RemoveRange(inbound.EquipmentInboundItems);
+            if (_context.EquipmentInboundItems != null && inbound.EquipmentInboundItems != null)
+            {
+                _context.EquipmentInboundItems.RemoveRange(inbound.EquipmentInboundItems);
+            }
             // 删除入库记录
             _context.EquipmentInbounds.Remove(inbound);
             
@@ -910,6 +998,10 @@ namespace DeviceWarehouseSystem.Services
         // 删除专用设备采购入库记录
         public async Task DeleteSpecialEquipmentPurchaseInboundAsync(int id)
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
             var inbound = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 1).Include(i => i.EquipmentInboundItems).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
@@ -917,16 +1009,16 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 收集需要删除的设备编号
-            var deviceCodes = inbound.EquipmentInboundItems.Select(item => item.DeviceCode).ToList();
+            var deviceCodes = inbound.EquipmentInboundItems?.Select(item => item.DeviceCode).ToList() ?? new List<string>();
 
             // 删除相关的专用设备记录和对应的库存记录
-            if (deviceCodes.Count > 0)
+            if (deviceCodes.Count > 0 && _context.SpecialEquipments != null && _context.Inventories != null)
             {
                 var devicesToDelete = await _context.SpecialEquipments.Where(d => deviceCodes.Contains(d.DeviceCode)).ToListAsync();
                 var deviceIds = devicesToDelete.Select(d => d.Id).ToList();
                 
                 // 删除对应的库存记录
-                var inventoriesToDelete = await _context.Inventories.Where(i => deviceIds.Contains(i.SpecialEquipmentId.Value)).ToListAsync();
+                var inventoriesToDelete = await _context.Inventories.Where(i => deviceIds.Contains(i.SpecialEquipmentId.GetValueOrDefault())).ToListAsync();
                 _context.Inventories.RemoveRange(inventoriesToDelete);
                 
                 // 删除专用设备记录
@@ -934,7 +1026,10 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 删除入库明细
-            _context.EquipmentInboundItems.RemoveRange(inbound.EquipmentInboundItems);
+            if (_context.EquipmentInboundItems != null && inbound.EquipmentInboundItems != null)
+            {
+                _context.EquipmentInboundItems.RemoveRange(inbound.EquipmentInboundItems);
+            }
             // 删除入库记录
             _context.EquipmentInbounds.Remove(inbound);
             
@@ -944,6 +1039,10 @@ namespace DeviceWarehouseSystem.Services
         // 删除通用设备采购入库记录
         public async Task DeleteGeneralEquipmentPurchaseInboundAsync(int id)
         {
+            if (_context.EquipmentInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
             var inbound = await _context.EquipmentInbounds.Where(e => e.EquipmentType == 2).Include(i => i.EquipmentInboundItems).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
@@ -951,16 +1050,16 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 收集需要删除的设备编号
-            var deviceCodes = inbound.EquipmentInboundItems.Select(item => item.DeviceCode).ToList();
+            var deviceCodes = inbound.EquipmentInboundItems?.Select(item => item.DeviceCode).ToList() ?? new List<string>();
 
             // 删除相关的通用设备记录和对应的库存记录
-            if (deviceCodes.Count > 0)
+            if (deviceCodes.Count > 0 && _context.GeneralEquipments != null && _context.Inventories != null)
             {
                 var devicesToDelete = await _context.GeneralEquipments.Where(d => deviceCodes.Contains(d.DeviceCode)).ToListAsync();
                 var deviceIds = devicesToDelete.Select(d => d.Id).ToList();
                 
                 // 删除对应的库存记录
-                var inventoriesToDelete = await _context.Inventories.Where(i => deviceIds.Contains(i.GeneralEquipmentId.Value)).ToListAsync();
+                var inventoriesToDelete = await _context.Inventories.Where(i => deviceIds.Contains(i.GeneralEquipmentId.GetValueOrDefault())).ToListAsync();
                 _context.Inventories.RemoveRange(inventoriesToDelete);
                 
                 // 删除通用设备记录
@@ -968,7 +1067,10 @@ namespace DeviceWarehouseSystem.Services
             }
 
             // 删除入库明细
-            _context.EquipmentInboundItems.RemoveRange(inbound.EquipmentInboundItems);
+            if (_context.EquipmentInboundItems != null && inbound.EquipmentInboundItems != null)
+            {
+                _context.EquipmentInboundItems.RemoveRange(inbound.EquipmentInboundItems);
+            }
             // 删除入库记录
             _context.EquipmentInbounds.Remove(inbound);
             
@@ -1019,7 +1121,7 @@ namespace DeviceWarehouseSystem.Services
                 // 只从当前实际存在的设备表中查询，不查询历史入库记录
                 int maxSequence = 0;
                 
-                if (deviceType == 1) // 专用设备
+                if (deviceType == 1 && _context.SpecialEquipments != null) // 专用设备
                 {
                     // 查找该设备名称的所有设备
                     var devices = await _context.SpecialEquipments
@@ -1054,7 +1156,7 @@ namespace DeviceWarehouseSystem.Services
                         }
                     }
                 }
-                else if (deviceType == 2) // 通用设备
+                else if (deviceType == 2 && _context.GeneralEquipments != null) // 通用设备
                 {
                     // 查找该设备名称、品牌、型号的所有设备
                     var devices = await _context.GeneralEquipments

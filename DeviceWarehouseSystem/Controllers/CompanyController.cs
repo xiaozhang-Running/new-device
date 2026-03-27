@@ -19,6 +19,10 @@ namespace DeviceWarehouseSystem.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Company>>> GetCompanies()
         {
+            if (_context.Companies == null)
+            {
+                return NotFound();
+            }
             return await _context.Companies.ToListAsync();
         }
 
@@ -26,6 +30,10 @@ namespace DeviceWarehouseSystem.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Company>> GetCompany(int id)
         {
+            if (_context.Companies == null)
+            {
+                return NotFound();
+            }
             var company = await _context.Companies.FindAsync(id);
 
             if (company == null)
@@ -40,6 +48,10 @@ namespace DeviceWarehouseSystem.Controllers
         [HttpPost]
         public async Task<ActionResult<Company>> PostCompany(Company company)
         {
+            if (_context.Companies == null)
+            {
+                return Problem("Entity set 'DeviceWarehouseContext.Companies'  is null.");
+            }
             _context.Companies.Add(company);
             await _context.SaveChangesAsync();
 
@@ -81,6 +93,10 @@ namespace DeviceWarehouseSystem.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCompany(int id)
         {
+            if (_context.Companies == null)
+            {
+                return NotFound();
+            }
             var company = await _context.Companies.FindAsync(id);
             if (company == null)
             {
@@ -95,6 +111,10 @@ namespace DeviceWarehouseSystem.Controllers
 
         private bool CompanyExists(int id)
         {
+            if (_context.Companies == null)
+            {
+                return false;
+            }
             return _context.Companies.Any(e => e.Id == id);
         }
     }
