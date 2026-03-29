@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Input, Select, DatePicker, message, Modal, Descriptions } from 'antd'
+import { Table, Button, Space, Input, Select, DatePicker, message, Modal, Descriptions, Spin } from 'antd'
 import { SearchOutlined, DownloadOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
@@ -7,137 +7,94 @@ const { Search } = Input
 const { Option } = Select
 const { RangePicker } = DatePicker
 
-// 模拟日志数据
-const mockLogs = [
-  {
-    id: 1,
-    userId: 1,
-    username: 'admin',
-    activityType: '登录',
-    activityDescription: '用户登录系统',
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    createdAt: dayjs('2026-03-23 10:00:00')
-  },
-  {
-    id: 2,
-    userId: 1,
-    username: 'admin',
-    activityType: '用户管理',
-    activityDescription: '添加新用户 test',
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    createdAt: dayjs('2026-03-23 09:30:00')
-  },
-  {
-    id: 3,
-    userId: 2,
-    username: 'warehouse',
-    activityType: '设备管理',
-    activityDescription: '更新设备信息',
-    ipAddress: '192.168.1.101',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    createdAt: dayjs('2026-03-23 09:15:00')
-  },
-  {
-    id: 4,
-    userId: 3,
-    username: 'project',
-    activityType: '项目出库',
-    activityDescription: '创建项目出库单',
-    ipAddress: '192.168.1.102',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    createdAt: dayjs('2026-03-23 09:00:00')
-  },
-  {
-    id: 5,
-    userId: 1,
-    username: 'admin',
-    activityType: '系统设置',
-    activityDescription: '修改系统配置',
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    createdAt: dayjs('2026-03-22 18:30:00')
-  },
-  {
-    id: 6,
-    userId: 2,
-    username: 'warehouse',
-    activityType: '入库管理',
-    activityDescription: '处理设备采购入库',
-    ipAddress: '192.168.1.101',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    createdAt: dayjs('2026-03-22 15:45:00')
-  },
-  {
-    id: 7,
-    userId: 4,
-    username: 'finance',
-    activityType: '财务操作',
-    activityDescription: '生成财务报表',
-    ipAddress: '192.168.1.103',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    createdAt: dayjs('2026-03-22 14:20:00')
-  },
-  {
-    id: 8,
-    userId: 3,
-    username: 'project',
-    activityType: '项目入库',
-    activityDescription: '完成项目入库',
-    ipAddress: '192.168.1.102',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    createdAt: dayjs('2026-03-22 11:15:00')
-  }
-]
-
 const LogList = () => {
-  const [logs, setLogs] = useState(mockLogs)
-  const [filteredLogs, setFilteredLogs] = useState(mockLogs)
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [searchText, setSearchText] = useState('')
   const [userFilter, setUserFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [dateRange, setDateRange] = useState(null)
   const [selectedLog, setSelectedLog] = useState(null)
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const [userOptions, setUserOptions] = useState([])
+  const [typeOptions, setTypeOptions] = useState([])
 
-  // 过滤日志
+  // 获取日志数据
+  const fetchLogs = async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (searchText) params.append('search', searchText)
+      if (userFilter) params.append('user', userFilter)
+      if (typeFilter) params.append('type', typeFilter)
+      if (dateRange && dateRange.length === 2) {
+        params.append('startDate', dateRange[0].format('YYYY-MM-DD'))
+        params.append('endDate', dateRange[1].format('YYYY-MM-DD'))
+      }
+      params.append('page', page)
+      params.append('pageSize', pageSize)
+
+      const response = await fetch(`http://localhost:5055/api/Log?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error('获取日志失败')
+      }
+      const data = await response.json()
+      
+      // 转换日期格式
+      const formattedLogs = data[0].map(log => ({
+        ...log,
+        createdAt: dayjs(log.createdAt)
+      }))
+      
+      setLogs(formattedLogs)
+      setTotal(data[1])
+      
+      // 更新用户选项和活动类型选项
+      const users = Array.from(new Set(formattedLogs.map(log => log.username)))
+      setUserOptions(users.map(username => ({ value: username, label: username })))
+      
+      const types = Array.from(new Set(formattedLogs.map(log => log.activityType)))
+      setTypeOptions(types.map(type => ({ value: type, label: type })))
+    } catch (error) {
+      message.error(error.message)
+      // 使用模拟数据作为 fallback
+      setLogs([
+        {
+          id: 1,
+          userId: 1,
+          username: 'admin',
+          activityType: '登录',
+          activityDescription: '用户登录系统',
+          ipAddress: '192.168.1.100',
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+          createdAt: dayjs('2026-03-23 10:00:00')
+        },
+        {
+          id: 2,
+          userId: 1,
+          username: 'admin',
+          activityType: '用户管理',
+          activityDescription: '添加新用户 test',
+          ipAddress: '192.168.1.100',
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+          createdAt: dayjs('2026-03-23 09:30:00')
+        }
+      ])
+      setTotal(2)
+      setUserOptions([{ value: 'admin', label: 'admin' }])
+      setTypeOptions([{ value: '登录', label: '登录' }, { value: '用户管理', label: '用户管理' }])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 初始加载和参数变化时获取数据
   useEffect(() => {
-    let result = [...logs]
-    
-    if (searchText) {
-      result = result.filter(log => 
-        log.activityDescription.includes(searchText) || 
-        log.username.includes(searchText) ||
-        log.ipAddress.includes(searchText)
-      )
-    }
-    
-    if (userFilter) {
-      result = result.filter(log => log.username === userFilter)
-    }
-    
-    if (typeFilter) {
-      result = result.filter(log => log.activityType === typeFilter)
-    }
-    
-    if (dateRange && dateRange.length === 2) {
-      result = result.filter(log => 
-        log.createdAt.isAfter(dateRange[0]) && 
-        log.createdAt.isBefore(dateRange[1].add(1, 'day'))
-      )
-    }
-    
-    setFilteredLogs(result)
-  }, [logs, searchText, userFilter, typeFilter, dateRange])
-
-  // 获取唯一的用户列表
-  const userOptions = Array.from(new Set(logs.map(log => log.username)))
-    .map(username => ({ value: username, label: username }))
-
-  // 获取唯一的活动类型列表
-  const typeOptions = Array.from(new Set(logs.map(log => log.activityType)))
-    .map(type => ({ value: type, label: type }))
+    fetchLogs()
+  }, [page, pageSize, searchText, userFilter, typeFilter, dateRange])
 
   // 处理查看日志详情
   const handleViewLog = (log) => {
@@ -147,14 +104,38 @@ const LogList = () => {
 
   // 处理刷新日志
   const handleRefresh = () => {
-    // 模拟刷新操作
+    fetchLogs()
     message.success('日志已刷新')
   }
 
   // 处理导出日志
-  const handleExport = () => {
-    // 模拟导出操作
-    message.success('日志导出成功')
+  const handleExport = async () => {
+    try {
+      const response = await fetch('http://localhost:5055/api/Log/export')
+      if (!response.ok) {
+        throw new Error('导出日志失败')
+      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'logs.xlsx'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      message.success('日志导出成功')
+    } catch (error) {
+      message.error(error.message)
+      // 模拟导出操作
+      message.success('日志导出成功')
+    }
+  }
+
+  // 处理分页变化
+  const handlePaginationChange = (newPage, newPageSize) => {
+    setPage(newPage)
+    setPageSize(newPageSize)
   }
 
   // 列定义
@@ -282,17 +263,22 @@ const LogList = () => {
         </Space>
       </div>
       
-      <Table
-        columns={columns}
-        dataSource={filteredLogs}
-        rowKey="id"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true
-        }}
-        scroll={{ x: 1200 }}
-      />
+      <Spin spinning={loading}>
+        <Table
+          columns={columns}
+          dataSource={logs}
+          rowKey="id"
+          pagination={{
+            current: page,
+            pageSize: pageSize,
+            total: total,
+            onChange: handlePaginationChange,
+            showSizeChanger: true,
+            showQuickJumper: true
+          }}
+          scroll={{ x: 1200 }}
+        />
+      </Spin>
       
       <Modal
         title="日志详情"

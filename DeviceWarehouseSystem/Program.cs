@@ -23,6 +23,7 @@ builder.Services.AddScoped<InOutboundService>();
 builder.Services.AddScoped<ImageService>();
 builder.Services.AddScoped<ConsumableService>();
 builder.Services.AddScoped<IRawMaterialService, RawMaterialService>();
+builder.Services.AddScoped<LogService>();
 
 // Configure JWT authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");

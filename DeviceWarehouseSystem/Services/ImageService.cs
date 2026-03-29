@@ -68,48 +68,79 @@ namespace DeviceWarehouseSystem.Services
         /// <summary>
         /// 上传出入库图片 - 保存到数据库
         /// </summary>
-        public async Task<List<string>> UploadInOutboundImages(IFormFileCollection files, int orderId)
+        public async Task<List<string>> UploadInOutboundImages(IFormFileCollection files, int orderId, int orderType)
         {
             var imagePaths = new List<string>();
             int orderIndex = 0;
 
-            foreach (var file in files)
+            try
             {
-                if (file.ContentType.StartsWith("image/"))
+                if (files == null || files.Count == 0)
                 {
-                    // 读取图片二进制数据
-                    byte[] imageData;
-                    using (var memoryStream = new MemoryStream())
+                    return imagePaths;
+                }
+
+                foreach (var file in files)
+                {
+                    try
                     {
-                        await file.CopyToAsync(memoryStream);
-                        imageData = memoryStream.ToArray();
+                        if (file == null || file.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        // 检查文件类型
+                        if (!file.ContentType.StartsWith("image/"))
+                        {
+                            continue;
+                        }
+
+                        // 读取图片二进制数据
+                        byte[] imageData;
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            await file.CopyToAsync(memoryStream);
+                            imageData = memoryStream.ToArray();
+                        }
+
+                        var fileName = $"{System.Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                        var relativePath = $"/api/images/inoutbound/{orderId}/{fileName}";
+
+                        // 保存到数据库
+                        var image = new InOutboundImage
+                        {
+                            OrderId = orderId,
+                            OrderType = orderType, // 使用传入的orderType
+                            ImagePath = relativePath,
+                            ImageName = fileName,
+                            OrderIndex = orderIndex++,
+                            ImageData = imageData,
+                            ContentType = file.ContentType,
+                            CreatedAt = DateTime.Now
+                        };
+
+                        if (_context.InOutboundImages != null)
+                        {
+                            _context.InOutboundImages.Add(image);
+                            imagePaths.Add(relativePath);
+                        }
                     }
-
-                    var fileName = $"{System.Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
-                    var relativePath = $"/api/images/inoutbound/{orderId}/{fileName}";
-
-                    // 保存到数据库
-                    var image = new InOutboundImage
+                    catch (Exception ex)
                     {
-                        OrderId = orderId,
-                        OrderType = 2, // 2表示出入库图片
-                        ImagePath = relativePath,
-                        ImageName = fileName,
-                        OrderIndex = orderIndex++,
-                        ImageData = imageData,
-                        ContentType = file.ContentType,
-                        CreatedAt = DateTime.Now
-                    };
-
-                    if (_context.InOutboundImages != null)
-                    {
-                        _context.InOutboundImages.Add(image);
-                        imagePaths.Add(relativePath);
+                        // 记录单个文件处理错误，继续处理其他文件
+                        Console.WriteLine($"处理文件 {file?.FileName} 时出错: {ex.Message}");
+                        continue;
                     }
                 }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // 记录整体错误
+                Console.WriteLine($"上传出入库图片时出错: {ex.Message}");
             }
 
-            await _context.SaveChangesAsync();
             return imagePaths;
         }
 

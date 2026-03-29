@@ -37,15 +37,52 @@ namespace DeviceWarehouseSystem.Controllers
 
         // 上传出入库图片
         [HttpPost("in-outbound")]
-        public async Task<ActionResult<List<string>>> UploadInOutboundImages([FromForm] IFormFileCollection files, [FromForm] int orderId, [FromForm] int orderType)
+        public async Task<ActionResult<List<string>>> UploadInOutboundImages()
         {
             try
             {
-                var imagePaths = await _imageService.UploadInOutboundImages(files, orderId);
+                // 从请求中获取所有表单数据
+                var form = await Request.ReadFormAsync();
+                
+                // 获取文件
+                var files = form.Files;
+                
+                // 检查是否接收到文件
+                if (files == null || files.Count == 0)
+                {
+                    return BadRequest(new { message = "没有接收到文件" });
+                }
+                
+                // 获取其他参数
+                if (!int.TryParse(form["orderId"], out int orderId))
+                {
+                    return BadRequest(new { message = "缺少orderId参数" });
+                }
+                
+                if (!int.TryParse(form["orderType"], out int orderType))
+                {
+                    return BadRequest(new { message = "缺少orderType参数" });
+                }
+                
+                // 记录日志
+                Console.WriteLine($"接收到文件数量: {files.Count}");
+                Console.WriteLine($"orderId: {orderId}");
+                Console.WriteLine($"orderType: {orderType}");
+                
+                var imagePaths = await _imageService.UploadInOutboundImages(files, orderId, orderType);
+                
+                // 记录返回的图片路径
+                Console.WriteLine($"返回的图片路径数量: {imagePaths.Count}");
+                foreach (var path in imagePaths)
+                {
+                    Console.WriteLine($"图片路径: {path}");
+                }
+                
                 return Ok(imagePaths);
             }
             catch (System.Exception ex)
             {
+                Console.WriteLine($"上传图片时出错: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }

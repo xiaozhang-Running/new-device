@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Layout, Menu, Button, Space, message } from 'antd'
 import { 
   DashboardOutlined, 
@@ -17,6 +17,7 @@ import {
   SettingOutlined
 } from '@ant-design/icons'
 import './App.css'
+import Dashboard from './components/Dashboard'
 import DeviceList from './components/DeviceList'
 import GeneralDeviceList from './components/GeneralDeviceList'
 import ConsumableList from './components/ConsumableList'
@@ -37,6 +38,7 @@ import ConsumablePurchaseInbound from './components/ConsumablePurchaseInbound'
 import WarehouseSettings from './components/WarehouseSettings'
 import CompanySettings from './components/CompanySettings'
 import LoginForm from './components/LoginForm'
+import { userApi } from './services/api'
 
 const { Header, Sider, Content } = Layout
 
@@ -46,6 +48,15 @@ function App() {
   const [selectedKey, setSelectedKey] = useState('dashboard')
   const [scrapView, setScrapView] = useState('list') // 'list' or 'form'
 
+  // 从localStorage读取登录状态
+  useEffect(() => {
+    const savedUser = userApi.getCurrentUser()
+    if (savedUser) {
+      setUser(savedUser)
+      setLoginVisible(false)
+    }
+  }, [])
+
   // 处理登录
   const handleLogin = (userData) => {
     setUser(userData)
@@ -54,6 +65,7 @@ function App() {
 
   // 处理登出
   const handleLogout = () => {
+    userApi.logout()
     setUser(null)
     setLoginVisible(true)
     message.success('登出成功')
@@ -64,56 +76,12 @@ function App() {
     setSelectedKey(e.key)
   }
 
-  // 渲染看板页面
-  const renderDashboard = () => (
-    <div className="dashboard">
-      <h2>系统看板</h2>
-      <div className="dashboard-cards">
-        <div className="card">
-          <div className="card-icon">
-            <ShopOutlined style={{ fontSize: 24, color: '#1890ff' }} />
-          </div>
-          <div className="card-content">
-            <h3>库存总值</h3>
-            <p>¥ 1,250,000</p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-icon">
-            <ToolOutlined style={{ fontSize: 24, color: '#52c41a' }} />
-          </div>
-          <div className="card-content">
-            <h3>设备总数</h3>
-            <p>128</p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-icon">
-            <BuildOutlined style={{ fontSize: 24, color: '#faad14' }} />
-          </div>
-          <div className="card-content">
-            <h3>待维修设备</h3>
-            <p>12</p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-icon">
-            <DeleteOutlined style={{ fontSize: 24, color: '#f5222d' }} />
-          </div>
-          <div className="card-content">
-            <h3>报废设备</h3>
-            <p>5</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 
   // 渲染主内容
   const renderContent = () => {
     switch (selectedKey) {
       case 'dashboard':
-        return renderDashboard()
+        return <Dashboard />
       case 'inventory':
         return <InventoryManagement />
       case 'special-device':
@@ -181,7 +149,7 @@ function App() {
       case 'logs':
         return <LogList />
       default:
-        return renderDashboard()
+        return <Dashboard />
     }
   }
 

@@ -23,134 +23,144 @@ public class ProjectOutboundController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<object>>> GetProjectOutbounds()
     {
-        if (_context.ProjectOutbounds == null)
+        try
         {
-            return Ok(new List<object>());
-        }
-        
-        var projectOutbounds = await _context.ProjectOutbounds
-            .Include(p => p.ProjectOutboundItems)
-            .Include(p => p.ProjectInboundOutbounds)
-            .ThenInclude(io => io.ProjectInbound)
-            .OrderByDescending(p => p.CreatedAt)
-            .ToListAsync();
-
-        // 转换为包含入库状态的对象
-        var result = projectOutbounds.Select(outbound => new
-        {
-            outbound.Id,
-            outbound.OutboundNumber,
-            outbound.OutboundDate,
-            outbound.ProjectName,
-            outbound.ProjectCode,
-            outbound.ProjectManager,
-            outbound.Recipient,
-            outbound.OutboundType,
-            outbound.ProjectTime,
-            outbound.ContactPhone,
-            outbound.UsageLocation,
-            outbound.ReturnDate,
-            outbound.Handler,
-            outbound.WarehouseKeeper,
-            outbound.LogisticsMethod,
-            outbound.OutboundImages,
-            outbound.Remark,
-            outbound.TotalQuantity,
-            outbound.IsCompleted,
-            outbound.CompletedAt,
-            outbound.CreatedAt,
-            outbound.UpdatedAt,
-            outbound.CreatedBy,
-            outbound.UpdatedBy,
-            InboundStatus = outbound.ProjectInboundOutbounds?.FirstOrDefault()?.ProjectInbound?.Status ?? "未入库",
-            ProjectOutboundItems = outbound.ProjectOutboundItems?.Select(item => new
+            if (_context.ProjectOutbounds == null)
             {
-                item.Id,
-                item.ItemType,
-                item.ItemId,
-                item.ItemName,
-                item.DeviceCode,
-                item.Brand,
-                item.Model,
-                item.Quantity,
-                item.Unit,
-                item.Accessories,
-                item.Remark,
-                item.DeviceStatus,
-                item.CreatedAt
-            }).ToList()
-        });
+                return Ok(new List<object>());
+            }
+            
+            var projectOutbounds = await _context.ProjectOutbounds
+                .Include(p => p.ProjectOutboundItems)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
 
-        return Ok(result);
+            // 转换为包含入库状态的对象
+            var result = projectOutbounds.Select(outbound => new
+            {
+                id = outbound.Id,
+                outboundNumber = outbound.OutboundNumber,
+                outboundDate = outbound.OutboundDate,
+                projectName = outbound.ProjectName,
+                projectCode = outbound.ProjectCode,
+                projectManager = outbound.ProjectManager,
+                recipient = outbound.Recipient,
+                outboundType = outbound.OutboundType,
+                projectTime = outbound.ProjectTime,
+                contactPhone = outbound.ContactPhone,
+                usageLocation = outbound.UsageLocation,
+                returnDate = outbound.ReturnDate,
+                handler = outbound.Handler,
+                warehouseKeeper = outbound.WarehouseKeeper,
+                logisticsMethod = outbound.LogisticsMethod,
+                outboundImages = outbound.OutboundImages,
+                remark = outbound.Remark,
+                totalQuantity = outbound.TotalQuantity,
+                isCompleted = outbound.IsCompleted,
+                completedAt = outbound.CompletedAt,
+                createdAt = outbound.CreatedAt,
+                updatedAt = outbound.UpdatedAt,
+                createdBy = outbound.CreatedBy,
+                updatedBy = outbound.UpdatedBy,
+                inboundStatus = "未入库", // 暂时设置为未入库，避免加载ProjectInboundOutbounds
+                projectOutboundItems = outbound.ProjectOutboundItems?.Select(item => new
+                {
+                    id = item.Id,
+                    itemType = item.ItemType,
+                    itemId = item.ItemId,
+                    itemName = item.ItemName,
+                    deviceCode = item.DeviceCode,
+                    brand = item.Brand,
+                    model = item.Model,
+                    quantity = item.Quantity,
+                    unit = item.Unit,
+                    accessories = item.Accessories,
+                    itemRemark = item.Remark,
+                    deviceStatus = item.DeviceStatus,
+                    createdAt = item.CreatedAt
+                }).ToList()
+            });
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message, innerException = ex.InnerException?.Message });
+        }
     }
 
     // GET: api/ProjectOutbound/5
     [HttpGet("{id}")]
     public async Task<ActionResult<object>> GetProjectOutbound(int id)
     {
-        if (_context.ProjectOutbounds == null)
+        try
         {
-            return NotFound();
-        }
-        
-        var projectOutbound = await _context.ProjectOutbounds
-            .Include(p => p.ProjectOutboundItems)
-            .Include(p => p.ProjectInboundOutbounds)
-            .ThenInclude(io => io.ProjectInbound)
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (projectOutbound == null)
-        {
-            return NotFound();
-        }
-
-        // 转换为包含入库状态的对象
-        var result = new
-        {
-            projectOutbound.Id,
-            projectOutbound.OutboundNumber,
-            projectOutbound.OutboundDate,
-            projectOutbound.ProjectName,
-            projectOutbound.ProjectCode,
-            projectOutbound.ProjectManager,
-            projectOutbound.Recipient,
-            projectOutbound.OutboundType,
-            projectOutbound.ProjectTime,
-            projectOutbound.ContactPhone,
-            projectOutbound.UsageLocation,
-            projectOutbound.ReturnDate,
-            projectOutbound.Handler,
-            projectOutbound.WarehouseKeeper,
-            projectOutbound.LogisticsMethod,
-            projectOutbound.OutboundImages,
-            projectOutbound.Remark,
-            projectOutbound.TotalQuantity,
-            projectOutbound.IsCompleted,
-            projectOutbound.CompletedAt,
-            projectOutbound.CreatedAt,
-            projectOutbound.UpdatedAt,
-            projectOutbound.CreatedBy,
-            projectOutbound.UpdatedBy,
-            InboundStatus = projectOutbound.ProjectInboundOutbounds?.FirstOrDefault()?.ProjectInbound?.Status ?? "未入库",
-            ProjectOutboundItems = projectOutbound.ProjectOutboundItems?.Select(item => new
+            if (_context.ProjectOutbounds == null)
             {
-                item.Id,
-                item.ItemType,
-                item.ItemId,
-                item.ItemName,
-                item.DeviceCode,
-                item.Brand,
-                item.Model,
-                item.Quantity,
-                item.Unit,
-                item.Accessories,
-                item.Remark,
-                item.DeviceStatus,
-                item.CreatedAt
-            }).ToList()
-        };
+                return NotFound();
+            }
+            
+            var projectOutbound = await _context.ProjectOutbounds
+                .Include(p => p.ProjectOutboundItems)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
-        return Ok(result);
+            if (projectOutbound == null)
+            {
+                return NotFound();
+            }
+
+            // 转换为包含入库状态的对象
+            var result = new
+            {
+                projectOutbound.Id,
+                projectOutbound.OutboundNumber,
+                projectOutbound.OutboundDate,
+                projectOutbound.ProjectName,
+                projectOutbound.ProjectCode,
+                projectOutbound.ProjectManager,
+                projectOutbound.Recipient,
+                projectOutbound.OutboundType,
+                projectOutbound.ProjectTime,
+                projectOutbound.ContactPhone,
+                projectOutbound.UsageLocation,
+                projectOutbound.ReturnDate,
+                projectOutbound.Handler,
+                projectOutbound.WarehouseKeeper,
+                projectOutbound.LogisticsMethod,
+                projectOutbound.OutboundImages,
+                projectOutbound.Remark,
+                projectOutbound.TotalQuantity,
+                projectOutbound.IsCompleted,
+                projectOutbound.CompletedAt,
+                projectOutbound.CreatedAt,
+                projectOutbound.UpdatedAt,
+                projectOutbound.CreatedBy,
+                projectOutbound.UpdatedBy,
+                InboundStatus = "未入库", // 暂时设置为未入库，避免加载ProjectInboundOutbounds
+                ProjectOutboundItems = projectOutbound.ProjectOutboundItems?.Select(item => new
+                {
+                    item.Id,
+                    item.ItemType,
+                    item.ItemId,
+                    item.ItemName,
+                    item.DeviceCode,
+                    item.Brand,
+                    item.Model,
+                    item.Quantity,
+                    item.Unit,
+                    item.Accessories,
+                    item.Remark,
+                    item.DeviceStatus,
+                    item.CreatedAt
+                }).ToList()
+            };
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message, innerException = ex.InnerException?.Message });
+        }
     }
 
     // POST: api/ProjectOutbound
@@ -388,36 +398,167 @@ public class ProjectOutboundController : ControllerBase
 
     // PUT: api/ProjectOutbound/5
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateProjectOutbound(int id, ProjectOutbound projectOutbound)
+    public async Task<IActionResult> UpdateProjectOutbound(int id, [FromBody] JsonElement projectOutboundData)
     {
-        if (id != projectOutbound.Id)
-        {
-            return BadRequest();
-        }
-
-        _context.Entry(projectOutbound).State = EntityState.Modified;
-        projectOutbound.UpdatedAt = DateTime.Now;
-
-        // 重新计算总数量
-        projectOutbound.TotalQuantity = projectOutbound.ProjectOutboundItems?.Sum(item => item.Quantity) ?? 0;
-
         try
         {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!ProjectOutboundExists(id))
+            // 查找现有的出库单
+            var existingOutbound = await _context.ProjectOutbounds
+                .Include(p => p.ProjectOutboundItems)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (existingOutbound == null)
             {
                 return NotFound();
             }
-            else
-            {
-                throw;
-            }
-        }
 
-        return NoContent();
+            // 更新基本信息
+            if (projectOutboundData.TryGetProperty("OutboundNumber", out var outboundNumberElement))
+            {
+                existingOutbound.OutboundNumber = outboundNumberElement.GetString() ?? existingOutbound.OutboundNumber;
+            }
+
+            if (projectOutboundData.TryGetProperty("OutboundDate", out var outboundDateElement))
+            {
+                existingOutbound.OutboundDate = outboundDateElement.GetDateTime();
+            }
+
+            if (projectOutboundData.TryGetProperty("ProjectName", out var projectNameElement))
+            {
+                existingOutbound.ProjectName = projectNameElement.GetString() ?? existingOutbound.ProjectName;
+            }
+
+            if (projectOutboundData.TryGetProperty("ProjectTime", out var projectTimeElement))
+            {
+                existingOutbound.ProjectTime = projectTimeElement.GetString() ?? existingOutbound.ProjectTime;
+            }
+
+            if (projectOutboundData.TryGetProperty("ProjectManager", out var projectManagerElement))
+            {
+                existingOutbound.ProjectManager = projectManagerElement.GetString() ?? existingOutbound.ProjectManager;
+            }
+
+            if (projectOutboundData.TryGetProperty("Recipient", out var recipientElement))
+            {
+                existingOutbound.Recipient = recipientElement.GetString() ?? existingOutbound.Recipient;
+            }
+
+            if (projectOutboundData.TryGetProperty("OutboundType", out var outboundTypeElement))
+            {
+                existingOutbound.OutboundType = outboundTypeElement.GetString() ?? existingOutbound.OutboundType;
+            }
+
+            if (projectOutboundData.TryGetProperty("ContactPhone", out var contactPhoneElement))
+            {
+                existingOutbound.ContactPhone = contactPhoneElement.GetString() ?? existingOutbound.ContactPhone;
+            }
+
+            if (projectOutboundData.TryGetProperty("UsageLocation", out var usageLocationElement))
+            {
+                existingOutbound.UsageLocation = usageLocationElement.GetString() ?? existingOutbound.UsageLocation;
+            }
+
+            if (projectOutboundData.TryGetProperty("ReturnDate", out var returnDateElement) && returnDateElement.ValueKind != JsonValueKind.Null)
+            {
+                existingOutbound.ReturnDate = returnDateElement.GetDateTime();
+            }
+
+            if (projectOutboundData.TryGetProperty("WarehouseKeeper", out var warehouseKeeperElement))
+            {
+                existingOutbound.WarehouseKeeper = warehouseKeeperElement.GetString() ?? existingOutbound.WarehouseKeeper;
+            }
+
+            if (projectOutboundData.TryGetProperty("LogisticsMethod", out var logisticsMethodElement) && logisticsMethodElement.ValueKind != JsonValueKind.Null)
+            {
+                existingOutbound.LogisticsMethod = logisticsMethodElement.GetInt32();
+            }
+
+            if (projectOutboundData.TryGetProperty("OutboundImages", out var outboundImagesElement))
+            {
+                existingOutbound.OutboundImages = outboundImagesElement.GetString() ?? existingOutbound.OutboundImages;
+            }
+
+            if (projectOutboundData.TryGetProperty("Remark", out var remarkElement))
+            {
+                existingOutbound.Remark = remarkElement.GetString() ?? existingOutbound.Remark;
+            }
+
+            // 更新项目项
+            if (projectOutboundData.TryGetProperty("ProjectOutboundItems", out var projectOutboundItemsElement) && 
+                projectOutboundItemsElement.ValueKind == JsonValueKind.Array)
+            {
+                // 先删除现有的项目项
+                _context.ProjectOutboundItems.RemoveRange(existingOutbound.ProjectOutboundItems);
+                existingOutbound.ProjectOutboundItems.Clear();
+
+                // 添加新的项目项
+                int totalQuantity = 0;
+                foreach (var itemData in projectOutboundItemsElement.EnumerateArray())
+                {
+                    int quantity = itemData.GetProperty("Quantity").GetInt32();
+                    totalQuantity += quantity;
+
+                    // 解析CreatedAt字段
+                    DateTime itemCreatedAt = DateTime.Now;
+                    if (itemData.TryGetProperty("CreatedAt", out var createdAtElement) && createdAtElement.ValueKind == JsonValueKind.String)
+                    {
+                        var createdAtString = createdAtElement.GetString();
+                        if (!string.IsNullOrEmpty(createdAtString))
+                        {
+                            if (!DateTime.TryParse(createdAtString, out itemCreatedAt))
+                            {
+                                itemCreatedAt = DateTime.Now;
+                            }
+                        }
+                    }
+
+                    var item = new ProjectOutboundItem
+                    {
+                        OutboundId = id,
+                        ItemType = itemData.GetProperty("ItemType").GetInt32(),
+                        ItemId = itemData.GetProperty("ItemId").GetInt32(),
+                        ItemName = itemData.GetProperty("ItemName").GetString() ?? "",
+                        DeviceCode = itemData.TryGetProperty("DeviceCode", out var deviceCodeElement) ? deviceCodeElement.GetString() : null,
+                        Brand = itemData.TryGetProperty("Brand", out var brandElement) ? brandElement.GetString() : null,
+                        Model = itemData.TryGetProperty("Model", out var modelElement) ? modelElement.GetString() : null,
+                        Quantity = quantity,
+                        Unit = itemData.TryGetProperty("Unit", out var unitElement) ? unitElement.GetString() : null,
+                        Accessories = itemData.TryGetProperty("Accessories", out var accessoriesElement) ? accessoriesElement.GetString() : null,
+                        Remark = itemData.TryGetProperty("Remark", out var itemRemarkElement) ? itemRemarkElement.GetString() : null,
+                        DeviceStatus = itemData.TryGetProperty("DeviceStatus", out var deviceStatusElement) ? deviceStatusElement.GetString() : null,
+                        CreatedAt = itemCreatedAt
+                    };
+                    existingOutbound.ProjectOutboundItems.Add(item);
+                }
+                existingOutbound.TotalQuantity = totalQuantity;
+            }
+
+            existingOutbound.UpdatedAt = DateTime.Now;
+
+            _context.Entry(existingOutbound).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ProjectOutboundExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message, innerException = ex.InnerException?.Message });
+        }
     }
 
     // DELETE: api/ProjectOutbound/5

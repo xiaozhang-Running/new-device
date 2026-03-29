@@ -18,7 +18,7 @@ const GeneralDeviceList = () => {
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [locationFilter, setLocationFilter] = useState('')
+  const [useStatusFilter, setUseStatusFilter] = useState('')
   const [filteredDevices, setFilteredDevices] = useState([])
   const [searchParams, setSearchParams] = useState({})
 
@@ -169,7 +169,7 @@ const GeneralDeviceList = () => {
           warehouse: item.warehouse || item.Warehouse || '主仓库',
           company: item.company || item.Company || '',
           status: item.status || item.Status || '正常',
-          useStatus: item.UseStatus === '使用中' ? '使用中' : '未使用',
+          useStatus: item.UseStatus === 1 ? '使用中' : '未使用',
           projectName: item.projectName || item.ProjectName || '',
           projectTime: item.projectTime || item.ProjectTime || '',
           location: item.location || item.Location || '',
@@ -207,11 +207,11 @@ const GeneralDeviceList = () => {
     if (searchText) {
       const text = searchText.toLowerCase()
       result = result.filter(device => 
-        device.name.toLowerCase().includes(text) ||
-        device.brand.toLowerCase().includes(text) ||
-        device.model.toLowerCase().includes(text) ||
-        device.serialNumber.toLowerCase().includes(text) ||
-        device.warehouse.toLowerCase().includes(text)
+        (device.name && device.name.toLowerCase().includes(text)) ||
+        (device.brand && device.brand.toLowerCase().includes(text)) ||
+        (device.model && device.model.toLowerCase().includes(text)) ||
+        (device.serialNumber && device.serialNumber.toLowerCase().includes(text)) ||
+        (device.warehouse && device.warehouse.toLowerCase().includes(text))
       )
     }
     
@@ -220,17 +220,14 @@ const GeneralDeviceList = () => {
       result = result.filter(device => device.status === statusFilter)
     }
     
-    // 位置过滤 - 同时考虑location和warehouse字段
-    if (locationFilter) {
-      result = result.filter(device => 
-        device.location === locationFilter || 
-        device.warehouse === locationFilter
-      )
+    // 使用状态过滤
+    if (useStatusFilter) {
+      result = result.filter(device => device.useStatus === useStatusFilter)
     }
     
     console.log('过滤后的设备数据:', result)
     setFilteredDevices(result)
-    setSearchParams({ searchText, statusFilter, locationFilter })
+    setSearchParams({ searchText, statusFilter, useStatusFilter })
   }
 
   // 当设备数据变化时，保持当前的过滤状态
@@ -780,16 +777,14 @@ const GeneralDeviceList = () => {
           </Col>
           <Col span={6}>
             <Select
-              placeholder="按位置筛选"
-              value={locationFilter}
-              onChange={setLocationFilter}
+              placeholder="按使用状态筛选"
+              value={useStatusFilter}
+              onChange={setUseStatusFilter}
               style={{ width: '100%' }}
               allowClear
             >
-              <Option value="办公室A">办公室A</Option>
-              <Option value="办公室B">办公室B</Option>
-              <Option value="会议室">会议室</Option>
-              <Option value="打印室">打印室</Option>
+              <Option value="使用中">使用中</Option>
+              <Option value="未使用">未使用</Option>
             </Select>
           </Col>
           <Col span={4}>
@@ -801,7 +796,7 @@ const GeneralDeviceList = () => {
                 onClick={() => {
                   setSearchText('')
                   setStatusFilter('')
-                  setLocationFilter('')
+                  setUseStatusFilter('')
                   setSearchParams({})
                   setFilteredDevices(devices)
                 }}

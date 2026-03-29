@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 
 namespace DeviceWarehouseSystem.Models;
@@ -8,6 +8,8 @@ public partial class ProjectInbound
     public int Id { get; set; }
 
     public string InboundNumber { get; set; } = null!;
+
+    // public int? OutboundOrderId { get; set; }
 
     public DateTime InboundDate { get; set; }
 
@@ -25,9 +27,13 @@ public partial class ProjectInbound
 
     public string? ContactPhone { get; set; }
 
+    public string? UsageLocation { get; set; }
+
     public string? StorageLocation { get; set; }
 
     public string? Handler { get; set; }
+
+    public string? Inspector { get; set; }
 
     public string? WarehouseKeeper { get; set; }
 

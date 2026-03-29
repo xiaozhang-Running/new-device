@@ -69,8 +69,61 @@ namespace DeviceWarehouseSystem.Controllers
         {
             try
             {
+                Console.WriteLine("开始获取项目入库记录");
                 var inbounds = await _inOutboundService.GetProjectInboundsAsync();
+                Console.WriteLine($"获取项目入库记录成功，数量: {inbounds.Count}");
                 return Ok(inbounds);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取项目入库记录失败: {ex.Message}");
+                Console.WriteLine($"错误堆栈: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"内部错误: {ex.InnerException.Message}");
+                }
+                return BadRequest(new { message = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
+        // POST: api/InOutbound/project-inbounds
+        [HttpPost("project-inbounds")]
+        public async Task<ActionResult<ProjectInboundDTO>> CreateProjectInbound([FromBody] ProjectInboundDTO dto)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.CreateProjectInboundAsync(dto);
+                return Ok(inbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // DELETE: api/InOutbound/project-inbounds/{id}
+        [HttpDelete("project-inbounds/{id}")]
+        public async Task<ActionResult<bool>> DeleteProjectInbound(int id)
+        {
+            try
+            {
+                await _inOutboundService.DeleteProjectInboundAsync(id);
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // PUT: api/InOutbound/project-inbounds/{id}
+        [HttpPut("project-inbounds/{id}")]
+        public async Task<ActionResult<ProjectInboundDTO>> UpdateProjectInbound(int id, [FromBody] ProjectInboundDTO dto)
+        {
+            try
+            {
+                var inbound = await _inOutboundService.UpdateProjectInboundAsync(id, dto);
+                return Ok(inbound);
             }
             catch (Exception ex)
             {

@@ -1,10 +1,37 @@
 import React, { useState, useEffect } from 'react'
-import { Form, Input, InputNumber, Upload, message, Button } from 'antd'
+import { Form, Input, Select, InputNumber, Upload, message, Button } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
+import { warehouseApi, companyApi } from '../services/api'
+
+const { Option } = Select
 
 const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
   const [form] = Form.useForm()
   const [imageUrl, setImageUrl] = useState('')
+  const [warehouses, setWarehouses] = useState([])
+  const [companies, setCompanies] = useState([])
+  const [fetchingData, setFetchingData] = useState(false)
+
+  // 获取仓库和公司列表
+  useEffect(() => {
+    const fetchData = async () => {
+      setFetchingData(true)
+      try {
+        const [warehouseList, companyList] = await Promise.all([
+          warehouseApi.getWarehouses(),
+          companyApi.getCompanies()
+        ])
+        setWarehouses(warehouseList || [])
+        setCompanies(companyList || [])
+      } catch (error) {
+        console.error('获取仓库或公司列表失败:', error)
+        message.error('获取仓库或公司列表失败')
+      } finally {
+        setFetchingData(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   useEffect(() => {
     if (rawMaterial) {
@@ -104,14 +131,34 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
         name="location"
         label="所在仓库"
       >
-        <Input placeholder="请输入所在仓库" />
+        <Select 
+          placeholder="请选择仓库"
+          loading={fetchingData}
+          allowClear
+        >
+          {warehouses.map(warehouse => (
+            <Option key={warehouse.id} value={warehouse.warehouseName || warehouse.WarehouseName || warehouse.name}>
+              {warehouse.warehouseName || warehouse.WarehouseName || warehouse.name}
+            </Option>
+          ))}
+        </Select>
       </Form.Item>
 
       <Form.Item
         name="company"
         label="所属公司"
       >
-        <Input placeholder="请输入所属公司" />
+        <Select 
+          placeholder="请选择公司"
+          loading={fetchingData}
+          allowClear
+        >
+          {companies.map(company => (
+            <Option key={company.id} value={company.companyName || company.CompanyName || company.name}>
+              {company.companyName || company.CompanyName || company.name}
+            </Option>
+          ))}
+        </Select>
       </Form.Item>
 
       <Form.Item

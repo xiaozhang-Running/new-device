@@ -4,6 +4,7 @@ using DeviceWarehouseSystem.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeviceWarehouseSystem.Migrations
 {
     [DbContext(typeof(DeviceWarehouseContext))]
-    partial class DeviceWarehouseContextModelSnapshot : ModelSnapshot
+    [Migration("20260329095141_AddInspectorFieldToProjectInbound")]
+    partial class AddInspectorFieldToProjectInbound
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -910,9 +913,6 @@ namespace DeviceWarehouseSystem.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UsageLocation")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("WarehouseKeeper")

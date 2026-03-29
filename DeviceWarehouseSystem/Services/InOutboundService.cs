@@ -143,16 +143,24 @@ namespace DeviceWarehouseSystem.Services
             {
                 return new List<ProjectInboundDTO>();
             }
-            var inbounds = await _context.ProjectInbounds.Include(i => i.ProjectInboundItems).ToListAsync();
+            var inbounds = await _context.ProjectInbounds
+                .Include(i => i.ProjectInboundItems)
+                .Include(i => i.ProjectInboundOutbounds)
+                .ToListAsync();
             return inbounds.Select(i => new ProjectInboundDTO
             {
                 Id = i.Id,
                 InboundNumber = i.InboundNumber ?? "",
+                OutboundOrderId = i.ProjectInboundOutbounds?.FirstOrDefault()?.ProjectOutboundId ?? 0,
                 ProjectName = i.ProjectName ?? "",
                 ProjectManager = i.ProjectManager ?? "",
                 ContactPhone = i.ContactPhone ?? "",
+                ProjectTime = i.ProjectTime ?? "",
+                UsageLocation = i.UsageLocation ?? "",
                 Handler = i.Handler ?? "",
+                Inspector = i.Inspector ?? "",
                 WarehouseKeeper = i.WarehouseKeeper ?? "",
+                InboundDate = i.InboundDate.ToString("yyyy-MM-dd"),
                 Remark = i.Remark ?? "",
                 Status = i.Status ?? "",
                 Items = i.ProjectInboundItems?.Select(item => new ProjectInboundItemDTO
@@ -165,9 +173,96 @@ namespace DeviceWarehouseSystem.Services
                     Model = item.Model ?? "",
                     Quantity = item.Quantity,
                     Unit = item.Unit ?? "",
-                    Status = item.DeviceStatus ?? ""
+                    Status = item.DeviceStatus ?? "",
+                    ItemType = item.ItemType
                 }).ToList() ?? new List<ProjectInboundItemDTO>()
             }).ToList();
+        }
+
+        public async Task<ProjectInboundDTO> CreateProjectInboundAsync(ProjectInboundDTO dto)
+        {
+            // 生成入库单号
+            var inboundNumber = GenerateInboundNumber();
+
+            var inbound = new ProjectInbound
+            {
+                InboundNumber = inboundNumber,
+                InboundDate = DateTime.Now,
+                ProjectName = dto.ProjectName,
+                ProjectManager = dto.ProjectManager,
+                ContactPhone = dto.ContactPhone,
+                ProjectTime = dto.ProjectTime,
+                UsageLocation = dto.UsageLocation,
+                Handler = dto.Handler,
+                Inspector = dto.Inspector,
+                WarehouseKeeper = dto.WarehouseKeeper,
+                Remark = dto.Remark,
+                Status = dto.Status,
+                IsCompleted = dto.Status == "全部入库",
+                CreatedAt = DateTime.Now
+            };
+
+            if (_context.ProjectInbounds != null)
+            {
+                _context.ProjectInbounds.Add(inbound);
+                await _context.SaveChangesAsync();
+
+                // 添加入库明细
+                if (dto.Items != null && dto.Items.Count > 0 && _context.ProjectInboundItems != null)
+                {
+                    foreach (var item in dto.Items)
+                    {
+                        var inboundItem = new ProjectInboundItem
+                        {
+                            InboundId = inbound.Id,
+                            ItemType = item.ItemType > 0 ? item.ItemType : 1, // 使用传入的ItemType，默认为1
+                            ItemId = item.EquipmentId,
+                            ItemName = item.EquipmentName,
+                            Brand = item.Brand,
+                            Model = item.Model,
+                            Quantity = item.Quantity,
+                            Unit = item.Unit,
+                            DeviceStatus = item.Status,
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.ProjectInboundItems.Add(inboundItem);
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
+                // 创建入库和出库的关联记录
+                if (dto.OutboundOrderId > 0 && _context.ProjectInboundOutbounds != null)
+                {
+                    var inboundOutbound = new ProjectInboundOutbound
+                    {
+                        ProjectInboundId = inbound.Id,
+                        ProjectOutboundId = dto.OutboundOrderId,
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.ProjectInboundOutbounds.Add(inboundOutbound);
+                    await _context.SaveChangesAsync();
+
+                    // 更新对应出库记录的状态
+                    if (_context.ProjectOutbounds != null)
+                    {
+                        var outbound = await _context.ProjectOutbounds.FirstOrDefaultAsync(o => o.Id == dto.OutboundOrderId);
+                        if (outbound != null)
+                        {
+                            // 根据入库状态更新出库记录状态
+                            if (dto.Status == "全部入库")
+                            {
+                                outbound.IsCompleted = true;
+                                outbound.CompletedAt = DateTime.Now;
+                            }
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+            }
+
+            dto.Id = inbound.Id;
+            dto.InboundNumber = inboundNumber;
+            return dto;
         }
 
 
@@ -1087,6 +1182,154 @@ namespace DeviceWarehouseSystem.Services
         private string GenerateInboundNumber()
         {
             return "IN" + DateTime.Now.ToString("yyyyMMddHHmmss");
+        }
+
+        // 删除项目入库记录
+        public async Task DeleteProjectInboundAsync(int id)
+        {
+            if (_context.ProjectInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
+            var inbound = await _context.ProjectInbounds.Include(i => i.ProjectInboundItems).FirstOrDefaultAsync(i => i.Id == id);
+            if (inbound == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
+
+            // 删除入库明细
+            if (_context.ProjectInboundItems != null && inbound.ProjectInboundItems != null)
+            {
+                _context.ProjectInboundItems.RemoveRange(inbound.ProjectInboundItems);
+            }
+            // 删除入库记录
+            _context.ProjectInbounds.Remove(inbound);
+            
+            await _context.SaveChangesAsync();
+        }
+
+        // 更新项目入库记录
+        public async Task<ProjectInboundDTO> UpdateProjectInboundAsync(int id, ProjectInboundDTO dto)
+        {
+            if (_context.ProjectInbounds == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
+            var inbound = await _context.ProjectInbounds.Include(i => i.ProjectInboundItems).FirstOrDefaultAsync(i => i.Id == id);
+            if (inbound == null)
+            {
+                throw new Exception("入库记录不存在");
+            }
+
+            // 更新入库记录基本信息
+            inbound.InboundNumber = dto.InboundNumber;
+            inbound.ProjectName = dto.ProjectName;
+            inbound.ProjectManager = dto.ProjectManager;
+            inbound.ContactPhone = dto.ContactPhone;
+            inbound.ProjectTime = dto.ProjectTime;
+            inbound.UsageLocation = dto.UsageLocation;
+            inbound.Handler = dto.Handler;
+            inbound.Inspector = dto.Inspector;
+            inbound.WarehouseKeeper = dto.WarehouseKeeper;
+            inbound.InboundDate = !string.IsNullOrEmpty(dto.InboundDate) ? DateTime.Parse(dto.InboundDate) : DateTime.Now;
+            inbound.Remark = dto.Remark;
+            inbound.Status = dto.Status;
+            inbound.IsCompleted = dto.Status == "全部入库";
+            inbound.UpdatedAt = DateTime.Now;
+
+            // 删除旧的入库明细
+            if (_context.ProjectInboundItems != null && inbound.ProjectInboundItems != null)
+            {
+                _context.ProjectInboundItems.RemoveRange(inbound.ProjectInboundItems);
+            }
+
+            // 添加新的入库明细
+            if (dto.Items != null && dto.Items.Count > 0 && _context.ProjectInboundItems != null)
+            {
+                foreach (var item in dto.Items)
+                {
+                    var inboundItem = new ProjectInboundItem
+                    {
+                        InboundId = inbound.Id,
+                        ItemType = item.ItemType > 0 ? item.ItemType : 1, // 使用传入的ItemType，默认为1
+                        ItemId = item.EquipmentId,
+                        ItemName = item.EquipmentName,
+                        Brand = item.Brand,
+                        Model = item.Model,
+                        Quantity = item.Quantity,
+                        Unit = item.Unit,
+                        DeviceStatus = item.Status,
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.ProjectInboundItems.Add(inboundItem);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // 获取关联的出库单ID
+            int outboundOrderId = dto.OutboundOrderId;
+            if (outboundOrderId == 0 && _context.ProjectInboundOutbounds != null)
+            {
+                var inboundOutbound = await _context.ProjectInboundOutbounds.FirstOrDefaultAsync(io => io.ProjectInboundId == id);
+                if (inboundOutbound != null)
+                {
+                    outboundOrderId = inboundOutbound.ProjectOutboundId;
+                }
+            }
+
+            // 更新对应出库记录的状态
+            if (outboundOrderId > 0 && _context.ProjectOutbounds != null)
+            {
+                var outbound = await _context.ProjectOutbounds.FirstOrDefaultAsync(o => o.Id == outboundOrderId);
+                if (outbound != null)
+                {
+                    // 根据入库状态更新出库记录状态
+                    if (dto.Status == "全部入库")
+                    {
+                        outbound.IsCompleted = true;
+                        outbound.CompletedAt = DateTime.Now;
+                    }
+                    else
+                    {
+                        // 如果不是全部入库，保持出库记录为未完成状态
+                        outbound.IsCompleted = false;
+                        outbound.CompletedAt = null;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            // 返回更新后的入库记录
+            return new ProjectInboundDTO
+            {
+                Id = inbound.Id,
+                InboundNumber = inbound.InboundNumber ?? "",
+                OutboundOrderId = dto.OutboundOrderId, // 返回传入的出库单ID
+                ProjectName = inbound.ProjectName ?? "",
+                ProjectManager = inbound.ProjectManager ?? "",
+                ContactPhone = inbound.ContactPhone ?? "",
+                ProjectTime = inbound.ProjectTime ?? "",
+                UsageLocation = inbound.UsageLocation ?? "",
+                Handler = inbound.Handler ?? "",
+                Inspector = inbound.Inspector ?? "",
+                WarehouseKeeper = inbound.WarehouseKeeper ?? "",
+                InboundDate = inbound.InboundDate.ToString("yyyy-MM-dd"),
+                Remark = inbound.Remark ?? "",
+                Status = inbound.Status ?? "",
+                Items = inbound.ProjectInboundItems?.Select(item => new ProjectInboundItemDTO
+                {
+                    Id = item.Id,
+                    ProjectInboundId = item.InboundId,
+                    EquipmentId = item.ItemId,
+                    EquipmentName = item.ItemName ?? "",
+                    Brand = item.Brand ?? "",
+                    Model = item.Model ?? "",
+                    Quantity = item.Quantity,
+                    Unit = item.Unit ?? "",
+                    Status = item.DeviceStatus ?? ""
+                }).ToList() ?? new List<ProjectInboundItemDTO>()
+            };
         }
 
         // 生成设备编号

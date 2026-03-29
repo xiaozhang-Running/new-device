@@ -15,6 +15,21 @@ namespace DeviceWarehouseSystem.Controllers
             _deviceService = deviceService;
         }
 
+        // 通用错误处理方法
+        private ActionResult HandleException(Exception ex)
+        {
+            var errorMessage = ex.Message;
+            if (ex.InnerException != null)
+            {
+                errorMessage += " | 内部错误: " + ex.InnerException.Message;
+                if (ex.InnerException.InnerException != null)
+                {
+                    errorMessage += " | 内部错误: " + ex.InnerException.InnerException.Message;
+                }
+            }
+            return BadRequest(new { message = errorMessage });
+        }
+
         // 专用设备管理
         // GET: api/Device/special-equipments
         [HttpGet("special-equipments")]
@@ -27,7 +42,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -42,7 +57,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -57,7 +72,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -72,16 +87,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = ex.Message;
-                if (ex.InnerException != null)
-                {
-                    errorMessage += " | 内部错误: " + ex.InnerException.Message;
-                    if (ex.InnerException.InnerException != null)
-                    {
-                        errorMessage += " | 内部错误: " + ex.InnerException.InnerException.Message;
-                    }
-                }
-                return BadRequest(new { message = errorMessage });
+                return HandleException(ex);
             }
         }
 
@@ -96,7 +102,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -111,7 +117,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -126,7 +132,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -142,7 +148,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -157,7 +163,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -172,7 +178,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -187,7 +193,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -202,7 +208,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -217,7 +223,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -232,7 +238,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -248,7 +254,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -264,7 +270,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -279,7 +285,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -294,7 +300,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -309,7 +315,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -325,7 +331,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -340,7 +346,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -356,7 +362,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
 
@@ -372,7 +378,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return HandleException(ex);
             }
         }
     }

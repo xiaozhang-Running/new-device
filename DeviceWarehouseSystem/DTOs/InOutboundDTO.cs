@@ -56,11 +56,16 @@ namespace DeviceWarehouseSystem.DTOs
     {
         public int Id { get; set; }
         public required string InboundNumber { get; set; }
+        public int OutboundOrderId { get; set; }
         public required string ProjectName { get; set; }
         public required string ProjectManager { get; set; }
         public required string ContactPhone { get; set; }
+        public required string ProjectTime { get; set; }
+        public required string UsageLocation { get; set; }
         public required string Handler { get; set; }
+        public required string Inspector { get; set; }
         public required string WarehouseKeeper { get; set; }
+        public string? InboundDate { get; set; }
         public required string Remark { get; set; }
         public required string Status { get; set; }
         public required List<ProjectInboundItemDTO> Items { get; set; }
@@ -77,6 +82,7 @@ namespace DeviceWarehouseSystem.DTOs
         public int Quantity { get; set; }
         public required string Unit { get; set; }
         public required string Status { get; set; }
+        public int ItemType { get; set; } // 1=专用设备, 2=通用设备, 3=耗材
     }
 
 

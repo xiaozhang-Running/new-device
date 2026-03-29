@@ -21,6 +21,10 @@ const InventoryManagement = () => {
   const [currentItem, setCurrentItem] = useState(null)
   const [adjustForm] = Form.useForm()
   const [adjustType, setAdjustType] = useState('increase')
+  const [alertModalVisible, setAlertModalVisible] = useState(false)
+  const [alertItems, setAlertItems] = useState([])
+  const [reportModalVisible, setReportModalVisible] = useState(false)
+  const [reportType, setReportType] = useState('turnover')
 
   // 模拟数据
   const mockInventory = [
@@ -260,11 +264,31 @@ const InventoryManagement = () => {
 
   // 计算汇总数据
   useEffect(() => {
+    let filteredItems = [...inventory]
+    
+    // 应用筛选条件
+    if (searchText) {
+      const text = searchText.toLowerCase()
+      filteredItems = filteredItems.filter(item => 
+        item.name.toLowerCase().includes(text) ||
+        item.brand.toLowerCase().includes(text) ||
+        item.model.toLowerCase().includes(text)
+      )
+    }
+    
+    if (categoryFilter) {
+      filteredItems = filteredItems.filter(item => item.category === categoryFilter)
+    }
+    
+    if (statusFilter) {
+      filteredItems = filteredItems.filter(item => item.status === statusFilter)
+    }
+
     const summary = []
     const grouped = {}
 
     // 按类别分组
-    inventory.forEach(item => {
+    filteredItems.forEach(item => {
       if (item.category === '专用设备' || item.category === '通用设备') {
         const key = `${item.name}-${item.brand}-${item.model}`
         if (!grouped[key]) {
@@ -309,7 +333,7 @@ const InventoryManagement = () => {
     })
 
     setSummaryData(summary)
-  }, [inventory])
+  }, [inventory, searchText, categoryFilter, statusFilter])
 
   // 过滤库存数据
   useEffect(() => {
@@ -360,7 +384,11 @@ const InventoryManagement = () => {
     setLoading(true)
     setTimeout(() => {
       const updatedInventory = inventory.map(item => {
-        if (item.id === currentItem.id) {
+        // 检查是否是相同的物品（通过名称、品牌、型号和类别）
+        if (item.name === currentItem.name && 
+            item.brand === currentItem.brand && 
+            item.model === currentItem.model && 
+            item.category === currentItem.category) {
           const newQuantity = adjustType === 'increase' 
             ? item.totalQuantity + quantity 
             : item.totalQuantity - quantity
@@ -477,6 +505,23 @@ const InventoryManagement = () => {
       key: 'unit',
       width: 60,
       align: 'center'
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 120,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space size="middle">
+          <Button 
+            type="primary" 
+            icon={<EditOutlined />} 
+            onClick={() => handleAdjustInventory(record)}
+          >
+            调整库存
+          </Button>
+        </Space>
+      )
     }
   ]
 
@@ -637,6 +682,55 @@ const InventoryManagement = () => {
     outOfStock: inventory.filter(item => item.remainingQuantity === 0).length
   }
 
+  // 检查库存预警
+  const checkInventoryAlerts = () => {
+    const lowStockItems = inventory.filter(item => (item.remainingQuantity / item.totalQuantity) < 0.2)
+    const outOfStockItems = inventory.filter(item => item.remainingQuantity === 0)
+    const alertItemsList = [...lowStockItems, ...outOfStockItems]
+    setAlertItems(alertItemsList)
+    setAlertModalVisible(alertItemsList.length > 0)
+  }
+
+  // 生成库存报表数据
+  const generateReport = (type) => {
+    switch (type) {
+      case 'turnover':
+        // 库存周转率报表
+        return inventory.map(item => ({
+          name: item.name,
+          brand: item.brand,
+          model: item.model,
+          category: item.category,
+          totalQuantity: item.totalQuantity,
+          usedQuantity: item.usedQuantity,
+          turnoverRate: item.totalQuantity > 0 ? (item.usedQuantity / item.totalQuantity * 100).toFixed(2) : '0.00'
+        }))
+      case 'value':
+        // 库存价值报表
+        return inventory.map(item => ({
+          name: item.name,
+          brand: item.brand,
+          model: item.model,
+          category: item.category,
+          quantity: item.totalQuantity,
+          estimatedValue: (item.totalQuantity * 100).toFixed(2) // 模拟价值
+        }))
+      case 'abc':
+        // ABC分析报表
+        return inventory.map(item => ({
+          name: item.name,
+          brand: item.brand,
+          model: item.model,
+          category: item.category,
+          quantity: item.totalQuantity,
+          value: item.totalQuantity * 100, // 模拟价值
+          abcClass: item.totalQuantity > 50 ? 'A' : item.totalQuantity > 20 ? 'B' : 'C'
+        }))
+      default:
+        return []
+    }
+  }
+
   return (
     <div className="inventory-management">
       <div className="page-header">
@@ -752,6 +846,12 @@ const InventoryManagement = () => {
           </Button>
           <Button icon={<DownloadOutlined />}>
             导出
+          </Button>
+          <Button type="primary" onClick={checkInventoryAlerts}>
+            库存预警
+          </Button>
+          <Button type="primary" onClick={() => setReportModalVisible(true)}>
+            库存报表
           </Button>
         </Space>
       </div>
@@ -1012,6 +1112,183 @@ const InventoryManagement = () => {
             </Form>
           </div>
         )}
+      </Modal>
+
+      {/* 库存预警模态框 */}
+      <Modal
+        title="库存预警"
+        open={alertModalVisible}
+        onCancel={() => setAlertModalVisible(false)}
+        width={800}
+      >
+        <div>
+          <h3 style={{ marginBottom: 16 }}>库存不足项目</h3>
+          <Table 
+            columns={[
+              {
+                title: '类别',
+                dataIndex: 'category',
+                key: 'category',
+                render: (category) => {
+                  let color = ''
+                  switch (category) {
+                    case '专用设备':
+                      color = 'blue'
+                      break
+                    case '通用设备':
+                      color = 'green'
+                      break
+                    case '耗材':
+                      color = 'orange'
+                      break
+                    case '原材料':
+                      color = 'purple'
+                      break
+                    default:
+                      color = 'gray'
+                  }
+                  return <Tag color={color}>{category}</Tag>
+                }
+              },
+              {
+                title: '名称',
+                dataIndex: 'name',
+                key: 'name'
+              },
+              {
+                title: '品牌',
+                dataIndex: 'brand',
+                key: 'brand'
+              },
+              {
+                title: '型号',
+                dataIndex: 'model',
+                key: 'model'
+              },
+              {
+                title: '总数',
+                dataIndex: 'totalQuantity',
+                key: 'totalQuantity'
+              },
+              {
+                title: '剩余',
+                dataIndex: 'remainingQuantity',
+                key: 'remainingQuantity',
+                render: (remaining, record) => {
+                  const percentage = (remaining / record.totalQuantity) * 100
+                  let color = ''
+                  if (percentage === 0) {
+                    color = 'red'
+                  } else if (percentage < 20) {
+                    color = 'orange'
+                  }
+                  return <span style={{ color, fontWeight: 'bold' }}>{remaining}</span>
+                }
+              },
+              {
+                title: '单位',
+                dataIndex: 'unit',
+                key: 'unit'
+              }
+            ]} 
+            dataSource={alertItems} 
+            rowKey="id"
+            pagination={false}
+          />
+        </div>
+      </Modal>
+
+      {/* 库存报表模态框 */}
+      <Modal
+        title="库存报表"
+        open={reportModalVisible}
+        onCancel={() => setReportModalVisible(false)}
+        width={1000}
+        footer={[
+          <Button key="close" onClick={() => setReportModalVisible(false)}>
+            关闭
+          </Button>
+        ]}
+      >
+        <div>
+          <Select
+            value={reportType}
+            onChange={setReportType}
+            style={{ width: 200, marginBottom: 16 }}
+          >
+            <Option value="turnover">库存周转率</Option>
+            <Option value="value">库存价值</Option>
+            <Option value="abc">ABC分析</Option>
+          </Select>
+
+          {reportType === 'turnover' && (
+            <Table 
+              columns={[
+                { title: '名称', dataIndex: 'name', key: 'name' },
+                { title: '品牌', dataIndex: 'brand', key: 'brand' },
+                { title: '型号', dataIndex: 'model', key: 'model' },
+                { title: '类别', dataIndex: 'category', key: 'category' },
+                { title: '总数量', dataIndex: 'totalQuantity', key: 'totalQuantity' },
+                { title: '已使用', dataIndex: 'usedQuantity', key: 'usedQuantity' },
+                { title: '周转率(%)', dataIndex: 'turnoverRate', key: 'turnoverRate' }
+              ]} 
+              dataSource={generateReport('turnover')} 
+              rowKey="name"
+            />
+          )}
+
+          {reportType === 'value' && (
+            <Table 
+              columns={[
+                { title: '名称', dataIndex: 'name', key: 'name' },
+                { title: '品牌', dataIndex: 'brand', key: 'brand' },
+                { title: '型号', dataIndex: 'model', key: 'model' },
+                { title: '类别', dataIndex: 'category', key: 'category' },
+                { title: '数量', dataIndex: 'quantity', key: 'quantity' },
+                { title: '估计价值(元)', dataIndex: 'estimatedValue', key: 'estimatedValue' }
+              ]} 
+              dataSource={generateReport('value')} 
+              rowKey="name"
+            />
+          )}
+
+          {reportType === 'abc' && (
+            <Table 
+              columns={[
+                { title: '名称', dataIndex: 'name', key: 'name' },
+                { title: '品牌', dataIndex: 'brand', key: 'brand' },
+                { title: '型号', dataIndex: 'model', key: 'model' },
+                { title: '类别', dataIndex: 'category', key: 'category' },
+                { title: '数量', dataIndex: 'quantity', key: 'quantity' },
+                { title: '价值(元)', dataIndex: 'value', key: 'value' },
+                { 
+                  title: 'ABC分类', 
+                  dataIndex: 'abcClass', 
+                  key: 'abcClass',
+                  render: (abcClass) => {
+                    let color = ''
+                    switch (abcClass) {
+                      case 'A':
+                        color = 'red'
+                        break
+                      case 'B':
+                        color = 'orange'
+                        break
+                      case 'C':
+                        color = 'green'
+                        break
+                      default:
+                        color = 'gray'
+                    }
+                    return <Tag color={color}>{abcClass}</Tag>
+                  }
+                }
+              ]} 
+              dataSource={generateReport('abc')} 
+              rowKey="name"
+            />
+          )}
+        </div>
       </Modal>
     </div>
   )

@@ -18,7 +18,7 @@ const DeviceList = () => {
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [locationFilter, setLocationFilter] = useState('')
+  const [useStatusFilter, setUseStatusFilter] = useState('')
   const [filteredDevices, setFilteredDevices] = useState([])
   const [searchParams, setSearchParams] = useState({})
 
@@ -207,11 +207,11 @@ const DeviceList = () => {
     if (searchText) {
       const text = searchText.toLowerCase()
       result = result.filter(device => 
-        device.name.toLowerCase().includes(text) ||
-        device.brand.toLowerCase().includes(text) ||
-        device.model.toLowerCase().includes(text) ||
-        device.serialNumber.toLowerCase().includes(text) ||
-        device.warehouse.toLowerCase().includes(text)
+        (device.name && device.name.toLowerCase().includes(text)) ||
+        (device.brand && device.brand.toLowerCase().includes(text)) ||
+        (device.model && device.model.toLowerCase().includes(text)) ||
+        (device.serialNumber && device.serialNumber.toLowerCase().includes(text)) ||
+        (device.warehouse && device.warehouse.toLowerCase().includes(text))
       )
     }
     
@@ -220,12 +220,9 @@ const DeviceList = () => {
       result = result.filter(device => device.status === statusFilter)
     }
     
-    // 位置过滤 - 同时考虑location和warehouse字段
-    if (locationFilter) {
-      result = result.filter(device => 
-        device.location === locationFilter || 
-        device.warehouse === locationFilter
-      )
+    // 使用状态过滤
+    if (useStatusFilter) {
+      result = result.filter(device => device.useStatus === useStatusFilter)
     }
     
     console.log('过滤后的设备数据:', result)
@@ -780,16 +777,14 @@ const DeviceList = () => {
           </Col>
           <Col span={6}>
             <Select
-              placeholder="按位置筛选"
-              value={locationFilter}
-              onChange={setLocationFilter}
+              placeholder="按使用状态筛选"
+              value={useStatusFilter}
+              onChange={setUseStatusFilter}
               style={{ width: '100%' }}
               allowClear
             >
-              <Option value="机房A">机房A</Option>
-              <Option value="机房B">机房B</Option>
-              <Option value="仓库">仓库</Option>
               <Option value="使用中">使用中</Option>
+              <Option value="未使用">未使用</Option>
             </Select>
           </Col>
           <Col span={4}>
@@ -801,7 +796,7 @@ const DeviceList = () => {
                 onClick={() => {
                   setSearchText('')
                   setStatusFilter('')
-                  setLocationFilter('')
+                  setUseStatusFilter('')
                   setSearchParams({})
                   setFilteredDevices(devices)
                 }}

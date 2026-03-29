@@ -21,6 +21,10 @@ namespace DeviceWarehouseSystem.Controllers
         {
             try
             {
+                // 获取客户端IP地址和用户代理
+                loginDTO.IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+                loginDTO.UserAgent = HttpContext.Request.Headers.UserAgent.ToString();
+                
                 Console.WriteLine($"Login attempt for user: {loginDTO.Username}");
                 var token = await _authService.LoginAsync(loginDTO);
                 Console.WriteLine($"Login successful for user: {loginDTO.Username}");
@@ -39,6 +43,10 @@ namespace DeviceWarehouseSystem.Controllers
         {
             try
             {
+                // 获取客户端IP地址和用户代理
+                registerDTO.IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+                registerDTO.UserAgent = HttpContext.Request.Headers.UserAgent.ToString();
+                
                 var user = await _authService.RegisterAsync(registerDTO);
                 return Ok(user);
             }

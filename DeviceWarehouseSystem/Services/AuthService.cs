@@ -12,11 +12,13 @@ namespace DeviceWarehouseSystem.Services
     {
         private readonly DeviceWarehouseContext _context;
         private readonly IConfiguration _configuration;
+        private readonly LogService _logService;
 
-        public AuthService(DeviceWarehouseContext context, IConfiguration configuration)
+        public AuthService(DeviceWarehouseContext context, IConfiguration configuration, LogService logService)
         {
             _context = context;
             _configuration = configuration;
+            _logService = logService;
         }
 
         public async Task<TokenDTO> LoginAsync(LoginDTO loginDTO)
@@ -33,6 +35,14 @@ namespace DeviceWarehouseSystem.Services
             }
             if (user.PasswordHash != loginDTO.Password)
             {
+                // 记录登录失败日志
+                await _logService.LogUserActivityAsync(
+                    user.Id, 
+                    "登录失败", 
+                    $"用户 {loginDTO.Username} 登录失败：密码错误",
+                    loginDTO.IpAddress,
+                    loginDTO.UserAgent
+                );
                 throw new Exception("密码错误");
             }
 
@@ -40,6 +50,15 @@ namespace DeviceWarehouseSystem.Services
             user.LastLoginAt = DateTime.Now;
             _context.Entry(user).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
             await _context.SaveChangesAsync();
+
+            // 记录登录成功日志
+            await _logService.LogUserActivityAsync(
+                user.Id, 
+                "登录", 
+                $"用户 {user.Username} 登录成功",
+                loginDTO.IpAddress,
+                loginDTO.UserAgent
+            );
 
             // 生成token
             var token = GenerateJwtToken(user);
@@ -78,6 +97,15 @@ namespace DeviceWarehouseSystem.Services
                 await _context.SaveChangesAsync();
             }
 
+            // 记录注册日志
+            await _logService.LogUserActivityAsync(
+                user.Id, 
+                "注册", 
+                $"新用户 {user.Username} 注册成功，角色：{user.Role}",
+                registerDTO.IpAddress,
+                registerDTO.UserAgent
+            );
+
             return new UserDTO
             {
                 Id = user.Id,
@@ -90,7 +118,19 @@ namespace DeviceWarehouseSystem.Services
         private string GenerateJwtToken(User user)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
-            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? "your-secret-key-here");
+            var jwtKey = jwtSettings["Key"];
+            
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new InvalidOperationException("JWT Key is not configured. Please set 'Jwt:Key' in appsettings.json or environment variables.");
+            }
+            
+            if (jwtKey.Length < 32)
+            {
+                throw new InvalidOperationException("JWT Key must be at least 32 characters long for security purposes.");
+            }
+            
+            var key = Encoding.UTF8.GetBytes(jwtKey);
 
             var claims = new List<Claim>
             {

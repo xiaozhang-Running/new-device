@@ -12,6 +12,8 @@ namespace DeviceWarehouseSystem.DTOs
     {
         public required string Username { get; set; }
         public required string Password { get; set; }
+        public string? IpAddress { get; set; }
+        public string? UserAgent { get; set; }
     }
 
     public class RegisterDTO
@@ -20,6 +22,8 @@ namespace DeviceWarehouseSystem.DTOs
         public required string Password { get; set; }
         public required string Role { get; set; }
         public required string Email { get; set; }
+        public string? IpAddress { get; set; }
+        public string? UserAgent { get; set; }
     }
 
     public class TokenDTO
