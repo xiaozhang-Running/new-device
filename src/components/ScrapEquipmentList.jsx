@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { get, del } from '../services/request';
 
 const ScrapEquipmentList = () => {
   const [scrapEquipments, setScrapEquipments] = useState([]);
@@ -12,11 +13,7 @@ const ScrapEquipmentList = () => {
   const fetchScrapEquipments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5055/api/Device/scrap-equipments');
-      if (!response.ok) {
-        throw new Error('Failed to fetch scrap equipments');
-      }
-      const data = await response.json();
+      const data = await get('/Device/scrap-equipments');
       setScrapEquipments(data);
       setError(null);
     } catch (err) {
@@ -30,12 +27,7 @@ const ScrapEquipmentList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('确定要删除这个报废设备记录吗？')) {
       try {
-        const response = await fetch(`http://localhost:5055/api/Device/scrap-equipments/${id}`, {
-          method: 'DELETE'
-        });
-        if (!response.ok) {
-          throw new Error('Failed to delete scrap equipment');
-        }
+        await del(`/Device/scrap-equipments/${id}`);
         fetchScrapEquipments();
       } catch (err) {
         alert('删除失败: ' + err.message);

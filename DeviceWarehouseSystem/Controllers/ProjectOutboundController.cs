@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DeviceWarehouseSystem.Models;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json;
@@ -62,7 +61,7 @@ public class ProjectOutboundController : ControllerBase
                 updatedAt = outbound.UpdatedAt,
                 createdBy = outbound.CreatedBy,
                 updatedBy = outbound.UpdatedBy,
-                inboundStatus = "未入库", // 暂时设置为未入库，避免加载ProjectInboundOutbounds
+                inboundStatus = string.IsNullOrEmpty(outbound.InboundStatus) ? "未入库" : outbound.InboundStatus,
                 projectOutboundItems = outbound.ProjectOutboundItems?.Select(item => new
                 {
                     id = item.Id,
@@ -136,7 +135,7 @@ public class ProjectOutboundController : ControllerBase
                 projectOutbound.UpdatedAt,
                 projectOutbound.CreatedBy,
                 projectOutbound.UpdatedBy,
-                InboundStatus = "未入库", // 暂时设置为未入库，避免加载ProjectInboundOutbounds
+                InboundStatus = string.IsNullOrEmpty(projectOutbound.InboundStatus) ? "未入库" : projectOutbound.InboundStatus,
                 ProjectOutboundItems = projectOutbound.ProjectOutboundItems?.Select(item => new
                 {
                     item.Id,
@@ -355,24 +354,36 @@ public class ProjectOutboundController : ControllerBase
             }
             else if (item.ItemType == 3) // 耗材
                 {
+                    Console.WriteLine($"处理耗材: ItemId={item.ItemId}, ItemName={item.ItemName}, Quantity={item.Quantity}");
                     if (_context.Consumables != null)
                     {
                         var consumable = await _context.Consumables.FindAsync(item.ItemId);
                         if (consumable != null)
                         {
+                            Console.WriteLine($"找到耗材: Id={consumable.Id}, Name={consumable.Name}, RemainingQuantity={consumable.RemainingQuantity}, UsedQuantity={consumable.UsedQuantity}");
                             // 添加边界检查，确保耗材数量充足
                             if (consumable.RemainingQuantity >= item.Quantity)
                             {
+                                Console.WriteLine($"更新前 - 剩余数量: {consumable.RemainingQuantity}, 使用数量: {consumable.UsedQuantity}");
                                 consumable.UsedQuantity += item.Quantity;
                                 consumable.RemainingQuantity -= item.Quantity;
                                 consumable.UpdatedAt = DateTime.Now;
                                 _context.Entry(consumable).State = EntityState.Modified;
+                                Console.WriteLine($"更新后 - 剩余数量: {consumable.RemainingQuantity}, 使用数量: {consumable.UsedQuantity}");
                             }
                             else
                             {
                                 throw new System.InvalidOperationException($"耗材数量不足，当前剩余: {consumable.RemainingQuantity}，需要: {item.Quantity}");
                             }
                         }
+                        else
+                        {
+                            Console.WriteLine($"未找到耗材: ItemId={item.ItemId}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Consumables 集合为空");
                     }
                 }
         }
@@ -397,20 +408,24 @@ public class ProjectOutboundController : ControllerBase
     }
 
     // PUT: api/ProjectOutbound/5
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateProjectOutbound(int id, [FromBody] JsonElement projectOutboundData)
-    {
-        try
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateProjectOutbound(int id, [FromBody] JsonElement projectOutboundData)
         {
-            // 查找现有的出库单
-            var existingOutbound = await _context.ProjectOutbounds
-                .Include(p => p.ProjectOutboundItems)
-                .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (existingOutbound == null)
+            try
             {
-                return NotFound();
-            }
+                if (_context.ProjectOutbounds == null)
+                {
+                    return NotFound();
+                }
+                // 查找现有的出库单
+                var existingOutbound = await _context.ProjectOutbounds
+                    .Include(p => p.ProjectOutboundItems)
+                    .FirstOrDefaultAsync(p => p.Id == id);
+
+                if (existingOutbound == null)
+                {
+                    return NotFound();
+                }
 
             // 更新基本信息
             if (projectOutboundData.TryGetProperty("OutboundNumber", out var outboundNumberElement))
@@ -483,13 +498,38 @@ public class ProjectOutboundController : ControllerBase
                 existingOutbound.Remark = remarkElement.GetString() ?? existingOutbound.Remark;
             }
 
+            // 更新是否完成字段
+            if (projectOutboundData.TryGetProperty("isCompleted", out var isCompletedElement))
+            {
+                existingOutbound.IsCompleted = isCompletedElement.GetBoolean();
+            }
+
+            // 更新完成时间字段
+            if (projectOutboundData.TryGetProperty("completedAt", out var completedAtElement) && completedAtElement.ValueKind != JsonValueKind.Null)
+            {
+                existingOutbound.CompletedAt = completedAtElement.GetDateTime();
+            }
+
+            // 更新入库状态字段
+            if (projectOutboundData.TryGetProperty("inboundStatus", out var inboundStatusElement))
+            {
+                existingOutbound.InboundStatus = inboundStatusElement.GetString();
+            }
+
             // 更新项目项
             if (projectOutboundData.TryGetProperty("ProjectOutboundItems", out var projectOutboundItemsElement) && 
                 projectOutboundItemsElement.ValueKind == JsonValueKind.Array)
             {
                 // 先删除现有的项目项
-                _context.ProjectOutboundItems.RemoveRange(existingOutbound.ProjectOutboundItems);
-                existingOutbound.ProjectOutboundItems.Clear();
+                if (existingOutbound.ProjectOutboundItems != null && _context.ProjectOutboundItems != null)
+                {
+                    _context.ProjectOutboundItems.RemoveRange(existingOutbound.ProjectOutboundItems);
+                    existingOutbound.ProjectOutboundItems.Clear();
+                }
+                else
+                {
+                    existingOutbound.ProjectOutboundItems = new List<ProjectOutboundItem>();
+                }
 
                 // 添加新的项目项
                 int totalQuantity = 0;

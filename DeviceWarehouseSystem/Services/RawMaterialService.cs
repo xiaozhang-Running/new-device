@@ -42,7 +42,26 @@ public class RawMaterialService : IRawMaterialService
                 query = query.Where(r => r.Location == location);
             }
 
-            return await query.Select(r => MapToRawMaterialDTO(r)).ToListAsync();
+            return await query.Select(r => new RawMaterialDTO
+            {
+                Id = r.Id,
+                productName = r.ProductName ?? "",
+                brand = r.Brand ?? "",
+                specification = r.Specification ?? "",
+                totalQuantity = r.TotalQuantity,
+                usedQuantity = r.UsedQuantity,
+                remainingQuantity = r.RemainingQuantity,
+                unit = r.Unit ?? "",
+                supplier = r.Supplier ?? "",
+                location = r.Location ?? "",
+                company = r.Company ?? "",
+                remark = r.Remark ?? "",
+                image = r.Image ?? "",
+                createdAt = r.CreatedAt,
+                updatedAt = r.UpdatedAt,
+                createdBy = r.CreatedBy ?? "",
+                updatedBy = r.UpdatedBy ?? ""
+            }).ToListAsync();
         }
         catch (Exception ex)
         {
@@ -56,12 +75,12 @@ public class RawMaterialService : IRawMaterialService
         {
             if (_context.RawMaterials == null)
             {
-                return null;
+                throw new Exception("原材料上下文不存在");
             }
             var rawMaterial = await _context.RawMaterials.FindAsync(id);
             if (rawMaterial == null)
             {
-                return null;
+                throw new Exception($"ID为 {id} 的原材料不存在");
             }
 
             return MapToRawMaterialDTO(rawMaterial);
@@ -131,12 +150,12 @@ public class RawMaterialService : IRawMaterialService
         {
             if (_context.RawMaterials == null)
             {
-                return null;
+                throw new Exception("原材料上下文不存在");
             }
             var rawMaterial = await _context.RawMaterials.FindAsync(id);
             if (rawMaterial == null)
             {
-                return null;
+                throw new Exception($"ID为 {id} 的原材料不存在");
             }
 
             // 验证输入数据

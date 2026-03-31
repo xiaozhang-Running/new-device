@@ -22,22 +22,97 @@ namespace DeviceWarehouseSystem.Controllers
 
         // 上传设备图片
         [HttpPost("equipment")]
-        public async Task<ActionResult<List<string>>> UploadEquipmentImages([FromForm] int equipmentId, [FromForm] int equipmentType, IFormFileCollection files)
+        public async Task<ActionResult<List<int>>> UploadEquipmentImages()
         {
             try
             {
-                var imagePaths = await _imageService.UploadEquipmentImages(files, equipmentId);
-                return Ok(imagePaths);
+                // 从请求中获取所有表单数据
+                var form = await Request.ReadFormAsync();
+                
+                // 获取文件
+                var files = form.Files;
+                
+                // 检查是否接收到文件
+                if (files == null || files.Count == 0)
+                {
+                    return BadRequest(new { message = "没有接收到文件" });
+                }
+                
+                // 获取其他参数
+                if (!int.TryParse(form["equipmentId"], out int equipmentId))
+                {
+                    return BadRequest(new { message = "缺少equipmentId参数" });
+                }
+                
+                if (!int.TryParse(form["equipmentType"], out int equipmentType))
+                {
+                    return BadRequest(new { message = "缺少equipmentType参数" });
+                }
+                
+                // 记录日志
+                Console.WriteLine($"接收到文件数量: {files.Count}");
+                Console.WriteLine($"equipmentId: {equipmentId}");
+                Console.WriteLine($"equipmentType: {equipmentType}");
+                
+                var imageIds = new List<int>();
+                int orderIndex = 0;
+
+                foreach (var file in files)
+                {
+                    if (file.ContentType.StartsWith("image/"))
+                    {
+                        // 读取图片二进制数据
+                        byte[] imageData;
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            await file.CopyToAsync(memoryStream);
+                            imageData = memoryStream.ToArray();
+                        }
+
+                        var fileName = $"{System.Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                        var relativePath = $"/api/images/equipment/{equipmentId}/{fileName}";
+
+                        // 保存到数据库
+                        var image = new EquipmentImage
+                        {
+                            EquipmentId = equipmentId,
+                            EquipmentType = equipmentType, // 使用传入的equipmentType
+                            ImagePath = relativePath,
+                            ImageName = fileName,
+                            OrderIndex = orderIndex++,
+                            ImageData = imageData,
+                            ContentType = file.ContentType,
+                            CreatedAt = DateTime.Now
+                        };
+
+                        if (_context.EquipmentImages != null)
+                        {
+                            _context.EquipmentImages.Add(image);
+                            await _context.SaveChangesAsync();
+                            imageIds.Add(image.Id);
+                        }
+                    }
+                }
+
+                // 记录返回的图片ID数量
+                Console.WriteLine($"返回的图片ID数量: {imageIds.Count}");
+                foreach (var id in imageIds)
+                {
+                    Console.WriteLine($"图片ID: {id}");
+                }
+                
+                return Ok(imageIds);
             }
             catch (System.Exception ex)
             {
+                Console.WriteLine($"上传图片时出错: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
 
         // 上传出入库图片
         [HttpPost("in-outbound")]
-        public async Task<ActionResult<List<string>>> UploadInOutboundImages()
+        public async Task<ActionResult<List<int>>> UploadInOutboundImages()
         {
             try
             {
@@ -69,16 +144,71 @@ namespace DeviceWarehouseSystem.Controllers
                 Console.WriteLine($"orderId: {orderId}");
                 Console.WriteLine($"orderType: {orderType}");
                 
-                var imagePaths = await _imageService.UploadInOutboundImages(files, orderId, orderType);
-                
-                // 记录返回的图片路径
-                Console.WriteLine($"返回的图片路径数量: {imagePaths.Count}");
-                foreach (var path in imagePaths)
+                var imageIds = new List<int>();
+                int orderIndex = 0;
+
+                foreach (var file in files)
                 {
-                    Console.WriteLine($"图片路径: {path}");
+                    try
+                    {
+                        if (file == null || file.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        // 检查文件类型
+                        if (!file.ContentType.StartsWith("image/"))
+                        {
+                            continue;
+                        }
+
+                        // 读取图片二进制数据
+                        byte[] imageData;
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            await file.CopyToAsync(memoryStream);
+                            imageData = memoryStream.ToArray();
+                        }
+
+                        var fileName = $"{System.Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                        var relativePath = $"/api/images/inoutbound/{orderId}/{fileName}";
+
+                        // 保存到数据库
+                        var image = new InOutboundImage
+                        {
+                            OrderId = orderId,
+                            OrderType = orderType, // 使用传入的orderType
+                            ImagePath = relativePath,
+                            ImageName = fileName,
+                            OrderIndex = orderIndex++,
+                            ImageData = imageData,
+                            ContentType = file.ContentType,
+                            CreatedAt = DateTime.Now
+                        };
+
+                        if (_context.InOutboundImages != null)
+                        {
+                            _context.InOutboundImages.Add(image);
+                            await _context.SaveChangesAsync();
+                            imageIds.Add(image.Id);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // 记录单个文件处理错误，继续处理其他文件
+                        Console.WriteLine($"处理文件 {file?.FileName} 时出错: {ex.Message}");
+                        continue;
+                    }
                 }
                 
-                return Ok(imagePaths);
+                // 记录返回的图片ID数量
+                Console.WriteLine($"返回的图片ID数量: {imageIds.Count}");
+                foreach (var id in imageIds)
+                {
+                    Console.WriteLine($"图片ID: {id}");
+                }
+                
+                return Ok(imageIds);
             }
             catch (System.Exception ex)
             {

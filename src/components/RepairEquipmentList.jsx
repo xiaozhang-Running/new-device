@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, message, Popconfirm, Input, Select, DatePicker, Card, Row, Col, Descriptions, Tag, Form, InputNumber } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, FilterOutlined, EyeOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { get, post, put, del } from '../services/request'
 
 const { Option } = Select
 const { RangePicker } = DatePicker
@@ -19,59 +20,42 @@ const RepairEquipmentList = () => {
   const [filteredRepairs, setFilteredRepairs] = useState([])
   const [form] = Form.useForm()
 
-  // 模拟数据
-  const mockRepairs = [
-    {
-      id: 1,
-      equipmentId: 3,
-      equipmentName: '路由器',
-      equipmentCode: 'DEV-2024-003',
-      faultDescription: '无法正常连接网络，指示灯异常',
-      repairDate: '2024-07-15',
-      repairCost: 500,
-      repairPerson: '张三',
-      repairStatus: '待维修',
-      remark: '需要更换网络模块',
-      createdAt: '2024-07-10',
-      updatedAt: '2024-07-10'
-    },
-    {
-      id: 2,
-      equipmentId: 6,
-      equipmentName: '存储设备',
-      equipmentCode: 'DEV-2024-006',
-      faultDescription: '硬盘读写速度慢，有坏道',
-      repairDate: '2024-07-20',
-      repairCost: 1200,
-      repairPerson: '李四',
-      repairStatus: '维修中',
-      remark: '需要更换硬盘',
-      createdAt: '2024-07-12',
-      updatedAt: '2024-07-15'
-    },
-    {
-      id: 3,
-      equipmentId: 2,
-      equipmentName: '交换机',
-      equipmentCode: 'DEV-2024-002',
-      faultDescription: '部分端口无响应',
-      repairDate: '2024-07-18',
-      repairCost: 800,
-      repairPerson: '王五',
-      repairStatus: '已完成',
-      remark: '已更换损坏的端口模块',
-      createdAt: '2024-07-14',
-      updatedAt: '2024-07-18'
+  // 从API获取维修设备数据
+  const fetchRepairEquipments = async () => {
+    setLoading(true)
+    try {
+      const data = await get('/Repair')
+      setRepairEquipments(data)
+    } catch (error) {
+      message.error('获取维修设备数据失败')
+      console.error('Error fetching repair equipments:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
+
+  // 从设备创建维修记录
+  const createRepairFromDevice = async (deviceType, equipmentId, faultDescription, repairPerson, remark) => {
+    try {
+      await post('/Repair/CreateFromDevice', {
+        deviceType,
+        equipmentId,
+        faultDescription,
+        repairPerson,
+        remark
+      })
+      message.success('维修记录创建成功')
+      fetchRepairEquipments()
+      return true
+    } catch (error) {
+      message.error('创建维修记录失败')
+      console.error('Error creating repair from device:', error)
+      return false
+    }
+  }
 
   useEffect(() => {
-    // 模拟从API获取数据
-    setLoading(true)
-    setTimeout(() => {
-      setRepairEquipments(mockRepairs)
-      setLoading(false)
-    }, 1000)
+    fetchRepairEquipments()
   }, [])
 
   // 过滤维修设备数据
@@ -124,35 +108,48 @@ const RepairEquipmentList = () => {
     setShowDetail(true)
   }
 
-  const handleDelete = (id) => {
-    setRepairEquipments(repairEquipments.filter(repair => repair.id !== id))
-    message.success('维修记录删除成功')
-  }
-
-  const handleSave = (values) => {
-    if (editingRepair) {
-      // 编辑现有维修记录
-      setRepairEquipments(repairEquipments.map(r => r.id === editingRepair.id ? { ...r, ...values, updatedAt: new Date().toISOString().split('T')[0] } : r))
-      message.success('维修记录更新成功')
-    } else {
-      // 添加新维修记录
-      const newRepair = {
-        ...values,
-        id: Date.now(),
-        createdAt: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0]
-      }
-      setRepairEquipments([...repairEquipments, newRepair])
-      message.success('维修记录添加成功')
+  const handleDelete = async (id) => {
+    try {
+      await del(`/Repair/${id}`)
+      message.success('维修记录删除成功')
+      fetchRepairEquipments()
+    } catch (error) {
+      message.error('删除维修记录失败')
+      console.error('Error deleting repair equipment:', error)
     }
-    setShowForm(false)
   }
 
-  const handleCompleteRepair = (id) => {
-    setRepairEquipments(repairEquipments.map(repair => 
-      repair.id === id ? { ...repair, repairStatus: '已完成', updatedAt: new Date().toISOString().split('T')[0] } : repair
-    ))
-    message.success('维修完成')
+  const handleSave = async (values) => {
+    try {
+      if (editingRepair) {
+        // 编辑现有维修记录
+        await put(`/Repair/${editingRepair.id}`, values)
+        message.success('维修记录更新成功')
+        fetchRepairEquipments()
+      } else {
+        // 添加新维修记录
+        await post('/Repair', values)
+        message.success('维修记录添加成功')
+        fetchRepairEquipments()
+      }
+      setShowForm(false)
+    } catch (error) {
+      message.error('保存维修记录失败')
+      console.error('Error saving repair equipment:', error)
+    }
+  }
+
+  const handleCompleteRepair = async (id) => {
+    try {
+      const repair = repairEquipments.find(r => r.id === id)
+      const updatedRepair = { ...repair, repairStatus: '已完成' }
+      await put(`/Repair/${id}`, updatedRepair)
+      message.success('维修完成')
+      fetchRepairEquipments()
+    } catch (error) {
+      message.error('更新维修状态失败')
+      console.error('Error completing repair:', error)
+    }
   }
 
   const columns = [

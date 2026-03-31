@@ -7,9 +7,7 @@ export const rawMaterialService = {
     return request({
       url: '/RawMaterials',
       method: 'GET',
-      params,
-      cache: true,
-      cacheKey: `rawMaterials_${JSON.stringify(params)}`
+      params
     });
   },
 

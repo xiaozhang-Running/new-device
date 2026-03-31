@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 
 namespace DeviceWarehouseSystem.Models;
@@ -44,6 +44,8 @@ public partial class ProjectOutbound
     public bool IsCompleted { get; set; }
 
     public DateTime? CompletedAt { get; set; }
+
+    public string? InboundStatus { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

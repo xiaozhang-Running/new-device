@@ -72,6 +72,10 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
+                if (ex.Message == "设备不存在")
+                {
+                    return NotFound(new { message = ex.Message });
+                }
                 return HandleException(ex);
             }
         }
@@ -178,6 +182,10 @@ namespace DeviceWarehouseSystem.Controllers
             }
             catch (Exception ex)
             {
+                if (ex.Message == "设备不存在")
+                {
+                    return NotFound(new { message = ex.Message });
+                }
                 return HandleException(ex);
             }
         }

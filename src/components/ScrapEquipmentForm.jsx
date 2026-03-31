@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { get, post } from '../services/request';
 
 const ScrapEquipmentForm = ({ onSuccess }) => {
   const [devices, setDevices] = useState([]);
@@ -17,12 +18,10 @@ const ScrapEquipmentForm = ({ onSuccess }) => {
     try {
       setLoading(true);
       // 获取专用设备
-      const specialResponse = await fetch('http://localhost:5055/api/Device/special-equipments');
-      const specialDevices = await specialResponse.json();
+      const specialDevices = await get('/Device/special-equipments');
       
       // 获取通用设备
-      const generalResponse = await fetch('http://localhost:5055/api/Device/general-equipments');
-      const generalDevices = await generalResponse.json();
+      const generalDevices = await get('/Device/general-equipments');
       
       // 合并设备列表
       const allDevices = [
@@ -52,21 +51,11 @@ const ScrapEquipmentForm = ({ onSuccess }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:5055/api/Device/scrap-equipments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          equipmentId: parseInt(selectedDeviceId),
-          scrapReason,
-          scrapDate: new Date(scrapDate).toISOString()
-        })
+      await post('/Device/scrap-equipments', {
+        equipmentId: parseInt(selectedDeviceId),
+        scrapReason,
+        scrapDate: new Date(scrapDate).toISOString()
       });
-
-      if (!response.ok) {
-        throw new Error('提交失败');
-      }
 
       setSuccess(true);
       setSelectedDeviceId('');

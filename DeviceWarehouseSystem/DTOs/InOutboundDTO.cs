@@ -4,6 +4,7 @@ namespace DeviceWarehouseSystem.DTOs
     {
         public int Id { get; set; }
         public required string OutboundNumber { get; set; }
+        public DateTime OutboundDate { get; set; }
         public required string ProjectName { get; set; }
         public required string ProjectManager { get; set; }
         public required string ContactPhone { get; set; }
@@ -68,6 +69,7 @@ namespace DeviceWarehouseSystem.DTOs
         public string? InboundDate { get; set; }
         public required string Remark { get; set; }
         public required string Status { get; set; }
+        public bool IsCompleted { get; set; }
         public required List<ProjectInboundItemDTO> Items { get; set; }
     }
 
@@ -77,10 +79,12 @@ namespace DeviceWarehouseSystem.DTOs
         public int ProjectInboundId { get; set; }
         public int EquipmentId { get; set; }
         public required string EquipmentName { get; set; }
+        public string? DeviceCode { get; set; }
         public required string Brand { get; set; }
         public required string Model { get; set; }
         public int Quantity { get; set; }
         public required string Unit { get; set; }
+        public string? Accessories { get; set; }
         public required string Status { get; set; }
         public int ItemType { get; set; } // 1=专用设备, 2=通用设备, 3=耗材
     }
@@ -135,6 +139,8 @@ namespace DeviceWarehouseSystem.DTOs
         public int Quantity { get; set; }
         public string? Status { get; set; }
         public string? DeviceCode { get; set; }
+        public string? SnCode { get; set; }
+        public string? Accessories { get; set; }
     }
 
     // 通用设备采购入库
@@ -165,6 +171,8 @@ namespace DeviceWarehouseSystem.DTOs
         public int Quantity { get; set; }
         public string? Status { get; set; }
         public string? DeviceCode { get; set; }
+        public string? SnCode { get; set; }
+        public string? Accessories { get; set; }
     }
 
     // 耗材采购入库

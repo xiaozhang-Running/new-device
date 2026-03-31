@@ -14,7 +14,11 @@ builder.Services.AddOpenApi();
 
 // Configure database connection
 builder.Services.AddDbContext<DeviceWarehouseContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null)));
 
 // Configure services
 builder.Services.AddScoped<AuthService>();
@@ -72,6 +76,45 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// 初始化默认用户
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<DeviceWarehouseContext>();
+    // 检查是否存在用户表
+    if (context.Users != null && !context.Users.Any())
+    {
+        // 添加默认管理员用户
+        var adminUser = new DeviceWarehouseSystem.Models.User
+        {
+            Username = "admin",
+            PasswordHash = "admin123", // 实际项目中应该加密密码
+            Role = "Admin",
+            Email = "admin@example.com",
+            FullName = "管理员",
+            IsActive = true,
+            CreatedAt = DateTime.Now,
+            LastLoginAt = DateTime.Now
+        };
+        context.Users.Add(adminUser);
+        
+        // 添加默认普通用户
+        var normalUser = new DeviceWarehouseSystem.Models.User
+        {
+            Username = "user",
+            PasswordHash = "user123",
+            Role = "User",
+            Email = "user@example.com",
+            FullName = "普通用户",
+            IsActive = true,
+            CreatedAt = DateTime.Now
+        };
+        context.Users.Add(normalUser);
+        
+        context.SaveChanges();
+        Console.WriteLine("默认用户初始化完成");
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -46,6 +46,25 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
+        // GET: api/InOutbound/project-outbounds/{id}
+        [HttpGet("project-outbounds/{id}")]
+        public async Task<ActionResult<ProjectOutboundDTO>> GetProjectOutbound(int id)
+        {
+            try
+            {
+                var outbound = await _inOutboundService.GetProjectOutboundAsync(id);
+                return Ok(outbound);
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "Project outbound not found")
+                {
+                    return NotFound(new { message = ex.Message });
+                }
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // 原材料出库管理
         // GET: api/InOutbound/raw-material-outbounds
         [HttpGet("raw-material-outbounds")]
@@ -55,6 +74,21 @@ namespace DeviceWarehouseSystem.Controllers
             {
                 var outbounds = await _inOutboundService.GetRawMaterialOutboundsAsync();
                 return Ok(outbounds);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/InOutbound/raw-material-outbounds
+        [HttpPost("raw-material-outbounds")]
+        public async Task<ActionResult<RawMaterialOutboundDTO>> CreateRawMaterialOutbound([FromBody] RawMaterialOutboundDTO dto)
+        {
+            try
+            {
+                var outbound = await _inOutboundService.CreateRawMaterialOutboundAsync(dto);
+                return Ok(outbound);
             }
             catch (Exception ex)
             {
@@ -289,9 +323,9 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // POST: api/InOutbound/consumable-purchase-inbounds/confirm
-        [HttpPost("consumable-purchase-inbounds/confirm")]
-        public async Task<ActionResult<ConsumablePurchaseInboundDTO>> ConfirmConsumablePurchaseInbound([FromBody] int id)
+        // POST: api/InOutbound/consumable-purchase-inbounds/{id}/confirm
+        [HttpPost("consumable-purchase-inbounds/{id}/confirm")]
+        public async Task<ActionResult<ConsumablePurchaseInboundDTO>> ConfirmConsumablePurchaseInbound(int id)
         {
             try
             {

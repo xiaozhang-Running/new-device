@@ -80,6 +80,15 @@ namespace DeviceWarehouseSystem.Middleware
             if (statusCode >= HttpStatusCode.InternalServerError)
             {
                 _logger.LogError(exception, "服务器错误: {Message}", exception.Message);
+                // 在开发环境下输出详细异常信息到控制台
+                Console.WriteLine($"[ERROR] {DateTime.Now:yyyy-MM-dd HH:mm:ss} - 服务器错误:");
+                Console.WriteLine($"  消息: {exception.Message}");
+                Console.WriteLine($"  堆栈: {exception.StackTrace}");
+                if (exception.InnerException != null)
+                {
+                    Console.WriteLine($"  内部异常: {exception.InnerException.Message}");
+                    Console.WriteLine($"  内部堆栈: {exception.InnerException.StackTrace}");
+                }
             }
             else
             {

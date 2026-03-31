@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Table, Button, Space, Input, Select, DatePicker, message, Modal, Descriptions, Spin } from 'antd'
 import { SearchOutlined, DownloadOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import request from '../services/request'
 
 const { Search } = Input
 const { Option } = Select
@@ -37,11 +38,7 @@ const LogList = () => {
       params.append('page', page)
       params.append('pageSize', pageSize)
 
-      const response = await fetch(`http://localhost:5055/api/Log?${params.toString()}`)
-      if (!response.ok) {
-        throw new Error('获取日志失败')
-      }
-      const data = await response.json()
+      const data = await request.get(`/Log?${params.toString()}`)
       
       // 转换日期格式
       const formattedLogs = data[0].map(log => ({
@@ -111,11 +108,8 @@ const LogList = () => {
   // 处理导出日志
   const handleExport = async () => {
     try {
-      const response = await fetch('http://localhost:5055/api/Log/export')
-      if (!response.ok) {
-        throw new Error('导出日志失败')
-      }
-      const blob = await response.blob()
+      const response = await request.get('/Log/export', { responseType: 'blob' })
+      const blob = response
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url

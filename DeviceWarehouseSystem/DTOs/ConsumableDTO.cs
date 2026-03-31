@@ -4,55 +4,55 @@ namespace DeviceWarehouseSystem.DTOs;
 
 public class ConsumableDTO
 {
-    public int id { get; set; }
-    public string name { get; set; } = null!;
-    public string? brand { get; set; }
-    public string? modelSpecification { get; set; }
-    public int totalQuantity { get; set; }
-    public int originalQuantity { get; set; }
-    public int usedQuantity { get; set; }
-    public int remainingQuantity { get; set; }
-    public string? unit { get; set; }
-    public string? company { get; set; }
-    public string? status { get; set; }
-    public string? accessories { get; set; }
-    public string? remark { get; set; }
-    public string? image { get; set; }
-    public string? location { get; set; }
-    public DateTime createdAt { get; set; }
-    public DateTime? updatedAt { get; set; }
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Brand { get; set; }
+    public string? ModelSpecification { get; set; }
+    public int TotalQuantity { get; set; }
+    public int OriginalQuantity { get; set; }
+    public int UsedQuantity { get; set; }
+    public int RemainingQuantity { get; set; }
+    public string? Unit { get; set; }
+    public string? Company { get; set; }
+    public string? Status { get; set; }
+    public string? Accessories { get; set; }
+    public string? Remark { get; set; }
+    public string? Image { get; set; }
+    public string? Location { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }
 
 public class ConsumableCreateDTO
 {
-    public string name { get; set; } = null!;
-    public string? brand { get; set; }
-    public string? modelSpecification { get; set; }
-    public int totalQuantity { get; set; }
-    public int originalQuantity { get; set; }
-    public int usedQuantity { get; set; }
-    public int remainingQuantity { get; set; }
-    public string? unit { get; set; }
-    public string? company { get; set; }
-    public string? accessories { get; set; }
-    public string? remark { get; set; }
-    public string? image { get; set; }
-    public string? location { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Brand { get; set; }
+    public string? ModelSpecification { get; set; }
+    public int TotalQuantity { get; set; }
+    public int OriginalQuantity { get; set; }
+    public int UsedQuantity { get; set; }
+    public int RemainingQuantity { get; set; }
+    public string? Unit { get; set; }
+    public string? Company { get; set; }
+    public string? Accessories { get; set; }
+    public string? Remark { get; set; }
+    public string? Image { get; set; }
+    public string? Location { get; set; }
 }
 
 public class ConsumableUpdateDTO
 {
-    public string? name { get; set; }
-    public string? brand { get; set; }
-    public string? modelSpecification { get; set; }
-    public int? totalQuantity { get; set; }
-    public int? originalQuantity { get; set; }
-    public int? usedQuantity { get; set; }
-    public int? remainingQuantity { get; set; }
-    public string? unit { get; set; }
-    public string? company { get; set; }
-    public string? accessories { get; set; }
-    public string? remark { get; set; }
-    public string? image { get; set; }
-    public string? location { get; set; }
+    public string? Name { get; set; }
+    public string? Brand { get; set; }
+    public string? ModelSpecification { get; set; }
+    public int? TotalQuantity { get; set; }
+    public int? OriginalQuantity { get; set; }
+    public int? UsedQuantity { get; set; }
+    public int? RemainingQuantity { get; set; }
+    public string? Unit { get; set; }
+    public string? Company { get; set; }
+    public string? Accessories { get; set; }
+    public string? Remark { get; set; }
+    public string? Image { get; set; }
+    public string? Location { get; set; }
 }

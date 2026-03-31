@@ -189,47 +189,71 @@ function ProjectOutbound() {
   const fetchDevices = async () => {
     setLoading(true)
     try {
-      // 从库存表获取专用设备
-      const specialInventoryDevices = await deviceApi.getSpecialInventoryDevices()
+      // 禁用缓存，确保获取最新数据
+      const specialInventoryDevices = await deviceApi.getSpecialInventoryDevices(false)
       console.log('库存专用设备数据:', specialInventoryDevices)
-      setSpecialDevices(specialInventoryDevices.map(device => ({
-        id: device.id,
-        equipmentId: device.equipmentId,
-        name: device.name,
-        brand: device.brand,
-        model: device.model,
-        specification: device.specification,
-        inventory: device.inventoryQuantity || 0,
-        unit: device.unit,
-        warehouse: device.warehouse
-      })))
+      console.log('库存专用设备数量:', specialInventoryDevices.length)
+      
+      // 检查数据格式
+      if (Array.isArray(specialInventoryDevices)) {
+        setSpecialDevices(specialInventoryDevices.map(device => ({
+          id: device.id,
+          equipmentId: device.equipmentId,
+          name: device.name,
+          brand: device.brand,
+          model: device.model,
+          specification: device.specification,
+          inventory: device.inventoryQuantity || 0,
+          unit: device.unit,
+          warehouse: device.warehouse
+        })))
+      } else {
+        console.error('专用设备数据格式错误:', specialInventoryDevices)
+        setSpecialDevices([])
+      }
 
-      // 从库存表获取通用设备
-      const generalInventoryDevices = await deviceApi.getGeneralInventoryDevices()
+      // 禁用缓存，确保获取最新数据
+      const generalInventoryDevices = await deviceApi.getGeneralInventoryDevices(false)
       console.log('库存通用设备数据:', generalInventoryDevices)
-      setGeneralDevices(generalInventoryDevices.map(device => ({
-        id: device.id,
-        equipmentId: device.equipmentId,
-        name: device.name,
-        brand: device.brand,
-        model: device.model,
-        specification: device.specification,
-        inventory: device.inventoryQuantity || 0,
-        unit: device.unit,
-        warehouse: device.warehouse
-      })))
+      console.log('库存通用设备数量:', generalInventoryDevices.length)
+      
+      // 检查数据格式
+      if (Array.isArray(generalInventoryDevices)) {
+        setGeneralDevices(generalInventoryDevices.map(device => ({
+          id: device.id,
+          equipmentId: device.equipmentId,
+          name: device.name,
+          brand: device.brand,
+          model: device.model,
+          specification: device.specification,
+          inventory: device.inventoryQuantity || 0,
+          unit: device.unit,
+          warehouse: device.warehouse
+        })))
+      } else {
+        console.error('通用设备数据格式错误:', generalInventoryDevices)
+        setGeneralDevices([])
+      }
 
-      // 从后端获取耗材数据
-      const consumablesData = await deviceApi.getConsumables()
+      // 禁用缓存，确保获取最新数据
+      const consumablesData = await deviceApi.getConsumables(false)
       console.log('耗材数据:', consumablesData)
-      setConsumables(consumablesData.map(consumable => ({
-        id: consumable.id,
-        name: consumable.name,
-        model: consumable.brand,
-        specification: consumable.modelSpecification,
-        inventory: consumable.remainingQuantity || 0,
-        unit: consumable.unit
-      })))
+      console.log('耗材数量:', consumablesData.length)
+      
+      // 检查数据格式
+      if (Array.isArray(consumablesData)) {
+        setConsumables(consumablesData.map(consumable => ({
+          id: consumable.id,
+          name: consumable.name,
+          model: consumable.brand,
+          specification: consumable.modelSpecification,
+          inventory: consumable.remainingQuantity || 0,
+          unit: consumable.unit
+        })))
+      } else {
+        console.error('耗材数据格式错误:', consumablesData)
+        setConsumables([])
+      }
     } catch (error) {
       console.error('获取设备数据失败:', error)
       message.error('获取设备数据失败')
@@ -266,7 +290,9 @@ function ProjectOutbound() {
         const formattedHistory = response.map(item => {
           // 处理ProjectOutboundItems字段
           let items = []
-          if (item.ProjectOutboundItems && Array.isArray(item.ProjectOutboundItems)) {
+          if (item.Items && Array.isArray(item.Items)) {
+            items = item.Items
+          } else if (item.ProjectOutboundItems && Array.isArray(item.ProjectOutboundItems)) {
             items = item.ProjectOutboundItems
           } else if (item.projectOutboundItems && Array.isArray(item.projectOutboundItems)) {
             items = item.projectOutboundItems
@@ -330,17 +356,17 @@ function ProjectOutbound() {
           console.log('第一个设备的id:', devices[0].id)
         }
         setFilteredDetailedDevices(devices.map(d => ({
-          id: d.id,
-          deviceId: d.deviceCode || d.DeviceCode || '',
-          deviceCode: d.deviceCode || d.DeviceCode || '',
-          name: d.name,
-          brand: d.brand,
-          model: d.model,
-          specification: d.specification,
-          unit: d.unit,
-          accessories: d.accessories,
-          status: d.status
-        })))
+              id: d.id,
+              deviceId: d.deviceCode || d.DeviceCode || d.id.toString(),
+              deviceCode: d.deviceCode || d.DeviceCode || '',
+              name: d.name || currentDeviceGroup?.name || '',
+              brand: d.brand,
+              model: d.model,
+              specification: d.specification,
+              unit: d.unit,
+              accessories: d.accessories,
+              status: d.status
+            })))
       } else if (deviceType === 'general') {
         console.log('调用getGeneralEquipmentDetails API')
         const devices = await deviceApi.getGeneralEquipmentDetails(device.name, device.brand)
@@ -352,17 +378,17 @@ function ProjectOutbound() {
           console.log('第一个设备的DeviceCode:', devices[0].DeviceCode)
         }
         setFilteredDetailedDevices(devices.map(d => ({
-          id: d.id,
-          deviceId: d.deviceCode || d.DeviceCode || '',
-          deviceCode: d.deviceCode || d.DeviceCode || '',
-          name: d.name,
-          brand: d.brand,
-          model: d.model,
-          specification: d.specification,
-          unit: d.unit,
-          accessories: d.accessories,
-          status: d.status
-        })))
+              id: d.id,
+              deviceId: d.deviceCode || d.DeviceCode || d.id.toString(),
+              deviceCode: d.deviceCode || d.DeviceCode || '',
+              name: d.name || currentDeviceGroup?.name || '',
+              brand: d.brand,
+              model: d.model,
+              specification: d.specification,
+              unit: d.unit,
+              accessories: d.accessories,
+              status: d.status
+            })))
       }
     } catch (error) {
       console.error('获取设备详情失败:', error)
@@ -383,31 +409,31 @@ function ProjectOutbound() {
       if (currentDeviceType === 'special') {
         const devices = await deviceApi.getSpecialEquipmentDetails(currentDeviceGroup.name, brand)
         setFilteredDetailedDevices(devices.map(d => ({
-          id: d.id,
-          deviceId: d.deviceCode || d.DeviceCode || '',
-          deviceCode: d.deviceCode || d.DeviceCode || '',
-          name: d.name,
-          brand: d.brand,
-          model: d.model,
-          specification: d.specification,
-          unit: d.unit,
-          accessories: d.accessories,
-          status: d.status
-        })))
+              id: d.id,
+              deviceId: d.deviceCode || d.DeviceCode || d.id.toString(),
+              deviceCode: d.deviceCode || d.DeviceCode || '',
+              name: d.name || currentDeviceGroup?.name || '',
+              brand: d.brand,
+              model: d.model,
+              specification: d.specification,
+              unit: d.unit,
+              accessories: d.accessories,
+              status: d.status
+            })))
       } else if (currentDeviceType === 'general') {
         const devices = await deviceApi.getGeneralEquipmentDetails(currentDeviceGroup.name, brand)
         setFilteredDetailedDevices(devices.map(d => ({
-          id: d.id,
-          deviceId: d.deviceCode || d.DeviceCode || '',
-          deviceCode: d.deviceCode || d.DeviceCode || '',
-          name: d.name,
-          brand: d.brand,
-          model: d.model,
-          specification: d.specification,
-          unit: d.unit,
-          accessories: d.accessories,
-          status: d.status
-        })))
+              id: d.id,
+              deviceId: d.deviceCode || d.DeviceCode || d.id.toString(),
+              deviceCode: d.deviceCode || d.DeviceCode || '',
+              name: d.name || currentDeviceGroup?.name || '',
+              brand: d.brand,
+              model: d.model,
+              specification: d.specification,
+              unit: d.unit,
+              accessories: d.accessories,
+              status: d.status
+            })))
       }
     } catch (error) {
       console.error('筛选设备详情失败:', error)
@@ -456,19 +482,22 @@ function ProjectOutbound() {
 
   // 处理耗材选择
   const handleConsumableSelect = (consumableId, quantity) => {
-    const consumable = consumables.find(c => c.id === consumableId)
-    if (!consumable) return
-
-    setSelectedConsumables(prev => {
-      const existingIndex = prev.findIndex(item => item.id === consumableId)
-      if (existingIndex >= 0) {
+    // 检查是否是修改已选耗材的数量
+    const existingIndex = selectedConsumables.findIndex(item => item.id === consumableId)
+    if (existingIndex >= 0) {
+      // 更新已选耗材的数量
+      setSelectedConsumables(prev => {
         const updated = [...prev]
         updated[existingIndex].quantity = quantity
         return updated
-      } else {
-        return [...prev, { ...consumable, quantity: quantity || 1 }]
+      })
+    } else {
+      // 添加新的耗材
+      const consumable = consumables.find(c => c.id === consumableId)
+      if (consumable) {
+        setSelectedConsumables(prev => [...prev, { ...consumable, quantity: quantity || 1 }])
       }
-    })
+    }
   }
 
   // 移除专用设备
@@ -502,7 +531,8 @@ function ProjectOutbound() {
     try {
       fullRecord = await projectOutboundApi.getProjectOutbound(record.id)
       console.log('从后端获取的完整记录:', fullRecord)
-      items = fullRecord.ProjectOutboundItems || fullRecord.projectOutboundItems || []
+      // 尝试从不同字段名获取物品数据
+      items = fullRecord.Items || fullRecord.items || fullRecord.ProjectOutboundItems || fullRecord.projectOutboundItems || []
       console.log('从后端获取的items:', items)
     } catch (error) {
       console.error('获取完整出库记录失败:', error)
@@ -526,29 +556,9 @@ function ProjectOutbound() {
       const unit = item.Unit || item.unit
       const accessories = item.Accessories || item.accessories || ''
       const deviceStatus = item.DeviceStatus || item.deviceStatus || item.status || '正常'
-      const itemId = item.ItemId || item.itemId
       
-      // 如果deviceCode为空，尝试根据itemId从设备详情API获取
-      if (!deviceCode && itemId && (itemType === 1 || itemType === 2)) {
-        console.log(`第${i}个物品deviceCode为空，尝试从设备详情API获取，itemId:`, itemId, 'itemType:', itemType)
-        try {
-          if (itemType === 1) { // 专用设备
-            const device = await deviceApi.getSpecialEquipment(itemId)
-            if (device && device.deviceCode) {
-              deviceCode = device.deviceCode
-              console.log(`从专用设备API获取到deviceCode:`, deviceCode)
-            }
-          } else if (itemType === 2) { // 通用设备
-            const device = await deviceApi.getGeneralEquipment(itemId)
-            if (device && device.deviceCode) {
-              deviceCode = device.deviceCode
-              console.log(`从通用设备API获取到deviceCode:`, deviceCode)
-            }
-          }
-        } catch (error) {
-          console.error(`获取设备详情失败:`, error)
-        }
-      }
+      // 直接使用ProjectOutboundItem中的DeviceCode字段，不再尝试根据ItemId获取设备详情
+      // 因为ItemId可能不是设备的实际ID，而是ProjectOutboundItem的ID
       
       console.log(`第${i}个物品处理后的字段:`, { itemType, itemName, deviceCode, brand, model, quantity, unit, accessories, deviceStatus })
       
@@ -587,6 +597,7 @@ function ProjectOutbound() {
     const returnDate = fullRecord.returnDate || fullRecord.ReturnDate || ''
     const recipient = fullRecord.recipient || fullRecord.Recipient || ''
     const warehouseKeeper = fullRecord.warehouseKeeper || fullRecord.WarehouseKeeper || ''
+    // 确保正确获取出库日期
     const outboundDate = fullRecord.outboundDate || fullRecord.OutboundDate || ''
     const remark = fullRecord.remark || fullRecord.Remark || ''
     
@@ -892,13 +903,14 @@ function ProjectOutbound() {
     
     // 重新获取设备和耗材数据，确保显示最新的数据库数据
     setLoading(true)
+    let fullRecord = null
     try {
       // 直接从后端获取最新的出库单详情，而不是使用缓存的记录
-      const fullRecord = await projectOutboundApi.getProjectOutbound(record.id)
+      fullRecord = await projectOutboundApi.getProjectOutbound(record.id)
       console.log('从后端获取的完整出库单详情:', fullRecord)
       
-      // 从库存表获取专用设备
-      const specialInventoryDevices = await deviceApi.getSpecialInventoryDevices()
+      // 从库存表获取专用设备（禁用缓存）
+      const specialInventoryDevices = await deviceApi.getSpecialInventoryDevices(false)
       setSpecialDevices(specialInventoryDevices.map(device => ({
         id: device.id,
         equipmentId: device.equipmentId,
@@ -911,8 +923,8 @@ function ProjectOutbound() {
         warehouse: device.warehouse
       })))
 
-      // 从库存表获取通用设备
-      const generalInventoryDevices = await deviceApi.getGeneralInventoryDevices()
+      // 从库存表获取通用设备（禁用缓存）
+      const generalInventoryDevices = await deviceApi.getGeneralInventoryDevices(false)
       setGeneralDevices(generalInventoryDevices.map(device => ({
         id: device.id,
         equipmentId: device.equipmentId,
@@ -925,8 +937,8 @@ function ProjectOutbound() {
         warehouse: device.warehouse
       })))
 
-      // 从后端获取耗材数据
-      const consumablesData = await deviceApi.getConsumables()
+      // 从后端获取耗材数据（禁用缓存）
+      const consumablesData = await deviceApi.getConsumables(false)
       console.log('耗材数据:', consumablesData)
       setConsumables(consumablesData.map(consumable => ({
         id: consumable.id,
@@ -938,25 +950,27 @@ function ProjectOutbound() {
       })))
       
       // 填充已选物品
-      console.log('开始填充已选物品，items长度:', (fullRecord.projectOutboundItems || []).length)
-      console.log('items数据:', fullRecord.projectOutboundItems)
+      // 尝试从不同字段名获取物品数据
+      const items = fullRecord.items || fullRecord.Items || fullRecord.projectOutboundItems || fullRecord.ProjectOutboundItems || []
+      console.log('开始填充已选物品，items长度:', items.length)
+      console.log('items数据:', items)
       
       // 确保items是数组
-      const items = Array.isArray(fullRecord.projectOutboundItems) ? fullRecord.projectOutboundItems : []
-      console.log('处理后的items:', items)
+      const processedItems = Array.isArray(items) ? items : []
+      console.log('处理后的items:', processedItems)
       
       // 检查ItemType字段的实际值
-      if (items.length > 0) {
-        console.log('第一个item的结构:', items[0])
-        console.log('第一个item的所有键:', Object.keys(items[0]))
-        console.log('第一个item的ItemType:', items[0].ItemType, '类型:', typeof items[0].ItemType)
-        console.log('第一个item的itemType:', items[0].itemType, '类型:', typeof items[0].itemType)
-        console.log('第一个item的ItemName:', items[0].ItemName, 'name:', items[0].name)
-        console.log('第一个item的DeviceCode:', items[0].DeviceCode, 'deviceCode:', items[0].deviceCode, 'deviceId:', items[0].deviceId)
-        console.log('第一个item的Id:', items[0].Id, 'id:', items[0].id)
-        console.log('第一个item的ItemId:', items[0].ItemId, 'itemId:', items[0].itemId)
+      if (processedItems.length > 0) {
+        console.log('第一个item的结构:', processedItems[0])
+        console.log('第一个item的所有键:', Object.keys(processedItems[0]))
+        console.log('第一个item的ItemType:', processedItems[0].ItemType, '类型:', typeof processedItems[0].ItemType)
+        console.log('第一个item的itemType:', processedItems[0].itemType, '类型:', typeof processedItems[0].itemType)
+        console.log('第一个item的ItemName:', processedItems[0].ItemName, 'name:', processedItems[0].name)
+        console.log('第一个item的DeviceCode:', processedItems[0].DeviceCode, 'deviceCode:', processedItems[0].deviceCode, 'deviceId:', processedItems[0].deviceId)
+        console.log('第一个item的Id:', processedItems[0].Id, 'id:', processedItems[0].id)
+        console.log('第一个item的ItemId:', processedItems[0].ItemId, 'itemId:', processedItems[0].itemId)
         // 遍历所有items，检查ItemType
-        items.forEach((item, index) => {
+        processedItems.forEach((item, index) => {
           console.log(`Item ${index} ItemType:`, item.ItemType, 'ItemName:', item.ItemName, 'DeviceCode:', item.DeviceCode, 'deviceCode:', item.deviceCode, 'deviceId:', item.deviceId, 'Id:', item.Id, 'id:', item.id, 'ItemId:', item.ItemId, 'itemId:', item.itemId)
         })
       } else {
@@ -973,60 +987,42 @@ function ProjectOutbound() {
       
       // 尝试不同的ItemType匹配方式
       // 先尝试所有物品，不管ItemType
-      const allItems = items.map(item => {
-        // 优先使用deviceCode作为设备编号，如果为空则使用itemId作为备选
-        let deviceId = item.deviceCode || item.DeviceCode || item.itemId || item.ItemId || item.id || item.Id || ''
+      const allItems = processedItems.map(item => {
+        // 优先使用DeviceCode作为设备编号，如果为空则使用itemId作为备选
+        let deviceId = item.DeviceCode || item.deviceCode || item.ItemId || item.itemId || ''
+        // 优先使用ItemType作为物品类型
+        let itemType = item.ItemType || item.itemType || 1
         return {
           ...item,
           deviceId,
-          name: item.itemName || item.ItemName || item.name,
-          brand: item.brand || item.Brand,
-          model: item.model || item.Model,
-          quantity: item.quantity || item.Quantity || 1,
-          unit: item.unit || item.Unit,
-          accessories: item.accessories || item.Accessories || '',
-          status: item.status || item.DeviceStatus || '正常'
+          ItemType: itemType,
+          ItemId: item.ItemId || item.itemId || item.EquipmentId || item.equipmentId,
+          ItemName: item.ItemName || item.itemName || item.EquipmentName || item.equipmentName || item.name,
+          name: item.ItemName || item.itemName || item.EquipmentName || item.equipmentName || item.name,
+          Brand: item.brand || item.Brand,
+          Model: item.model || item.Model,
+          Quantity: item.quantity || item.Quantity || 1,
+          Unit: item.unit || item.Unit,
+          Accessories: item.accessories || item.Accessories || '',
+          DeviceStatus: item.status || item.DeviceStatus || item.Status || '正常',
+          status: item.status || item.DeviceStatus || item.Status || '正常'
         }
       })
       console.log('映射后的物品数据:', allItems)
       console.log('所有物品数量:', allItems.length)
       console.log('所有物品数据:', allItems)
       
-      // 尝试根据itemId获取设备的详细信息，包括设备编号
-      // 用于跟踪已请求过的不存在的设备，避免重复请求
-      const nonExistentDevices = new Set()
-      
+      // 直接使用ProjectOutboundItem中的DeviceCode字段，不再尝试根据ItemId获取设备详情
+      // 因为ItemId可能不是设备的实际ID，而是ProjectOutboundItem的ID
       for (let item of allItems) {
-        const itemType = item.ItemType || item.itemType
-        const itemId = item.ItemId || item.itemId
-        
-        // 只有在没有设备编号的情况下才尝试通过API获取设备详情
+        // 确保deviceId字段存在
         if (!item.deviceId || item.deviceId === '') {
-          if (itemType === 1 && itemId && !nonExistentDevices.has(`special-${itemId}`)) { // 专用设备
-            try {
-              const device = await deviceApi.getSpecialEquipment(itemId)
-              if (device && device.deviceCode) {
-                item.deviceId = device.deviceCode
-                console.log(`更新专用设备 ${item.name} 的设备编号为: ${device.deviceCode}`)
-              }
-            } catch (error) {
-              console.error(`获取专用设备 ${itemId} 详情失败:`, error)
-              // 设备不存在时，添加到不存在设备集合，避免重复请求
-              nonExistentDevices.add(`special-${itemId}`)
-            }
-          } else if (itemType === 2 && itemId && !nonExistentDevices.has(`general-${itemId}`)) { // 通用设备
-            try {
-              const device = await deviceApi.getGeneralEquipment(itemId)
-              if (device && device.deviceCode) {
-                item.deviceId = device.deviceCode
-                console.log(`更新通用设备 ${item.name} 的设备编号为: ${device.deviceCode}`)
-              }
-            } catch (error) {
-              console.error(`获取通用设备 ${itemId} 详情失败:`, error)
-              // 设备不存在时，添加到不存在设备集合，避免重复请求
-              nonExistentDevices.add(`general-${itemId}`)
-            }
-          }
+          item.deviceId = item.DeviceCode || item.deviceCode || ''
+        }
+        // 确保ItemType字段存在且正确
+        if (!item.ItemType && !item.itemType) {
+          // 根据物品名称或其他属性判断类型
+          item.ItemType = 1; // 默认设为专用设备
         }
       }
       console.log('更新设备编号后的物品数据:', allItems)
@@ -1115,7 +1111,7 @@ function ProjectOutbound() {
           console.log('直接从后端获取的图片列表:', images)
           
           if (images && images.length > 0) {
-            const baseUrl = 'http://localhost:5055'
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api'
             const loadedImages = []
             
             console.log('图片列表中的每个对象:', images)
@@ -1174,7 +1170,7 @@ function ProjectOutbound() {
           if (imageUrls.length > 0) {
             // 尝试从后端获取图片数据
             try {
-              const baseUrl = 'http://localhost:5055'
+              const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api'
               const loadedImages = []
               
               // 尝试获取出入库图片列表
@@ -1223,7 +1219,7 @@ function ProjectOutbound() {
             } catch (error) {
               console.error('加载图片失败:', error)
               // 即使失败，也使用原始URL创建图片对象
-              const baseUrl = 'http://localhost:5055'
+              const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api'
               const loadedImages = imageUrls.map(url => {
                 const fullUrl = url.startsWith('http') ? url : baseUrl + url
                 const file = new File([], fullUrl, { type: 'image/jpeg' })
@@ -1250,46 +1246,52 @@ function ProjectOutbound() {
       console.log('record.outboundImages:', fullRecord.outboundImages)
       console.log('record.images:', fullRecord.images)
       
+      // 显示模态框
+      setCreateModalVisible(true)
+      
+      // 模态框显示后填充表单数据
+      setTimeout(() => {
+        if (fullRecord) {
+          // 将物流方式数字值转换为对应的字符串值
+          const logisticsMethodNum = fullRecord.logisticsMethod || fullRecord.LogisticsMethod
+          const logisticsMethodStr = {
+            1: '随身携带',
+            2: '顺丰速运',
+            3: '跨越物流',
+            4: '德邦物流',
+            5: '其他方式'
+          }[logisticsMethodNum] || '随身携带' // 默认值为'随身携带'
+          
+          form.setFieldsValue({
+            outboundId: fullRecord.outboundId || fullRecord.OutboundId || fullRecord.outboundNumber || fullRecord.OutboundNumber,
+            '领用方式': fullRecord.outboundType || fullRecord.OutboundType || fullRecord.handler || fullRecord.Handler || '元动自用',
+            '物流方式': logisticsMethodStr,
+            '项目名称': fullRecord.projectName || fullRecord.ProjectName,
+            '项目时间': fullRecord.projectTime || fullRecord.ProjectTime,
+            '使用地': fullRecord.usageLocation || fullRecord.UsageLocation,
+            '项目负责人': fullRecord.projectManager || fullRecord.ProjectManager,
+            '联系电话': fullRecord.contactPhone || fullRecord.ContactPhone,
+            '预计归还时间': (fullRecord.returnDate || fullRecord.ReturnDate) ? moment((fullRecord.returnDate || fullRecord.ReturnDate)) : null,
+            '领用人': fullRecord.recipient || fullRecord.Recipient,
+            '库管': fullRecord.warehouseKeeper || fullRecord.WarehouseKeeper,
+            '出库时间': (fullRecord.outboundDate || fullRecord.OutboundDate) ? moment((fullRecord.outboundDate || fullRecord.OutboundDate)) : null,
+            'remark': fullRecord.remark || fullRecord.Remark
+          })
+        }
+      }, 100)
+      
     } catch (error) {
       console.error('获取设备数据失败:', error)
       console.error('错误堆栈:', error.stack)
       message.error('获取设备数据失败')
+      // 即使出错也要显示模态框，避免用户操作被卡住
+      setCreateModalVisible(true)
     } finally {
       setLoading(false)
-      // 显示模态框
-      setCreateModalVisible(true)
-      // 模态框显示后填充表单数据
-      setTimeout(() => {
-        // 将物流方式数字值转换为对应的字符串值
-        const logisticsMethodNum = record.logisticsMethod || record.LogisticsMethod
-        const logisticsMethodStr = {
-          1: '随身携带',
-          2: '顺丰速运',
-          3: '跨越物流',
-          4: '德邦物流',
-          5: '其他方式'
-        }[logisticsMethodNum] || ''
-        
-        form.setFieldsValue({
-          outboundId: record.outboundId || record.OutboundId,
-          '领用方式': record.outboundType || record.OutboundType,
-          '物流方式': logisticsMethodStr,
-          '项目名称': record.projectName || record.ProjectName,
-          '项目时间': record.projectTime || record.ProjectTime,
-          '使用地': record.usageLocation || record.UsageLocation,
-          '项目负责人': record.projectManager || record.ProjectManager,
-          '联系电话': record.contactPhone || record.ContactPhone,
-          '预计归还时间': record.returnDate || record.ReturnDate ? moment(record.returnDate || record.ReturnDate) : null,
-          '领用人': record.recipient || record.Recipient,
-          '库管': record.warehouseKeeper || record.WarehouseKeeper,
-          '出库时间': record.outboundDate || record.OutboundDate ? moment(record.outboundDate || record.OutboundDate) : null,
-          'remark': record.remark || record.Remark
-        })
-      }, 100)
     }
   }
 
-  // 处理新建出库单
+  // 处理新建项目出库单
   const handleCreateOutbound = async () => {
     // 重置编辑模式状态
     setIsEditMode(false)
@@ -1370,7 +1372,7 @@ function ProjectOutbound() {
         recipient: outbound.recipient,
         outboundDate: outbound.outboundDate ? new Date(outbound.outboundDate).toISOString().split('T')[0] : '',
         status: outbound.isCompleted ? '已完成' : '待确认',
-        inboundStatus: outbound.inboundStatus || '未入库',
+        inboundStatus: outbound.inboundStatus || '未入库', // 使用后端返回的入库状态，默认为未入库
         items: [] // 简化处理，实际应用中可以从outbound.ProjectOutboundItems获取
       }));
       setOutboundHistory(outboundHistoryData);
@@ -1431,7 +1433,7 @@ function ProjectOutbound() {
         ...(selectedGeneralDevices || []).map(item => ({ ...item, type: '通用设备' })),
         ...(selectedConsumables || []).map(item => ({ ...item, type: '耗材' }))
       ],
-      images: (selectedImages || []).map(file => URL.createObjectURL(file))
+      images: (selectedImages || []).map(file => file.url)
     }
     
     console.log('构建预览数据:', previewDataObj)
@@ -1453,47 +1455,59 @@ function ProjectOutbound() {
   const handleSubmit = async (values) => {
     console.log('开始提交出库单:', values);
     const now = new Date().toISOString();
+    
+    // 将物流方式字符串转换为数字值
+    const logisticsMethodMap = {
+      '随身携带': 1,
+      '顺丰速运': 2,
+      '跨越物流': 3,
+      '德邦物流': 4,
+      '其他方式': 5
+    };
+    const logisticsMethodNum = logisticsMethodMap[values['物流方式']] || null;
+    console.log('物流方式数字值:', logisticsMethodNum);
+    
     const projectOutboundItems = [
       ...selectedSpecialDevices.map(item => ({
         ItemType: 1, // 1表示专用设备
-        ItemId: item.id || item.deviceId || 0,
+        ItemId: item.id || 0, // 确保ItemId是数字类型
         ItemName: item.name,
-        DeviceCode: item.deviceCode || item.deviceId || '',
-        Brand: item.brand,
-        Model: item.model,
+        DeviceCode: item.deviceId || '', // 使用deviceId作为设备编号
+        Brand: item.brand || '',
+        Model: item.model || '',
         Quantity: item.quantity || 1,
-        Unit: item.unit,
-        Accessories: item.accessories,
-        Remark: item.remark,
-        DeviceStatus: item.status,
+        Unit: item.unit || '',
+        Accessories: item.accessories || '',
+        Remark: item.remark || '',
+        DeviceStatus: item.status || '正常',
         CreatedAt: now
       })),
       ...selectedGeneralDevices.map(item => ({
         ItemType: 2, // 2表示通用设备
-        ItemId: item.id || item.deviceId || 0,
+        ItemId: item.id || 0, // 确保ItemId是数字类型
         ItemName: item.name,
-        DeviceCode: item.deviceCode || item.deviceId || '',
-        Brand: item.brand,
-        Model: item.model,
+        DeviceCode: item.deviceId || '', // 使用deviceId作为设备编号
+        Brand: item.brand || '',
+        Model: item.model || '',
         Quantity: item.quantity || 1,
-        Unit: item.unit,
-        Accessories: item.accessories,
-        Remark: item.remark,
-        DeviceStatus: item.status,
+        Unit: item.unit || '',
+        Accessories: item.accessories || '',
+        Remark: item.remark || '',
+        DeviceStatus: item.status || '正常',
         CreatedAt: now
       })),
       ...selectedConsumables.map(item => ({
         ItemType: 3, // 3表示耗材
         ItemId: item.id || 0,
         ItemName: item.name,
-        DeviceCode: item.deviceCode || item.deviceId || '',
-        Brand: item.brand,
-        Model: item.model,
+        DeviceCode: item.deviceId || '', // 使用deviceId作为设备编号
+        Brand: item.brand || '',
+        Model: item.model || '',
         Quantity: item.quantity || 1,
-        Unit: item.unit,
-        Accessories: item.accessories,
-        Remark: item.remark,
-        DeviceStatus: item.status,
+        Unit: item.unit || '',
+        Accessories: item.accessories || '',
+        Remark: item.remark || '',
+        DeviceStatus: item.status || '正常',
         CreatedAt: now
       }))
     ]
@@ -1527,46 +1541,22 @@ function ProjectOutbound() {
         }
       }
 
-      // 构建出库单数据
+      // 构建出库单数据 - 适配ProjectOutboundController格式
       const outboundData = {
-        OutboundNumber: isEditMode ? values.outboundId : 'temp', // 编辑时使用原出库单号，新建时使用临时值
-        OutboundDate: values['出库时间'] ? values['出库时间'].toISOString() : new Date().toISOString(),
         ProjectName: projectName,
         ProjectTime: values['项目时间'] || '',
         ProjectManager: values['项目负责人'] || '',
         Recipient: values['领用人'] || '',
-        OutboundType: values['领用方式'] || '',
+        OutboundType: values['领用方式'] || '', // 将领用方式映射到OutboundType字段
         ContactPhone: values['联系电话'] || '',
         UsageLocation: values['使用地'] || '',
         ReturnDate: values['预计归还时间'] ? values['预计归还时间'].toISOString() : null,
         WarehouseKeeper: values['库管'] || '',
-        // 将物流方式字符串转换为对应的数字值
-        LogisticsMethod: {
-          '随身携带': 1,
-          '顺丰速运': 2,
-          '跨越物流': 3,
-          '德邦物流': 4,
-          '其他方式': 5
-        }[values['物流方式']] || null,
-        OutboundImages: '', // 先空着，后续更新
+        LogisticsMethod: logisticsMethodNum, // 添加物流方式数字值
         Remark: values.remark || '',
-        ProjectOutboundItems: projectOutboundItems.map(item => {
-          // 只保留必要的字段，完全移除Outbound字段
-          return {
-            ItemType: Number(item.ItemType),
-            ItemId: Number(item.ItemId),
-            ItemName: item.ItemName,
-            DeviceCode: item.DeviceCode || '',
-            Brand: item.Brand || '',
-            Model: item.Model || '',
-            Quantity: Number(item.Quantity || 1),
-            Unit: item.Unit || '',
-            Accessories: item.Accessories || '',
-            Remark: item.Remark || '',
-            DeviceStatus: item.DeviceStatus || '',
-            CreatedAt: item.CreatedAt
-          };
-        })
+        OutboundNumber: `PROOUT${Date.now()}`, // 生成出库单号
+        OutboundDate: new Date().toISOString(), // 添加出库日期
+        ProjectOutboundItems: projectOutboundItems
       }
 
       let response;
@@ -1575,13 +1565,7 @@ function ProjectOutbound() {
         // 构建正确的更新数据结构，确保所有必填字段都存在
         const updateData = {
           ...outboundData,
-          Id: currentEditId,
-          ProjectOutboundItems: outboundData.ProjectOutboundItems.map(item => ({
-            ...item,
-            OutboundId: currentEditId, // 添加OutboundId字段
-            DeviceCode: item.DeviceCode ? String(item.DeviceCode) : '', // 确保DeviceCode是字符串类型
-            Id: item.Id || 0
-          }))
+          Id: currentEditId
         };
         console.log('编辑出库单数据:', updateData);
         console.log('编辑出库单ID:', currentEditId);
@@ -1682,7 +1666,7 @@ function ProjectOutbound() {
         recipient: outbound.recipient,
         outboundDate: outbound.outboundDate ? new Date(outbound.outboundDate).toISOString().split('T')[0] : '',
         status: outbound.isCompleted ? '已完成' : '待确认',
-        inboundStatus: outbound.inboundStatus || '未入库',
+        inboundStatus: outbound.isCompleted ? '已完成' : '未入库',
         outboundType: outbound.outboundType,
         logisticsMethod: outbound.logisticsMethod,
         usageLocation: outbound.usageLocation,
@@ -1723,7 +1707,7 @@ function ProjectOutbound() {
         className="mb-4"
         extra={
           <Button type="primary" onClick={handleCreateOutbound}>
-            新建出库单
+            新建项目出库单
           </Button>
         }
       >
@@ -1734,9 +1718,9 @@ function ProjectOutbound() {
         />
       </Card>
 
-      {/* 新建出库单模态框 */}
+      {/* 新建项目出库单模态框 */}
       <Modal
-        title="新建出库单"
+        title="新建项目出库单"
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
         width={1600}
@@ -1863,13 +1847,22 @@ function ProjectOutbound() {
                 console.log('Upload onChange info:', info);
                 // 处理文件选择，保留之前的图片
                 const existingFiles = selectedImages.filter(file => file.url); // 保留从后端加载的图片（有url属性）
-                // 保留之前用户选择的本地文件（没有url属性的）
-                const previousLocalFiles = selectedImages.filter(file => !file.url);
-                // 获取新选择的文件
+                // 保留之前用户选择的本地文件（没有url属性的）并为它们创建URL
+                const previousLocalFiles = selectedImages.filter(file => !file.url).map(file => {
+                  // 为之前选择的本地文件创建URL
+                  if (!file.url && file instanceof File) {
+                    file.url = URL.createObjectURL(file);
+                  }
+                  return file;
+                });
+                // 获取新选择的文件，并为本地文件创建URL
                 const newFiles = [];
                 info.fileList.forEach(item => {
                   if (item.originFileObj) {
-                    newFiles.push(item.originFileObj);
+                    const file = item.originFileObj;
+                    // 为本地文件创建URL并存储
+                    file.url = URL.createObjectURL(file);
+                    newFiles.push(file);
                   }
                 });
                 console.log('新选择的文件数量:', newFiles.length);
@@ -1879,10 +1872,10 @@ function ProjectOutbound() {
                 setSelectedImages(allFiles);
               }}
               fileList={selectedImages.map((file, index) => ({
-                uid: index,
+                uid: file.url ? `url-${file.url}` : `file-${index}`,
                 name: file.name,
                 status: 'done',
-                url: file.url || URL.createObjectURL(file)
+                url: file.url
               }))}
               customRequest={() => {}}
             >

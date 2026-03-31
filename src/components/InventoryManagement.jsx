@@ -3,11 +3,11 @@ import { Table, Button, Space, Card, Row, Col, Input, Select, DatePicker, Descri
 const { TextArea } = Input
 import { SearchOutlined, FilterOutlined, EyeOutlined, ReloadOutlined, DownloadOutlined, EditOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons'
 import { deviceApi } from '../services/api'
+import * as XLSX from 'xlsx'
 
 const { Option } = Select
 const { RangePicker } = DatePicker
 const { Search } = Input
-const { TabPane } = Tabs
 
 const InventoryManagement = () => {
   const [inventory, setInventory] = useState([])
@@ -731,6 +731,38 @@ const InventoryManagement = () => {
     }
   }
 
+  // 导出库存数据为Excel
+  const handleExport = () => {
+    try {
+      // 准备导出数据
+      const exportData = summaryData.map(item => ({
+        '类别': item.category,
+        '名称': item.name,
+        '品牌': item.brand,
+        '型号': item.model,
+        '总数': item.totalQuantity,
+        '已使用': item.usedQuantity,
+        '剩余': item.remainingQuantity,
+        '单位': item.unit
+      }))
+
+      // 创建工作簿和工作表
+      const ws = XLSX.utils.json_to_sheet(exportData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, '库存汇总')
+
+      // 生成文件名
+      const fileName = `库存报表_${new Date().toISOString().split('T')[0]}.xlsx`
+
+      // 导出文件
+      XLSX.writeFile(wb, fileName)
+      message.success('库存报表导出成功')
+    } catch (error) {
+      console.error('导出失败:', error)
+      message.error('导出失败，请重试')
+    }
+  }
+
   return (
     <div className="inventory-management">
       <div className="page-header">
@@ -844,7 +876,7 @@ const InventoryManagement = () => {
           }}>
             刷新
           </Button>
-          <Button icon={<DownloadOutlined />}>
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>
             导出
           </Button>
           <Button type="primary" onClick={checkInventoryAlerts}>
@@ -962,68 +994,80 @@ const InventoryManagement = () => {
       </Card>
       
       {/* 标签页切换汇总视图和详细视图 */}
-      <Tabs defaultActiveKey="summary">
-        <TabPane tab="汇总视图" key="summary">
-          <Table 
-            columns={summaryColumns} 
-            dataSource={summaryData} 
-            loading={loading}
-            rowKey="name"
-            pagination={{ 
-              pageSize: 10,
-              showTotal: (total) => `共 ${total} 个汇总项`
-            }}
-            scroll={{ x: 1000 }}
-            components={{
-              body: (props) => {
-                const { data } = props;
-                if (data.length === 0) {
-                  return (
-                    <tbody>
-                      <tr key="empty">
-                        <td colSpan={summaryColumns.length} style={{ textAlign: 'center' }}>
-                          暂无数据
-                        </td>
-                      </tr>
-                    </tbody>
-                  );
-                }
-                return <tbody>{props.children}</tbody>;
-              }
-            }}
-          />
-        </TabPane>
-        <TabPane tab="详细视图" key="detail">
-          <Table 
-            columns={detailColumns} 
-            dataSource={filteredInventory} 
-            loading={loading}
-            rowKey="id"
-            pagination={{ 
-              pageSize: 10,
-              showTotal: (total) => `共 ${total} 个库存项`
-            }}
-            scroll={{ x: 1200 }}
-            components={{
-              body: (props) => {
-                const { data } = props;
-                if (data.length === 0) {
-                  return (
-                    <tbody>
-                      <tr key="empty">
-                        <td colSpan={detailColumns.length} style={{ textAlign: 'center' }}>
-                          暂无数据
-                        </td>
-                      </tr>
-                    </tbody>
-                  );
-                }
-                return <tbody>{props.children}</tbody>;
-              }
-            }}
-          />
-        </TabPane>
-      </Tabs>
+      <Tabs 
+        defaultActiveKey="summary"
+        items={[
+          {
+            key: 'summary',
+            label: '汇总视图',
+            children: (
+              <Table 
+                columns={summaryColumns} 
+                dataSource={summaryData} 
+                loading={loading}
+                rowKey={(record) => `${record.name}-${record.brand}-${record.model}`}
+                pagination={{ 
+                  pageSize: 10,
+                  showTotal: (total) => `共 ${total} 个汇总项`
+                }}
+                scroll={{ x: 1000 }}
+                components={{
+                  body: (props) => {
+                    const { data } = props;
+                    if (data.length === 0) {
+                      return (
+                        <tbody>
+                          <tr key="empty">
+                            <td colSpan={summaryColumns.length} style={{ textAlign: 'center' }}>
+                              暂无数据
+                            </td>
+                          </tr>
+                        </tbody>
+                      );
+                    }
+                    return <tbody>{props.children}</tbody>;
+                  }
+                }}
+              />
+            )
+          },
+          {
+            key: 'detail',
+            label: '详细视图',
+            children: (
+              <Table 
+                columns={detailColumns} 
+                dataSource={filteredInventory} 
+                loading={loading}
+                rowKey="id"
+                pagination={{ 
+                  pageSize: 10,
+                  showTotal: (total) => `共 ${total} 个库存项`
+                }}
+                scroll={{ x: 1200 }}
+                components={{
+                  body: (props) => {
+                    const { data } = props;
+                    if (data.length === 0) {
+                      return (
+                        <tbody>
+                          <tr key="empty">
+                            <td colSpan={detailColumns.length} style={{ textAlign: 'center' }}>
+                              暂无数据
+                            </td>
+                          </tr>
+                        </tbody>
+                      );
+                    }
+                    return <tbody>{props.children}</tbody>;
+                  }
+                }}
+              />
+            )
+          }
+        ]}
+      />
+
 
       {/* 库存调整模态框 */}
       <Modal
@@ -1233,7 +1277,7 @@ const InventoryManagement = () => {
                 { title: '周转率(%)', dataIndex: 'turnoverRate', key: 'turnoverRate' }
               ]} 
               dataSource={generateReport('turnover')} 
-              rowKey="name"
+              rowKey={(record) => `${record.name}-${record.brand}-${record.model}`}
             />
           )}
 
@@ -1248,7 +1292,7 @@ const InventoryManagement = () => {
                 { title: '估计价值(元)', dataIndex: 'estimatedValue', key: 'estimatedValue' }
               ]} 
               dataSource={generateReport('value')} 
-              rowKey="name"
+              rowKey={(record) => `${record.name}-${record.brand}-${record.model}`}
             />
           )}
 
@@ -1285,7 +1329,7 @@ const InventoryManagement = () => {
                 }
               ]} 
               dataSource={generateReport('abc')} 
-              rowKey="name"
+              rowKey={(record) => `${record.name}-${record.brand}-${record.model}`}
             />
           )}
         </div>

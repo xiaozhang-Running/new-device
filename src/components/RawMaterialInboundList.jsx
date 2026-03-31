@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Table, Button, message, Space, Modal, Card, Tag, Spin, Row, Col, Input, DatePicker, Form, Select, InputNumber } from 'antd'
 import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
+import { get, post, del } from '../services/request'
 
 const { Option } = Select
 const { TextArea } = Input
@@ -8,11 +9,7 @@ const { TextArea } = Input
 // API调用函数
 const fetchInboundHistory = async () => {
   try {
-    const response = await fetch('http://localhost:5055/api/InOutbound/raw-material-inbounds');
-    if (!response.ok) {
-      throw new Error('获取入库历史失败');
-    }
-    const data = await response.json();
+    const data = await get('/InOutbound/raw-material-inbounds');
     return data.map(item => ({
       id: item.id,
       orderNumber: item.inboundNumber,
@@ -55,19 +52,7 @@ const createRawMaterialInbound = async (data, rawMaterials) => {
       }))
     };
 
-    const response = await fetch('http://localhost:5055/api/InOutbound/raw-material-inbounds', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(dto)
-    });
-    if (!response.ok) {
-      // 尝试获取详细错误信息
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || '创建入库单失败');
-    }
-    const result = await response.json();
+    const result = await post('/InOutbound/raw-material-inbounds', dto);
     message.success('原材料采购入库成功');
     return result;
   } catch (error) {
@@ -80,11 +65,7 @@ const createRawMaterialInbound = async (data, rawMaterials) => {
 // API调用函数 - 获取原材料列表
 const fetchRawMaterials = async () => {
   try {
-    const response = await fetch('http://localhost:5055/api/RawMaterials');
-    if (!response.ok) {
-      throw new Error('获取原材料失败');
-    }
-    const data = await response.json();
+    const data = await get('/RawMaterials');
     return data.map(item => ({
       id: item.id,
       name: item.productName,
@@ -332,16 +313,7 @@ function RawMaterialInboundList() {
   const confirmInbound = async (record) => {
     try {
       // 调用API确认入库
-      const response = await fetch('http://localhost:5055/api/InOutbound/raw-material-inbounds/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(record.id)
-      });
-      if (!response.ok) {
-        throw new Error('确认入库失败');
-      }
+      await post('/InOutbound/raw-material-inbounds/confirm', record.id);
       // 更新本地状态
       const updatedHistory = inboundHistory.map(item => {
         if (item.id === record.id) {
@@ -361,12 +333,7 @@ function RawMaterialInboundList() {
   const deleteInbound = async (record) => {
     try {
       // 调用API删除入库单
-      const response = await fetch(`http://localhost:5055/api/InOutbound/raw-material-inbounds/${record.id}`, {
-        method: 'DELETE'
-      });
-      if (!response.ok) {
-        throw new Error('删除入库单失败');
-      }
+      await del(`/InOutbound/raw-material-inbounds/${record.id}`);
       // 更新本地状态
       const updatedHistory = inboundHistory.filter(item => item.id !== record.id);
       setInboundHistory(updatedHistory);

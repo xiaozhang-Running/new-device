@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Form, Input, Select, InputNumber, Upload, message, Button } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
-import { warehouseApi, companyApi } from '../services/api'
+import request from '../services/request'
 
 const { Option } = Select
 
@@ -18,8 +18,8 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
       setFetchingData(true)
       try {
         const [warehouseList, companyList] = await Promise.all([
-          warehouseApi.getWarehouses(),
-          companyApi.getCompanies()
+          request.get('/Warehouse'),
+          request.get('/Company')
         ])
         setWarehouses(warehouseList || [])
         setCompanies(companyList || [])
@@ -59,11 +59,31 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
     onSave(rawMaterialData)
   }
 
-  const handleUpload = (info) => {
+  const handleUpload = async (info) => {
     if (info.file.status === 'done') {
-      // 模拟上传成功，实际项目中应该调用真实的上传接口
-      setImageUrl(`https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=raw%20material%20item&image_size=square`)
-      message.success(`${info.file.name} 上传成功`)
+      try {
+        // 创建FormData对象
+        const formData = new FormData()
+        formData.append('file', info.file.originFileObj)
+        
+        // 临时使用0作为设备ID，后续会在保存设备时更新
+        const equipmentId = rawMaterial?.id || 0
+        const equipmentType = 3 // 3表示原材料（暂时使用，后续可能需要为原材料添加专门的类型）
+        
+        // 调用后端API上传图片
+        const imagePaths = await request.post(`/Image/equipment/${equipmentId}/type/${equipmentType}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+        
+        if (imagePaths && imagePaths.length > 0) {
+          const imageUrl = imagePaths[0]
+          setImageUrl(imageUrl)
+          message.success(`${info.file.name} 上传成功`)
+        } else {
+          message.error('图片上传失败：未返回图片路径')
+        }
+      } catch (error) {
+        console.error('图片上传失败:', error)
+        message.error(`${info.file.name} 上传失败: ${error.message || '未知错误'}`)
+      }
     } else if (info.file.status === 'error') {
       message.error(`${info.file.name} 上传失败`)
     }
@@ -174,7 +194,7 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
       >
         <Upload
           name="file"
-          action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
+          beforeUpload={() => false}
           onChange={handleUpload}
           listType="picture"
           maxCount={1}

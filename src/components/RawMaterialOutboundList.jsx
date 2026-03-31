@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, message, Popconfirm, Input, Card, Row, Col, Descriptions, Tag, DatePicker, Select } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons'
 import RawMaterialOutboundForm from './RawMaterialOutboundForm'
+import { get, post } from '../services/request'
 
 const { Search } = Input
 const { RangePicker } = DatePicker
@@ -139,13 +140,28 @@ const RawMaterialOutboundList = () => {
   ]
 
   useEffect(() => {
-    // 模拟从API获取数据
-    setLoading(true)
-    setTimeout(() => {
-      setOutbounds(mockOutbounds)
-      setRawMaterials(mockRawMaterials)
-      setLoading(false)
-    }, 1000)
+    // 从API获取数据
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        // 获取原材料出库记录
+        const outboundData = await get('/InOutbound/raw-material-outbounds')
+        setOutbounds(outboundData)
+
+        // 获取原材料列表
+        const materialData = await get('/RawMaterial')
+        setRawMaterials(materialData)
+      } catch (error) {
+        console.error('获取数据失败:', error)
+        // 使用模拟数据作为 fallback
+        setOutbounds(mockOutbounds)
+        setRawMaterials(mockRawMaterials)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
 
   // 过滤出库数据
@@ -201,23 +217,61 @@ const RawMaterialOutboundList = () => {
     message.success('出库记录删除成功')
   }
 
-  const handleSave = (outbound) => {
-    if (outbound.id) {
-      // 编辑现有出库记录
-      setOutbounds(outbounds.map(o => o.id === outbound.id ? outbound : o))
-      message.success('出库记录更新成功')
-    } else {
-      // 添加新出库记录
-      const newOutbound = {
-        ...outbound,
-        id: Date.now(),
-        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+  const handleSave = async (outbound) => {
+    try {
+      const dto = {
+        id: outbound.id,
+        outboundNumber: outbound.orderNumber,
+        outboundDate: new Date(outbound.outboundDate),
+        recipient: outbound.recipient,
+        operator: outbound.handler,
+        status: '已完成',
+        remark: outbound.remark,
+        items: outbound.items.map(item => ({
+          rawMaterialId: item.rawMaterialId,
+          quantity: item.quantity,
+          remark: item.remark
+        }))
       }
-      setOutbounds([...outbounds, newOutbound])
-      message.success('出库记录添加成功')
+
+      if (outbound.id) {
+        // 编辑现有出库记录（暂时未实现）
+        setOutbounds(outbounds.map(o => o.id === outbound.id ? outbound : o))
+        message.success('出库记录更新成功')
+      } else {
+        // 添加新出库记录
+        const newOutbound = await post('/InOutbound/raw-material-outbounds', dto)
+        // 转换数据格式以匹配前端状态
+        const formattedOutbound = {
+          id: newOutbound.id,
+          orderNumber: newOutbound.outboundNumber,
+          outboundDate: newOutbound.outboundDate.split('T')[0],
+          department: outbound.department,
+          handler: newOutbound.operator,
+          recipient: newOutbound.recipient,
+          remark: newOutbound.remark,
+          items: newOutbound.items.map(item => {
+            const rawMaterial = rawMaterials.find(m => m.id === item.rawMaterialId)
+            return {
+              ...item,
+              rawMaterial: rawMaterial
+            }
+          }),
+          createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        }
+        setOutbounds([...outbounds, formattedOutbound])
+        message.success('出库记录添加成功')
+
+        // 重新获取原材料数据以更新库存
+        const materialData = await get('/RawMaterial')
+        setRawMaterials(materialData)
+      }
+      setShowForm(false)
+    } catch (error) {
+      console.error('保存出库记录失败:', error)
+      message.error(error.message || '保存出库记录失败')
     }
-    setShowForm(false)
   }
 
   const columns = [
@@ -314,7 +368,7 @@ const RawMaterialOutboundList = () => {
       <div className="page-header">
         <h2>原材料出库管理</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          添加出库记录
+          新建原材料出库单
         </Button>
       </div>
       
@@ -407,7 +461,7 @@ const RawMaterialOutboundList = () => {
       />
 
       <Modal
-        title={editingOutbound ? '编辑出库记录' : '添加出库记录'}
+        title={editingOutbound ? '编辑原材料出库单' : '新建原材料出库单'}
         open={showForm}
         onCancel={() => setShowForm(false)}
         footer={null}

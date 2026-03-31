@@ -93,6 +93,12 @@ const cachedRequest = async (key, requestFn, useCache = true, options = {}) => {
       lastError = error;
       console.error(`[API Error] ${key} (attempt ${attempt}/${retry}):`, error);
       
+      // 检查是否是404错误
+      if (error.response && error.response.status === 404) {
+        console.log(`[API 404] ${key}: 资源不存在`);
+        return null; // 对于404错误，返回null而不是抛出异常
+      }
+      
       // 最后一次尝试失败时显示错误
       if (attempt === retry && showError) {
         message.error(error.message || '请求失败，请稍后重试');
@@ -113,7 +119,7 @@ export const deviceApi = {
   // 获取单个设备详情
   getSpecialEquipment: async (id) => {
     return await cachedRequest(`special-equipment-${id}`, () => 
-      get(`/Device/special-equipments/${id}`), true, { retry: 1 });
+      get(`/Device/special-equipments/${id}`), true, { retry: 1, showError: false });
   },
 
   // 创建新设备
@@ -159,7 +165,7 @@ export const deviceApi = {
   // 获取单个通用设备详情
   getGeneralEquipment: async (id) => {
     return await cachedRequest(`general-equipment-${id}`, () => 
-      get(`/Device/general-equipments/${id}`), true, { retry: 1 });
+      get(`/Device/general-equipments/${id}`), true, { retry: 1, showError: false });
   },
 
   // 创建新通用设备
@@ -367,18 +373,19 @@ export const companyApi = {
 export const imageApi = {
   // 上传设备图片
   uploadEquipmentImage: async (equipmentId, equipmentType, formData) => {
+    // 添加设备ID和类型到FormData
+    formData.append('equipmentId', equipmentId);
+    formData.append('equipmentType', equipmentType);
     return await cachedRequest(`upload-equipment-image-${equipmentId}`, () => 
       post('/Image/equipment', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        // 不设置Content-Type，让浏览器自动设置
       }), false, { retry: 1 });
   },
 
   // 获取设备图片列表
   getEquipmentImages: async (equipmentId, equipmentType) => {
     return await cachedRequest(`equipment-images-${equipmentId}-${equipmentType}`, () => 
-      get(`/Image/equipment/${equipmentId}?equipmentType=${equipmentType}`), true, { retry: 1 });
+      get(`/Image/equipment/${equipmentId}?equipmentType=${equipmentType}`), true, { retry: 0, showError: false });
   },
 
   // 删除设备图片

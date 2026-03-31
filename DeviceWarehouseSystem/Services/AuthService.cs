@@ -36,13 +36,13 @@ namespace DeviceWarehouseSystem.Services
             if (user.PasswordHash != loginDTO.Password)
             {
                 // 记录登录失败日志
-                await _logService.LogUserActivityAsync(
-                    user.Id, 
-                    "登录失败", 
-                    $"用户 {loginDTO.Username} 登录失败：密码错误",
-                    loginDTO.IpAddress,
-                    loginDTO.UserAgent
-                );
+            await _logService.LogUserActivityAsync(
+                user.Id, 
+                "登录失败", 
+                $"用户 {loginDTO.Username} 登录失败：密码错误",
+                loginDTO?.IpAddress,
+                loginDTO?.UserAgent
+            );
                 throw new Exception("密码错误");
             }
 
@@ -56,8 +56,8 @@ namespace DeviceWarehouseSystem.Services
                 user.Id, 
                 "登录", 
                 $"用户 {user.Username} 登录成功",
-                loginDTO.IpAddress,
-                loginDTO.UserAgent
+                loginDTO?.IpAddress,
+                loginDTO?.UserAgent
             );
 
             // 生成token
@@ -102,8 +102,8 @@ namespace DeviceWarehouseSystem.Services
                 user.Id, 
                 "注册", 
                 $"新用户 {user.Username} 注册成功，角色：{user.Role}",
-                registerDTO.IpAddress,
-                registerDTO.UserAgent
+                registerDTO?.IpAddress,
+                registerDTO?.UserAgent
             );
 
             return new UserDTO

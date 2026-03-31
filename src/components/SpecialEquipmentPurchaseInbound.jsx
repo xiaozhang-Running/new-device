@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   Form, 
   Input, 
@@ -15,18 +15,16 @@ import {
   InputNumber, 
   Spin 
 } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
+import { get, post, del } from '../services/request'
+import { useReactToPrint } from 'react-to-print'
 
 const { Option } = Select
 
 // API调用函数
 const fetchInboundHistory = async () => {
   try {
-    const response = await fetch('http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds');
-    if (!response.ok) {
-      throw new Error('获取入库历史失败');
-    }
-    const data = await response.json();
+    const data = await get('/InOutbound/special-equipment-purchase-inbounds');
     return data.map(item => ({
       id: item.id,
       orderNumber: item.inboundNumber,
@@ -36,7 +34,7 @@ const fetchInboundHistory = async () => {
       inboundDate: item.inboundDate ? new Date(item.inboundDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       operator: item.handler || '未知操作人',
       status: item.status || '待确认',
-      items: item.items.map(item => ({
+      items: item.items.map((item, index) => ({
         type: '专用设备',
         name: item.equipmentName,
         brand: item.brand,
@@ -45,7 +43,10 @@ const fetchInboundHistory = async () => {
         unit: item.unit,
         inventory: item.inventory || 0,
         quantity: item.quantity,
-        deviceId: item.deviceCode || `YD${item.equipmentName}001` // 使用后端返回的设备编号或临时生成
+        deviceId: item.deviceCode || `YD${item.equipmentName}${index + 1}`, // 使用后端返回的设备编号或临时生成唯一编号
+        snCode: item.serialNumber || item.SnCode || item.snCode || '', // 处理SN码
+        accessories: item.remark || item.Accessories || item.accessories || '', // 处理配件
+        status: item.status || item.DeviceStatus || '' // 处理设备状态
       }))
     }));
   } catch (error) {
@@ -76,40 +77,19 @@ const createSpecialEquipmentPurchaseInbound = async (data) => {
           Unit: item.unit,
           Quantity: item.quantity,
           Status: item.status || '正常',
-          DeviceCode: item.deviceId
+          DeviceCode: item.deviceId,
+          SnCode: item.snCode || '',
+          Accessories: item.accessories || ''
         }))
     };
     
     console.log('发送的请求数据:', JSON.stringify(requestData, null, 2));
     
-    const response = await fetch('http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestData)
-    });
+    const response = await post('/InOutbound/special-equipment-purchase-inbounds', requestData);
     
-    console.log('响应状态码:', response.status);
-    console.log('响应状态文本:', response.statusText);
-    
-    if (!response.ok) {
-      try {
-        const errorData = await response.json();
-        console.error('错误响应数据:', JSON.stringify(errorData, null, 2));
-        throw new Error(`创建入库单失败: ${errorData.message || response.statusText}`);
-      } catch (jsonError) {
-        console.error('解析错误响应失败:', jsonError);
-        const responseText = await response.text();
-        console.error('错误响应文本:', responseText);
-        throw new Error(`创建入库单失败: ${response.statusText}\n响应内容: ${responseText}`);
-      }
-    }
-    
-    const result = await response.json();
-    console.log('成功响应数据:', JSON.stringify(result, null, 2));
+    console.log('成功响应数据:', JSON.stringify(response, null, 2));
     message.success('专用设备采购入库成功');
-    return result;
+    return response;
   } catch (error) {
     console.error('创建入库单失败:', error);
     message.error('创建入库单失败');
@@ -120,15 +100,7 @@ const createSpecialEquipmentPurchaseInbound = async (data) => {
 // 删除专用设备采购入库记录
 const deleteSpecialEquipmentPurchaseInbound = async (id) => {
   try {
-    const response = await fetch(`http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    if (!response.ok) {
-      throw new Error('删除入库记录失败');
-    }
+    await del(`/InOutbound/special-equipment-purchase-inbounds/${id}`);
     message.success('删除入库记录成功');
     return true;
   } catch (error) {
@@ -141,15 +113,15 @@ const deleteSpecialEquipmentPurchaseInbound = async (id) => {
 // 生成设备编号
 const generateDeviceId = async (name, brand, model) => {
   try {
-    let url = `http://localhost:5055/api/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand || '')}&deviceType=1`;
+    const params = {
+      deviceName: name,
+      brand: brand || '',
+      deviceType: 1
+    };
     if (model) {
-      url += `&model=${encodeURIComponent(model)}`;
+      params.model = model;
     }
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error('生成设备编号失败');
-    }
-    const deviceCode = await response.text();
+    const deviceCode = await get('/InOutbound/generate-device-code', { params });
     return deviceCode;
   } catch (error) {
     console.error('生成设备编号失败:', error);
@@ -170,11 +142,7 @@ const mockSuppliers = [
 // API调用函数 - 获取专用设备列表
 const fetchSpecialEquipments = async () => {
   try {
-    const response = await fetch('http://localhost:5055/api/Device/special-equipments');
-    if (!response.ok) {
-      throw new Error('获取专用设备失败');
-    }
-    const data = await response.json();
+    const data = await get('/Device/special-equipments');
     return data.map(item => ({
       id: item.id,
       name: item.name,
@@ -194,9 +162,10 @@ const fetchSpecialEquipments = async () => {
 function SpecialEquipmentPurchaseInbound() {
   const [form] = Form.useForm()
   const [inboundHistory, setInboundHistory] = useState([])
-  const [detailModalVisible, setDetailModalVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
-  const [currentInboundDetail, setCurrentInboundDetail] = useState(null)
+  // 预览相关state
+  const [previewModalVisible, setPreviewModalVisible] = useState(false)
+  const [previewData, setPreviewData] = useState({})
   const [inboundItems, setInboundItems] = useState([])
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [deviceForm, setDeviceForm] = useState({
@@ -211,6 +180,44 @@ function SpecialEquipmentPurchaseInbound() {
   const [loading, setLoading] = useState(false)
   const [devices, setDevices] = useState([])
   const [devicesLoading, setDevicesLoading] = useState(false)
+  
+  // 打印ref
+  const printRef = useRef(null)
+
+  // 配置react-to-print
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `专用设备入库单-${previewData.inboundNumber || '预览'}`,
+    pageStyle: `
+      @page {
+        size: A4 landscape;
+        margin: 5mm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    `,
+    onBeforePrint: () => {
+      return new Promise((resolve) => {
+        // 确保内容已渲染
+        setTimeout(resolve, 100)
+      })
+    },
+    onAfterPrint: () => {
+      message.success('打印完成')
+    },
+    onPrintError: (error) => {
+      message.error('打印失败: ' + error.message)
+    }
+  })
+
+  // 处理保存PDF - 使用相同的打印方式，用户可以在打印对话框中选择保存为PDF
+  const handleSavePDF = () => {
+    handlePrint()
+  }
 
   // 加载入库历史和设备列表
   useEffect(() => {
@@ -427,12 +434,6 @@ function SpecialEquipmentPurchaseInbound() {
     }
   };
 
-  // 查看入库详情
-  const viewInboundDetail = (record) => {
-    setCurrentInboundDetail(record);
-    setDetailModalVisible(true);
-  };
-
   // 删除入库记录
   const handleDeleteInbound = async (record) => {
     try {
@@ -564,15 +565,7 @@ function SpecialEquipmentPurchaseInbound() {
   // 确认入库
   const confirmInbound = async (record) => {
     try {
-      const response = await fetch(`http://localhost:5055/api/InOutbound/special-equipment-purchase-inbounds/${record.id}/confirm`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) {
-        throw new Error('确认入库失败');
-      }
+      const response = await post(`/InOutbound/special-equipment-purchase-inbounds/${record.id}/confirm`, {});
       message.success('确认入库成功');
       // 重新加载入库历史
       const history = await fetchInboundHistory();
@@ -584,9 +577,86 @@ function SpecialEquipmentPurchaseInbound() {
       }
     } catch (error) {
       console.error('确认入库失败:', error);
-      message.error('确认入库失败');
+      // 检查错误信息，显示更友好的错误提示
+      if (error.message && error.message.includes('入库记录不存在')) {
+        message.error('入库记录不存在，可能已被删除');
+        // 重新加载入库历史，更新状态
+        const history = await fetchInboundHistory();
+        setInboundHistory(history);
+      } else {
+        message.error('确认入库失败');
+      }
     }
   };
+
+  // 预览入库记录
+  const previewInbound = async (record) => {
+    console.log('预览入库记录:', record)
+    
+    // 构建预览数据
+    const inboundItems = record.items || []
+    
+    const previewDataObj = {
+      inboundNumber: record.orderNumber || '',
+      deliveryPerson: record.deliveryPerson || '',
+      inspector: record.inspector || '',
+      inboundPerson: record.inboundPerson || '',
+      inboundDate: record.inboundDate || '',
+      operator: record.operator || '',
+      remark: record.remark || '',
+      items: inboundItems.map(item => ({
+        type: '专用设备',
+        name: item.name || '',
+        deviceId: item.deviceId || '',
+        snCode: item.snCode || '',
+        brand: item.brand || '',
+        model: item.model || '',
+        quantity: item.quantity || 0,
+        unit: item.unit || '',
+        accessories: item.accessories || '',
+        status: item.status || ''
+      }))
+    }
+    
+    console.log('预览数据:', previewDataObj)
+    setPreviewData(previewDataObj)
+    setPreviewModalVisible(true)
+  }
+
+  // 处理新建入库单的预览
+  const handlePreview = () => {
+    console.log('处理新建入库单预览')
+    
+    // 获取表单值
+    const values = form.getFieldsValue()
+    
+    // 构建预览数据
+    const previewDataObj = {
+      inboundNumber: values.orderNumber || `SPE-IN-${Date.now()}`,
+      deliveryPerson: values.deliveryPerson || '',
+      inspector: values.inspector || '',
+      inboundPerson: values.inboundPerson || '',
+      inboundDate: values.inboundDate ? values.inboundDate.format('YYYY-MM-DD') : '',
+      operator: values.inboundPerson || '',
+      remark: values.remark || '',
+      items: inboundItems.map(item => ({
+        type: '专用设备',
+        name: item.name || '',
+        deviceId: item.deviceId || '',
+        snCode: item.snCode || '',
+        brand: item.brand || '',
+        model: item.model || '',
+        quantity: item.quantity || 0,
+        unit: item.unit || '',
+        accessories: item.accessories || '',
+        status: item.status || ''
+      }))
+    }
+    
+    console.log('新建入库单预览数据:', previewDataObj)
+    setPreviewData(previewDataObj)
+    setPreviewModalVisible(true)
+  }
 
   // 入库历史表格列
   const historyColumns = [
@@ -630,7 +700,7 @@ function SpecialEquipmentPurchaseInbound() {
       key: 'action',
       render: (_, record) => (
         <Space>
-          <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
+          <Button icon={<EyeOutlined />} onClick={() => previewInbound(record)}>预览</Button>
           {record.status === '待确认' && (
             <Button type="primary" onClick={() => confirmInbound(record)}>确认入库</Button>
           )}
@@ -944,6 +1014,9 @@ function SpecialEquipmentPurchaseInbound() {
             <Button type="primary" htmlType="submit" style={{ marginRight: 16 }}>
               提交入库
             </Button>
+            <Button type="default" onClick={handlePreview} style={{ marginRight: 16 }}>
+              预览
+            </Button>
             <Button onClick={() => {
               form.resetFields();
               setInboundItems([]);
@@ -964,52 +1037,206 @@ function SpecialEquipmentPurchaseInbound() {
         </Form>
       </Modal>
 
-      {/* 入库详情模态框 */}
+      {/* 预览模态框 */}
       <Modal
-        title="入库详情"
-        open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
+        title="入库单预览"
+        open={previewModalVisible}
+        onCancel={() => setPreviewModalVisible(false)}
+        width="90%"
+        zIndex={9999}
+        mask={true}
+        styles={{
+          modal: { 
+            top: 50, 
+            maxWidth: 1400, 
+            zIndex: 9999, 
+            backgroundColor: '#fff',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            borderRadius: '8px'
+          },
+          body: { 
+            padding: 0,
+            backgroundColor: '#fff',
+            overflow: 'auto'
+          },
+          header: {
+            backgroundColor: '#fff',
+            borderBottom: '1px solid #e8e8e8'
+          },
+          footer: {
+            backgroundColor: '#fff',
+            borderTop: '1px solid #e8e8e8'
+          },
+          mask: {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }}
+        className="preview-modal"
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+          <Button key="close" onClick={() => setPreviewModalVisible(false)}>
             关闭
+          </Button>,
+          <Button key="print" type="default" onClick={handlePrint} style={{ marginRight: 16 }}>
+            打印
+          </Button>,
+          <Button key="save" type="primary" onClick={handleSavePDF}>
+            保存PDF
           </Button>
         ]}
-        width={800}
       >
-        {currentInboundDetail && (
-          <div>
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <p><strong>入库单号:</strong> {currentInboundDetail.orderNumber}</p>
-                <p><strong>送货人:</strong> {currentInboundDetail.deliveryPerson}</p>
-                <p><strong>检验人员:</strong> {currentInboundDetail.inspector}</p>
-              </Col>
-              <Col span={12}>
-                <p><strong>入库人:</strong> {currentInboundDetail.inboundPerson}</p>
-                <p><strong>入库日期:</strong> {currentInboundDetail.inboundDate}</p>
-                <p><strong>操作人:</strong> {currentInboundDetail.operator}</p>
-                <p><strong>状态:</strong> {currentInboundDetail.status}</p>
+        <div ref={printRef} className="preview-content" style={{ padding: '20px', maxHeight: '75vh', overflow: 'auto', backgroundColor: '#fff' }}>
+          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <h2>专用设备入库单</h2>
+          </div>
+          
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            {/* 第一行：入库单号 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col span={24}>
+                <p style={{ margin: 0, fontSize: '16px' }}><strong>入库单号:</strong> {previewData.inboundNumber}</p>
               </Col>
             </Row>
-            <h4 className="mt-4">入库物品</h4>
+            
+            {/* 第二行：送货人、检验人员、入库人 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>送货人:</strong> {previewData.deliveryPerson}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>检验人员:</strong> {previewData.inspector}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>入库人:</strong> {previewData.inboundPerson}</p>
+              </Col>
+            </Row>
+            
+            {/* 第三行：入库日期、操作人、备注 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>入库日期:</strong> {previewData.inboundDate}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>操作人:</strong> {previewData.operator}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>备注:</strong> {previewData.remark || '无'}</p>
+              </Col>
+            </Row>
+          </div>
+          
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>入库物品</h3>
             <Table 
               columns={[
-                { title: '设备名称', dataIndex: 'name', key: 'name' },
-                { title: '设备编号', dataIndex: 'deviceId', key: 'deviceId' },
-                { title: 'SN码', dataIndex: 'snCode', key: 'snCode' },
-                { title: '品牌', dataIndex: 'brand', key: 'brand' },
-                { title: '型号', dataIndex: 'model', key: 'model' },
-                { title: '数量', dataIndex: 'quantity', key: 'quantity' },
-                { title: '单位', dataIndex: 'unit', key: 'unit' },
-                { title: '配件', dataIndex: 'accessories', key: 'accessories' },
-                { title: '设备状态', dataIndex: 'status', key: 'status' }
+                {
+                  title: '设备名称',
+                  dataIndex: 'name',
+                  key: 'name',
+                  width: '15%',
+                  render: (text) => (
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4'
+                    }}>
+                      {text || '-'}
+                    </div>
+                  )
+                },
+                {
+                  title: '设备编号',
+                  dataIndex: 'deviceId',
+                  key: 'deviceId',
+                  width: '12%',
+                  render: (text) => (
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4'
+                    }}>
+                      {text || '-'}
+                    </div>
+                  )
+                },
+                {
+                  title: 'SN码',
+                  dataIndex: 'snCode',
+                  key: 'snCode',
+                  width: '12%',
+                  render: (text) => (
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4'
+                    }}>
+                      {text || '-'}
+                    </div>
+                  )
+                },
+                {
+                  title: '品牌',
+                  dataIndex: 'brand',
+                  key: 'brand',
+                  width: '10%'
+                },
+                {
+                  title: '型号',
+                  dataIndex: 'model',
+                  key: 'model',
+                  width: '12%',
+                  render: (text) => (
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4'
+                    }}>
+                      {text || '-'}
+                    </div>
+                  )
+                },
+                {
+                  title: '数量',
+                  dataIndex: 'quantity',
+                  key: 'quantity',
+                  width: '8%'
+                },
+                {
+                  title: '单位',
+                  dataIndex: 'unit',
+                  key: 'unit',
+                  width: '8%'
+                },
+                {
+                  title: '配件',
+                  dataIndex: 'accessories',
+                  key: 'accessories',
+                  width: '15%',
+                  render: (text) => (
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4'
+                    }}>
+                      {text || '-'}
+                    </div>
+                  )
+                },
+                {
+                  title: '设备状态',
+                  dataIndex: 'status',
+                  key: 'status',
+                  width: '10%'
+                }
               ]} 
-              dataSource={currentInboundDetail.items} 
-              rowKey={(record, index) => index}
+              dataSource={previewData.items || []}
+              rowKey={(record) => `${record.deviceId || 'unknown'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`}
               pagination={false}
+              size="small"
+              bordered
+              style={{ width: '100%' }}
             />
           </div>
-        )}
+        </div>
       </Modal>
     </div>
   )

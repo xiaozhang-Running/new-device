@@ -5,7 +5,38 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055
 const TIMEOUT = 30000;
 
 // 统一的请求函数
-const request = async (url, options = {}) => {
+const request = async (config) => {
+  let url, options = {}
+  
+  // 处理两种调用方式
+  if (typeof config === 'string') {
+    url = config
+  } else {
+    url = config.url
+    options = { ...config }
+    delete options.url
+    
+    // 处理params参数，将其转换为查询字符串
+    if (options.params) {
+      const params = new URLSearchParams()
+      for (const [key, value] of Object.entries(options.params)) {
+        if (value !== undefined && value !== null) {
+          params.append(key, value)
+        }
+      }
+      const queryString = params.toString()
+      if (queryString) {
+        url += (url.includes('?') ? '&' : '?') + queryString
+      }
+      delete options.params
+    }
+    
+    // 处理data参数，将其转换为body字段
+    if (options.data) {
+      options.body = JSON.stringify(options.data)
+      delete options.data
+    }
+  }
   // 获取token
   const token = localStorage.getItem('token');
   
@@ -33,6 +64,9 @@ const request = async (url, options = {}) => {
   if (options.headers === undefined) {
     // 如果没有设置headers，使用默认的headers
     mergedHeaders = defaultOptions.headers;
+  } else if (options.headers === null) {
+    // 如果显式设置为null，不使用任何headers
+    mergedHeaders = undefined;
   } else {
     // 否则合并默认headers和传入的headers
     mergedHeaders = {
@@ -113,7 +147,8 @@ const generateRequestId = () => {
 
 // 导出请求方法
 export const get = (url, options = {}) => {
-  return request(url, {
+  return request({
+    url,
     ...options,
     method: 'GET',
   });
@@ -125,16 +160,18 @@ export const post = (url, data, options = {}) => {
   if (data instanceof FormData) {
     console.log('请求数据: FormData对象');
     // 完全覆盖headers，不使用默认的application/json
-    return request(url, {
+    return request({
+      url,
       ...options,
       method: 'POST',
       body: data,
       // 完全不设置headers，让浏览器自动处理
-      headers: undefined,
+      headers: null,
     });
   } else {
     console.log('请求数据:', JSON.stringify(data, null, 2));
-    return request(url, {
+    return request({
+      url,
       ...options,
       method: 'POST',
       body: JSON.stringify(data),
@@ -143,7 +180,8 @@ export const post = (url, data, options = {}) => {
 };
 
 export const put = (url, data, options = {}) => {
-  return request(url, {
+  return request({
+    url,
     ...options,
     method: 'PUT',
     body: JSON.stringify(data),
@@ -155,7 +193,8 @@ export const put = (url, data, options = {}) => {
 };
 
 export const del = (url, options = {}) => {
-  return request(url, {
+  return request({
+    url,
     ...options,
     method: 'DELETE',
   });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   Form, 
   Input, 
@@ -15,18 +15,16 @@ import {
   InputNumber, 
   Spin 
 } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
+import { get, post, del } from '../services/request'
+import { useReactToPrint } from 'react-to-print'
 
 const { Option } = Select
 
 // API调用函数
 const fetchInboundHistory = async () => {
   try {
-    const response = await fetch('http://localhost:5055/api/InOutbound/consumable-purchase-inbounds');
-    if (!response.ok) {
-      throw new Error('获取入库历史失败');
-    }
-    const data = await response.json();
+    const data = await get('/InOutbound/consumable-purchase-inbounds');
     return data.map(item => ({
       id: item.id,
       orderNumber: item.inboundNumber,
@@ -55,33 +53,23 @@ const fetchInboundHistory = async () => {
 
 const createConsumablePurchaseInbound = async (data) => {
   try {
-    const response = await fetch('http://localhost:5055/api/InOutbound/consumable-purchase-inbounds', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        InboundNumber: data.orderNumber,
-        DeliveryPerson: data.deliveryPerson,
-        Inspector: data.inspector,
-        InboundPerson: data.inboundPerson,
-        InboundDate: data.inboundDate ? data.inboundDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0],
-        Handler: data.inboundPerson, // 使用入库人作为操作人
-        WarehouseKeeper: data.inspector, // 使用检验人员作为仓管员
-        Remark: data.remark || '',
-        Items: data.items.map(item => ({
-          ConsumableName: item.name,
-          Brand: item.brand,
-          Model: item.model,
-          Unit: item.unit,
-          Quantity: item.quantity
-        }))
-      })
+    const result = await post('/InOutbound/consumable-purchase-inbounds', {
+      InboundNumber: data.orderNumber,
+      DeliveryPerson: data.deliveryPerson,
+      Inspector: data.inspector,
+      InboundPerson: data.inboundPerson,
+      InboundDate: data.inboundDate && typeof data.inboundDate.toDate === 'function' ? data.inboundDate.toDate().toISOString() : new Date().toISOString(),
+      Handler: data.inboundPerson, // 使用入库人作为操作人
+      WarehouseKeeper: data.inspector, // 使用检验人员作为仓管员
+      Remark: data.remark || '',
+      Items: data.items.map(item => ({
+        ConsumableName: item.name,
+        Brand: item.brand,
+        Model: item.model,
+        Unit: item.unit,
+        Quantity: item.quantity
+      }))
     });
-    if (!response.ok) {
-      throw new Error('创建入库单失败');
-    }
-    const result = await response.json();
     message.success('耗材采购入库成功');
     return result;
   } catch (error) {
@@ -123,11 +111,7 @@ const mockSuppliers = [
 // API调用函数 - 获取耗材列表
 const fetchConsumables = async () => {
   try {
-    const response = await fetch('http://localhost:5055/api/Consumable');
-    if (!response.ok) {
-      throw new Error('获取耗材失败');
-    }
-    const data = await response.json();
+    const data = await get('/Consumable');
     return data.map(item => ({
       id: item.id,
       name: item.name,
@@ -146,9 +130,10 @@ const fetchConsumables = async () => {
 function ConsumablePurchaseInbound() {
   const [form] = Form.useForm()
   const [inboundHistory, setInboundHistory] = useState([])
-  const [detailModalVisible, setDetailModalVisible] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
-  const [currentInboundDetail, setCurrentInboundDetail] = useState(null)
+  // 预览相关state
+  const [previewModalVisible, setPreviewModalVisible] = useState(false)
+  const [previewData, setPreviewData] = useState({})
   const [inboundItems, setInboundItems] = useState([])
   const [selectedDevice, setSelectedDevice] = useState(null)
   const [deviceForm, setDeviceForm] = useState({
@@ -163,6 +148,44 @@ function ConsumablePurchaseInbound() {
   const [loading, setLoading] = useState(false)
   const [devices, setDevices] = useState([])
   const [devicesLoading, setDevicesLoading] = useState(false)
+  
+  // 打印ref
+  const printRef = useRef(null)
+
+  // 配置react-to-print
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `耗材入库单-${previewData.orderNumber || '预览'}`,
+    pageStyle: `
+      @page {
+        size: A4 landscape;
+        margin: 5mm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    `,
+    onBeforePrint: () => {
+      return new Promise((resolve) => {
+        // 确保内容已渲染
+        setTimeout(resolve, 100)
+      })
+    },
+    onAfterPrint: () => {
+      message.success('打印完成')
+    },
+    onPrintError: (error) => {
+      message.error('打印失败: ' + error.message)
+    }
+  })
+
+  // 处理保存PDF - 使用相同的打印方式，用户可以在打印对话框中选择保存为PDF
+  const handleSavePDF = () => {
+    handlePrint()
+  }
 
   // 加载入库历史和耗材列表
   useEffect(() => {
@@ -294,8 +317,10 @@ function ConsumablePurchaseInbound() {
   };
 
   // 处理新建入库单
-  const handleCreateInbound = () => {
-    form.resetFields();
+  const handleCreateInbound = async () => {
+    // 重新加载耗材列表
+    await loadDevices();
+    // 重置状态
     setInboundItems([]);
     setSelectedDevice(null);
     setDeviceForm({
@@ -306,9 +331,7 @@ function ConsumablePurchaseInbound() {
       inventory: 0,
       quantity: 1
     });
-    // 生成并设置入库单号
-    const orderNumber = generateOrderNumber();
-    form.setFieldsValue({ orderNumber });
+    // 打开模态框
     setCreateModalVisible(true);
   };
 
@@ -349,11 +372,66 @@ function ConsumablePurchaseInbound() {
     }
   };
 
-  // 查看入库详情
-  const viewInboundDetail = (record) => {
-    setCurrentInboundDetail(record);
-    setDetailModalVisible(true);
-  };
+  // 预览入库记录
+  const previewInbound = async (record) => {
+    console.log('预览入库记录:', record)
+    
+    // 构建预览数据
+    const inboundItems = record.items || []
+    
+    const previewDataObj = {
+      inboundNumber: record.orderNumber || '',
+      deliveryPerson: record.deliveryPerson || '',
+      inspector: record.inspector || '',
+      inboundPerson: record.inboundPerson || '',
+      inboundDate: record.inboundDate || '',
+      operator: record.operator || '',
+      remark: record.remark || '',
+      items: inboundItems.map(item => ({
+        type: '耗材',
+        name: item.name || '',
+        brand: item.brand || '',
+        model: item.model || '',
+        quantity: item.quantity || 0,
+        unit: item.unit || ''
+      }))
+    }
+    
+    console.log('预览数据:', previewDataObj)
+    setPreviewData(previewDataObj)
+    setPreviewModalVisible(true)
+  }
+
+  // 处理新建入库单的预览
+  const handlePreview = () => {
+    console.log('处理新建入库单预览')
+    
+    // 获取表单值
+    const values = form.getFieldsValue()
+    
+    // 构建预览数据
+    const previewDataObj = {
+      inboundNumber: values.orderNumber || `CON-IN-${Date.now()}`,
+      deliveryPerson: values.deliveryPerson || '',
+      inspector: values.inspector || '',
+      inboundPerson: values.inboundPerson || '',
+      inboundDate: values.inboundDate ? values.inboundDate.format('YYYY-MM-DD') : '',
+      operator: values.inboundPerson || '',
+      remark: values.remark || '',
+      items: inboundItems.map(item => ({
+        type: '耗材',
+        name: item.name || '',
+        brand: item.brand || '',
+        model: item.model || '',
+        quantity: item.quantity || 0,
+        unit: item.unit || ''
+      }))
+    }
+    
+    console.log('新建入库单预览数据:', previewDataObj)
+    setPreviewData(previewDataObj)
+    setPreviewModalVisible(true)
+  }
 
   // 编辑入库单
   const editInbound = (record) => {
@@ -363,57 +441,48 @@ function ConsumablePurchaseInbound() {
 
   // 确认入库
   const confirmInbound = async (record) => {
-    // 实现确认入库功能
     try {
-      // 调用API确认入库
-      const response = await fetch('http://localhost:5055/api/InOutbound/consumable-purchase-inbounds/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(record.id)
-      });
-      if (!response.ok) {
-        throw new Error('确认入库失败');
-      }
-      // 更新本地状态
-      const updatedHistory = inboundHistory.map(item => {
-        if (item.id === record.id) {
-          return { ...item, status: '已完成' };
-        }
-        return item;
-      });
-      setInboundHistory(updatedHistory);
+      const response = await post(`/InOutbound/consumable-purchase-inbounds/${record.id}/confirm`, {});
       message.success('确认入库成功');
-    } catch (error) {
-      console.error('确认入库失败:', error);
-      message.error('确认入库失败');
-    }
-  };
-
-  // 删除入库单
-  const deleteInbound = async (record) => {
-    // 实现删除功能
-    try {
-      // 调用API删除入库单
-      const response = await fetch(`http://localhost:5055/api/InOutbound/consumable-purchase-inbounds/${record.id}`, {
-        method: 'DELETE'
-      });
-      if (!response.ok) {
-        throw new Error('删除入库单失败');
-      }
-      // 更新本地状态
-      const updatedHistory = inboundHistory.filter(item => item.id !== record.id);
-      setInboundHistory(updatedHistory);
-      message.success('删除入库单成功');
+      // 重新加载入库历史
+      const history = await fetchInboundHistory();
+      setInboundHistory(history);
       
       // 清除耗材列表缓存并刷新
       if (typeof window !== 'undefined' && window.cacheManager) {
         window.cacheManager.invalidate('consumables');
       }
     } catch (error) {
-      console.error('删除入库单失败:', error);
-      message.error('删除入库单失败');
+      console.error('确认入库失败:', error);
+      // 检查错误信息，显示更友好的错误提示
+      if (error.message && error.message.includes('入库记录不存在')) {
+        message.error('入库记录不存在，可能已被删除');
+        // 重新加载入库历史，更新状态
+        const history = await fetchInboundHistory();
+        setInboundHistory(history);
+      } else {
+        message.error('确认入库失败');
+      }
+    }
+  };
+
+  // 删除入库单
+  const handleDeleteInbound = async (record) => {
+    try {
+      // 调用API删除入库单
+      await del(`/InOutbound/consumable-purchase-inbounds/${record.id}`);
+      message.success('删除入库记录成功');
+      // 重新加载入库历史
+      const history = await fetchInboundHistory();
+      setInboundHistory(history);
+      
+      // 清除耗材列表缓存并刷新
+      if (typeof window !== 'undefined' && window.cacheManager) {
+        window.cacheManager.invalidate('consumables');
+      }
+    } catch (error) {
+      console.error('删除入库记录失败:', error);
+      message.error('删除入库记录失败');
     }
   };
 
@@ -500,29 +569,12 @@ function ConsumablePurchaseInbound() {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Space size="middle">
-          <Button onClick={() => viewInboundDetail(record)}>查看详情</Button>
-          <Button 
-            type="primary" 
-            onClick={() => editInbound(record)}
-            disabled={record.status === '已完成'}
-          >
-            编辑
-          </Button>
-          <Button 
-            type="danger" 
-            onClick={() => deleteInbound(record)}
-          >
-            删除
-          </Button>
-          {record.status !== '已完成' && (
-            <Button 
-              type="success" 
-              onClick={() => confirmInbound(record)}
-            >
-              确认入库
-            </Button>
+        <Space>
+          <Button icon={<EyeOutlined />} onClick={() => previewInbound(record)}>预览</Button>
+          {record.status === '待确认' && (
+            <Button type="primary" onClick={() => confirmInbound(record)}>确认入库</Button>
           )}
+          <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteInbound(record)}>删除</Button>
         </Space>
       )
     }
@@ -572,7 +624,7 @@ function ConsumablePurchaseInbound() {
               <Form.Item 
                 name="orderNumber" 
                 label="入库单号" 
-                initialValue={`CON-IN-${new Date().getTime()}`}
+                initialValue={`CON-IN-${Date.now().toString().slice(-6)}`}
               >
                 <Input disabled placeholder="自动生成" />
               </Form.Item>
@@ -831,6 +883,9 @@ function ConsumablePurchaseInbound() {
             <Button type="primary" htmlType="submit" style={{ marginRight: 16 }}>
               提交入库
             </Button>
+            <Button type="default" onClick={handlePreview} style={{ marginRight: 16 }}>
+              预览
+            </Button>
             <Button onClick={() => {
               form.resetFields();
               setInboundItems([]);
@@ -851,48 +906,155 @@ function ConsumablePurchaseInbound() {
         </Form>
       </Modal>
 
-      {/* 入库详情模态框 */}
+      {/* 预览模态框 */}
       <Modal
-        title="入库详情"
-        open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
+        title="入库单预览"
+        open={previewModalVisible}
+        onCancel={() => setPreviewModalVisible(false)}
+        width="90%"
+        zIndex={9999}
+        mask={true}
+        styles={{
+          modal: { 
+            top: 50, 
+            maxWidth: 1400, 
+            zIndex: 9999, 
+            backgroundColor: '#fff',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            borderRadius: '8px'
+          },
+          body: { 
+            padding: 0,
+            backgroundColor: '#fff',
+            overflow: 'auto'
+          },
+          header: {
+            backgroundColor: '#fff',
+            borderBottom: '1px solid #e8e8e8'
+          },
+          footer: {
+            backgroundColor: '#fff',
+            borderTop: '1px solid #e8e8e8'
+          },
+          mask: {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }}
+        className="preview-modal"
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+          <Button key="close" onClick={() => setPreviewModalVisible(false)}>
             关闭
+          </Button>,
+          <Button key="print" type="default" onClick={handlePrint} style={{ marginRight: 16 }}>
+            打印
+          </Button>,
+          <Button key="save" type="primary" onClick={handleSavePDF}>
+            保存PDF
           </Button>
         ]}
-        width={800}
       >
-        {currentInboundDetail && (
-          <div>
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <p><strong>入库单号:</strong> {currentInboundDetail.orderNumber}</p>
-                <p><strong>送货人:</strong> {currentInboundDetail.deliveryPerson}</p>
-                <p><strong>检验人员:</strong> {currentInboundDetail.inspector}</p>
-              </Col>
-              <Col span={12}>
-                <p><strong>入库人:</strong> {currentInboundDetail.inboundPerson}</p>
-                <p><strong>入库日期:</strong> {currentInboundDetail.inboundDate}</p>
-                <p><strong>操作人:</strong> {currentInboundDetail.operator}</p>
-                <p><strong>状态:</strong> {currentInboundDetail.status}</p>
+        <div ref={printRef} className="preview-content" style={{ padding: '20px', maxHeight: '75vh', overflow: 'auto', backgroundColor: '#fff' }}>
+          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <h2>耗材入库单</h2>
+          </div>
+          
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            {/* 第一行：入库单号 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col span={24}>
+                <p style={{ margin: 0, fontSize: '16px' }}><strong>入库单号:</strong> {previewData.inboundNumber}</p>
               </Col>
             </Row>
-            <h4 className="mt-4">入库物品</h4>
+            
+            {/* 第二行：送货人、检验人员、入库人 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>送货人:</strong> {previewData.deliveryPerson}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>检验人员:</strong> {previewData.inspector}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>入库人:</strong> {previewData.inboundPerson}</p>
+              </Col>
+            </Row>
+            
+            {/* 第三行：入库日期、操作人、备注 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>入库日期:</strong> {previewData.inboundDate}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>操作人:</strong> {previewData.operator}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>备注:</strong> {previewData.remark || '无'}</p>
+              </Col>
+            </Row>
+          </div>
+          
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>入库物品</h3>
             <Table 
               columns={[
-                { title: '耗材名称', dataIndex: 'name', key: 'name' },
-                { title: '品牌', dataIndex: 'brand', key: 'brand' },
-                { title: '型号', dataIndex: 'model', key: 'model' },
-                { title: '数量', dataIndex: 'quantity', key: 'quantity' },
-                { title: '单位', dataIndex: 'unit', key: 'unit' }
+                {
+                  title: '耗材名称',
+                  dataIndex: 'name',
+                  key: 'name',
+                  width: '20%',
+                  render: (text) => (
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4'
+                    }}>
+                      {text || '-'}
+                    </div>
+                  )
+                },
+                {
+                  title: '品牌',
+                  dataIndex: 'brand',
+                  key: 'brand',
+                  width: '15%'
+                },
+                {
+                  title: '型号',
+                  dataIndex: 'model',
+                  key: 'model',
+                  width: '20%',
+                  render: (text) => (
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4'
+                    }}>
+                      {text || '-'}
+                    </div>
+                  )
+                },
+                {
+                  title: '数量',
+                  dataIndex: 'quantity',
+                  key: 'quantity',
+                  width: '10%'
+                },
+                {
+                  title: '单位',
+                  dataIndex: 'unit',
+                  key: 'unit',
+                  width: '10%'
+                }
               ]} 
-              dataSource={currentInboundDetail.items} 
+              dataSource={previewData.items || []}
               rowKey={(record, index) => index}
               pagination={false}
+              size="small"
+              bordered
+              style={{ width: '100%' }}
             />
           </div>
-        )}
+        </div>
       </Modal>
     </div>
   )

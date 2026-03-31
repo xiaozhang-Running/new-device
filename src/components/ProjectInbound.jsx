@@ -19,15 +19,12 @@ import {
 
 const { TextArea } = Input
 import { PlusOutlined, DeleteOutlined, EditOutlined, CheckOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons'
-import axios from 'axios'
 import moment from 'moment'
-import { deviceApi } from '../services/api'
+import { deviceApi, projectOutboundApi, projectInboundApi, cacheManager } from '../services/api'
+import { get, post, put, del } from '../services/request'
 import { useReactToPrint } from 'react-to-print'
 
 const { Option } = Select
-
-// API 基础URL
-const API_BASE_URL = 'http://localhost:5055/api/InOutbound'
 
 function ProjectInbound() {
   const [form] = Form.useForm()
@@ -69,91 +66,112 @@ function ProjectInbound() {
     pageStyle: `
       @page {
         size: A4;
-        margin: 10mm;
+        margin: 5mm;
       }
       @media print {
         body {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
           font-family: 'Microsoft YaHei', Arial, sans-serif;
-          font-size: 12px;
-          line-height: 1.5;
+          font-size: 9px;
+          line-height: 1.1;
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 210mm !important;
+          height: 297mm !important;
+          box-sizing: border-box !important;
         }
         .preview-content {
           max-height: none !important;
           overflow: visible !important;
           padding: 0 !important;
+          margin: 0 !important;
+          width: 100% !important;
         }
         table {
-          page-break-inside: avoid;
           width: 100% !important;
           border-collapse: collapse !important;
-          margin: 10px 0 !important;
-          font-size: 11px !important;
+          margin: 2px 0 !important;
+          font-size: 8px !important;
+          table-layout: fixed !important;
         }
         th, td {
           border: 1px solid #ddd !important;
-          padding: 4px !important;
+          padding: 1.5px !important;
           text-align: left !important;
-          font-size: 11px !important;
+          font-size: 8px !important;
+          line-height: 1 !important;
+          word-break: break-all !important;
         }
-        th:nth-child(1), td:nth-child(1) { width: 60px !important; text-align: center !important; font-size: 8px !important; line-height: 1.2 !important; padding: 2px !important; }
-        th:nth-child(2), td:nth-child(2) { width: 80px !important; text-align: center !important; }
-        th:nth-child(3), td:nth-child(3) { width: 120px !important; }
-        th:nth-child(4), td:nth-child(4) { width: 100px !important; font-size: 9px !important; word-break: break-all !important; }
-        th:nth-child(5), td:nth-child(5) { width: 80px !important; text-align: center !important; }
-        th:nth-child(6), td:nth-child(6) { width: 90px !important; word-break: break-all !important; }
-        th:nth-child(7), td:nth-child(7) { width: 70px !important; text-align: center !important; }
-        th:nth-child(8), td:nth-child(8) { width: 60px !important; text-align: center !important; }
-        th:nth-child(9), td:nth-child(9) { width: 120px !important; word-break: break-all !important; }
-        th:nth-child(10), td:nth-child(10) { width: 100px !important; text-align: center !important; }
-        th:nth-child(11), td:nth-child(11) { width: 100px !important; word-break: break-all !important; }
+        th:nth-child(1), td:nth-child(1) { width: 35px !important; text-align: center !important; font-size: 7px !important; }
+        th:nth-child(2), td:nth-child(2) { width: 50px !important; text-align: center !important; }
+        th:nth-child(3), td:nth-child(3) { width: 80px !important; }
+        th:nth-child(4), td:nth-child(4) { width: 70px !important; font-size: 7px !important; }
+        th:nth-child(5), td:nth-child(5) { width: 50px !important; text-align: center !important; }
+        th:nth-child(6), td:nth-child(6) { width: 60px !important; }
+        th:nth-child(7), td:nth-child(7) { width: 40px !important; text-align: center !important; }
+        th:nth-child(8), td:nth-child(8) { width: 35px !important; text-align: center !important; }
+        th:nth-child(9), td:nth-child(9) { width: 80px !important; }
+        th:nth-child(10), td:nth-child(10) { width: 70px !important; text-align: center !important; }
+        th:nth-child(11), td:nth-child(11) { width: 70px !important; }
         th {
           background-color: #f2f2f2 !important;
           font-weight: bold !important;
+          padding: 1.5px !important;
+          font-size: 7.5px !important;
         }
         tr {
-          page-break-inside: avoid;
-        }
-        td {
-          page-break-inside: avoid;
+          line-height: 1 !important;
         }
         h1 {
-          font-size: 18px !important;
+          font-size: 12px !important;
           text-align: center !important;
-          margin: 0 0 8px 0 !important;
+          margin: 0 0 2px 0 !important;
+          line-height: 1.1 !important;
         }
         h3 {
-          font-size: 13px !important;
-          margin: 0 0 8px 0 !important;
+          font-size: 10px !important;
+          margin: 0 0 2px 0 !important;
+          line-height: 1.1 !important;
+        }
+        p {
+          margin: 1px 0 !important;
+          line-height: 1.2 !important;
+          font-size: 14px !important;
+        }
+        /* 备注部分样式 */
+        .preview-content > div:last-child {
+          font-size: 14px !important;
+        }
+        .preview-content > div:last-child div {
+          font-size: 14px !important;
+          line-height: 1.2 !important;
         }
         .ant-row {
           width: 100% !important;
           margin: 0 !important;
-        }
-        .ant-col {
-          padding: 0 !important;
-        }
-        div {
-          break-inside: avoid;
-        }
-        .preview-content > div {
-          margin-bottom: 12px !important;
-          padding: 10px !important;
-        }
-        .preview-content h3 {
-          font-size: 13px !important;
-          margin-bottom: 8px !important;
-        }
-        .preview-content .ant-row {
-          margin-bottom: 8px !important;
           display: flex !important;
           flex-wrap: nowrap !important;
         }
-        .preview-content .ant-col {
-          margin-bottom: 0 !important;
+        .ant-col {
+          padding: 0 !important;
           flex: 1 !important;
           min-width: 0 !important;
+        }
+        div {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .preview-content > div {
+          margin-bottom: 3px !important;
+          padding: 2px !important;
+        }
+        .preview-content h3 {
+          font-size: 10px !important;
+          margin-bottom: 2px !important;
+        }
+        .preview-content .ant-row {
+          margin-bottom: 2px !important;
         }
         .preview-content .ant-col > div {
           display: flex !important;
@@ -161,12 +179,48 @@ function ProjectInbound() {
           height: 100% !important;
         }
         .preview-content .ant-col > div > span:first-child {
-          font-size: 11px !important;
-          margin-bottom: 2px !important;
+          font-size: 12px !important;
+          margin-bottom: 1px !important;
         }
         .preview-content .ant-col > div > span:last-child {
-          font-size: 12px !important;
+          font-size: 14px !important;
           font-weight: 500 !important;
+          line-height: 1.2 !important;
+        }
+        /* 移除所有边框和背景色，使打印更简洁 */
+        .preview-content > div {
+          border: none !important;
+          background-color: white !important;
+        }
+        /* 确保表格不占用过多空间 */
+        .ant-table {
+          margin: 0 !important;
+        }
+        .ant-table-container {
+          margin: 0 !important;
+        }
+        .ant-table-content {
+          overflow: visible !important;
+        }
+        /* 优化表格分页 */
+        .ant-table-tbody {
+          page-break-inside: auto;
+        }
+        .ant-table-row {
+          page-break-inside: avoid;
+          page-break-after: auto;
+        }
+        /* 确保内容适应页面 */
+        .ant-table-wrapper {
+          width: 100% !important;
+          overflow: visible !important;
+        }
+        /* 移除滚动条 */
+        ::-webkit-scrollbar {
+          display: none !important;
+        }
+        scrollbar {
+          display: none !important;
         }
       }
     `,
@@ -208,21 +262,87 @@ function ProjectInbound() {
   const fetchData = async () => {
     setLoading(true)
     try {
+      // 清除缓存，确保获取最新数据
+      if (window.cacheManager) {
+        console.log('清除入库和出库记录缓存')
+        window.cacheManager.invalidate('project-inbounds')
+        window.cacheManager.invalidate('project-outbounds')
+      }
+      
       // 获取入库历史
-      const inboundResponse = await axios.get(`${API_BASE_URL}/project-inbounds`)
+      const inboundData = await projectInboundApi.getProjectInbounds(false) // 禁用缓存
+      console.log('获取到的入库单数据:', inboundData)
       // 处理可能的value字段包装
-      const inboundData = inboundResponse.data.value || inboundResponse.data
-      setInboundHistory(inboundData)
+      let processedInboundData = inboundData
+      if (inboundData && typeof inboundData === 'object' && 'value' in inboundData) {
+        processedInboundData = inboundData.value
+      }
+      console.log('处理后的入库单数据:', processedInboundData)
+      // 确保是数组
+      if (Array.isArray(processedInboundData)) {
+        // 直接使用原始数据，不需要处理items字段
+        setInboundHistory(processedInboundData)
+      } else {
+        console.error('入库单数据格式错误，不是数组:', processedInboundData)
+        setInboundHistory([])
+      }
       
       // 获取出库历史
-      const outboundResponse = await axios.get(`${API_BASE_URL}/project-outbounds`)
-      console.log('获取到的出库单数据:', outboundResponse.data)
+      const outboundData = await projectOutboundApi.getProjectOutbounds(false) // 禁用缓存
+      console.log('获取到的出库单数据:', outboundData)
       // 处理可能的value字段包装
-      const outboundData = outboundResponse.data.value || outboundResponse.data
-      // 筛选已确认出库的出库单
-      const confirmedOutbounds = outboundData.filter(order => order.isCompleted === true)
-      console.log('筛选后的出库单:', confirmedOutbounds)
-      setOutboundHistory(confirmedOutbounds)
+      let processedOutboundData = outboundData
+      if (outboundData && typeof outboundData === 'object' && 'value' in outboundData) {
+        processedOutboundData = outboundData.value
+      }
+      console.log('处理后的出库单数据:', processedOutboundData)
+      // 确保是数组
+      if (Array.isArray(processedOutboundData)) {
+        // 转换数据格式以匹配表格列定义
+        const formattedOutbounds = processedOutboundData.map(item => {
+          // 处理ProjectOutboundItems字段
+          let items = []
+          if (item.Items && Array.isArray(item.Items)) {
+            items = item.Items
+          } else if (item.ProjectOutboundItems && Array.isArray(item.ProjectOutboundItems)) {
+            items = item.ProjectOutboundItems
+          } else if (item.projectOutboundItems && Array.isArray(item.projectOutboundItems)) {
+            items = item.projectOutboundItems
+          }
+          console.log('处理出库记录:', item.outboundNumber || item.OutboundNumber, 'items数量:', items.length)
+          
+          return {
+            id: item.id,
+            outboundId: item.outboundNumber || item.OutboundNumber,
+            projectName: item.projectName || item.ProjectName,
+            projectTime: item.projectTime || item.ProjectTime,
+            recipient: item.recipient || item.Recipient,
+            outboundDate: item.outboundDate ? new Date(item.outboundDate).toISOString().split('T')[0] : (item.OutboundDate ? new Date(item.OutboundDate).toISOString().split('T')[0] : ''),
+            status: item.isCompleted ? '已完成' : '待确认',
+            inboundStatus: item.inboundStatus || item.InboundStatus || '未入库',
+            outboundType: item.outboundType || item.OutboundType,
+            logisticsMethod: item.logisticsMethod || item.LogisticsMethod,
+            usageLocation: item.usageLocation || item.UsageLocation,
+            projectManager: item.projectManager || item.ProjectManager,
+            contactPhone: item.contactPhone || item.ContactPhone,
+            returnDate: item.returnDate || (item.ReturnDate ? new Date(item.ReturnDate).toISOString().split('T')[0] : ''),
+            warehouseKeeper: item.warehouseKeeper || item.WarehouseKeeper,
+            remark: item.remark || item.Remark,
+            items: items,
+            OutboundImages: item.outboundImages || item.OutboundImages || ''
+          }
+        })
+        // 筛选出库状态为已完成且入库状态不是已完成的出库单
+        const confirmedOutbounds = formattedOutbounds.filter(order => 
+          order.status === '已完成' && 
+          order.inboundStatus !== '已完成'
+        )
+        console.log('筛选后的出库单:', confirmedOutbounds)
+        setOutboundHistory(confirmedOutbounds)
+      } else {
+        console.error('出库单数据格式错误，不是数组:', processedOutboundData)
+        setOutboundHistory([])
+      }
     } catch (error) {
       console.error('获取数据失败:', error)
       message.error('获取数据失败，请刷新页面重试')
@@ -240,7 +360,7 @@ function ProjectInbound() {
       setSelectedOutboundOrder(order)
       // 初始化可入库项，默认数量为0（未入库）
       // 尝试不同的字段名来获取设备明细
-      const items = order.items || order.Items || order.projectOutboundItems || order.ProjectOutboundItems || []
+      const items = order.items || order.Items || order.projectOutboundItems || order.ProjectOutboundItems || order.ProjectOutboundItem || order.projectOutboundItem || []
       console.log('获取到的设备明细:', items)
       
       // 获取设备详细信息
@@ -250,14 +370,16 @@ function ProjectInbound() {
         const isConsumable = item.itemType === 3 || item.ItemType === 3 || 
                           item.name?.includes('耗材') || item.Name?.includes('耗材') ||
                           item.equipmentName?.includes('别针') || item.EquipmentName?.includes('别针') ||
-                          item.equipmentName?.includes('耗材') || item.EquipmentName?.includes('耗材')
+                          item.equipmentName?.includes('耗材') || item.EquipmentName?.includes('耗材') ||
+                          item.itemName?.includes('耗材') || item.ItemName?.includes('耗材')
         console.log('是否为耗材:', isConsumable)
         
         // 从设备表获取设备详细信息
         let deviceCode = item.DeviceCode || item.deviceCode
         let accessories = item.Accessories || item.accessories || item.accessory || item.Accessory || item.equipmentAccessories || item.EquipmentAccessories
+        let equipmentName = item.EquipmentName || item.equipmentName || item.ItemName || item.itemName || item.Name || item.name
         
-        const equipmentId = item.equipmentId || item.EquipmentId
+        const equipmentId = item.equipmentId || item.EquipmentId || item.itemId || item.ItemId
         const itemType = item.ItemType || item.itemType || (isConsumable ? 3 : 1)
         console.log('设备ID:', equipmentId, '设备类型:', itemType)
         
@@ -271,8 +393,10 @@ function ProjectInbound() {
             if (deviceData) {
               deviceCode = deviceData.DeviceCode || deviceData.deviceCode
               accessories = deviceData.Accessories || deviceData.accessories || '无'
+              equipmentName = equipmentName || deviceData.Name || deviceData.name
               console.log('从专用设备表获取的设备编号:', deviceCode)
               console.log('从专用设备表获取的配件:', accessories)
+              console.log('从专用设备表获取的设备名称:', equipmentName)
             }
           } catch (specialError) {
             console.log('专用设备表未找到，equipmentId:', equipmentId, '错误:', specialError.message)
@@ -286,8 +410,10 @@ function ProjectInbound() {
               if (deviceData) {
                 deviceCode = deviceData.DeviceCode || deviceData.deviceCode
                 accessories = deviceData.Accessories || deviceData.accessories || '无'
+                equipmentName = equipmentName || deviceData.Name || deviceData.name
                 console.log('从通用设备表获取的设备编号:', deviceCode)
                 console.log('从通用设备表获取的配件:', accessories)
+                console.log('从通用设备表获取的设备名称:', equipmentName)
               }
             } catch (generalError) {
               console.log('通用设备表也未找到，equipmentId:', equipmentId, '错误:', generalError.message)
@@ -307,7 +433,9 @@ function ProjectInbound() {
             deviceCode: deviceCode || '无',
             accessories: accessories || '无',
             itemType: itemType,
-            isConsumable: isConsumable
+            isConsumable: isConsumable,
+            equipmentName: equipmentName,
+            ItemName: equipmentName
           }
       }))
       
@@ -338,11 +466,41 @@ function ProjectInbound() {
   // 处理部分入库
   const handlePartialInbound = async (record) => {
     try {
+      // 准备入库数据，确保 items 包含正确的 ItemType
+      const itemsData = record.items ? record.items.map(item => ({
+        id: item.id || item.Id || 0,
+        projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
+        equipmentId: item.equipmentId || item.EquipmentId || 0,
+        equipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
+        brand: item.brand || item.Brand || '',
+        model: item.model || item.Model || '',
+        quantity: item.quantity || item.Quantity || 0,
+        unit: item.unit || item.Unit || '',
+        status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
+        itemType: item.itemType || item.ItemType || 1
+      })) : []
+      
+      const inboundData = {
+        id: record.id || record.Id || 0,
+        inboundNumber: record.inboundNumber || record.InboundNumber || '',
+        outboundOrderId: record.outboundOrderId || record.OutboundOrderId || record.outboundId || record.OutboundId || 0,
+        projectName: record.projectName || record.ProjectName || '',
+        projectManager: record.projectManager || record.ProjectManager || '',
+        contactPhone: record.contactPhone || record.ContactPhone || '',
+        projectTime: record.projectTime || record.ProjectTime || '',
+        usageLocation: record.usageLocation || record.UsageLocation || '',
+        handler: record.handler || record.Handler || '',
+        inspector: record.inspector || record.Inspector || '',
+        warehouseKeeper: record.warehouseKeeper || record.WarehouseKeeper || '',
+        inboundDate: record.inboundDate || record.InboundDate || '',
+        remark: record.remark || record.Remark || '',
+        status: '部分入库',
+        isCompleted: false,
+        items: itemsData
+      }
+      
       // 标记为部分入库
-      const response = await axios.put(`${API_BASE_URL}/project-inbounds/${record.id}`, {
-        ...record,
-        status: '部分入库'
-      })
+      const response = await projectInboundApi.updateProjectInbound(record.id, inboundData)
       
       // 释放设备使用状态
       if (record.items && record.items.length > 0) {
@@ -354,24 +512,76 @@ function ProjectInbound() {
             // 根据设备类型调用不同的API
             try {
               if (itemType === 1) {
-                // 专用设备
-                const equipment = await deviceApi.getSpecialEquipment(equipmentId)
-                if (equipment) {
-                  await deviceApi.updateSpecialEquipment(equipmentId, {
-                    ...equipment,
-                    useStatus: "未使用"
-                  })
-                }
-              } else if (itemType === 2) {
-                // 通用设备
-                const equipment = await deviceApi.getGeneralEquipment(equipmentId)
-                if (equipment) {
-                  await deviceApi.updateGeneralEquipment(equipmentId, {
-                    ...equipment,
-                    useStatus: "未使用"
-                  })
-                }
-              }
+                    // 专用设备
+                    try {
+                      const equipment = await deviceApi.getSpecialEquipment(equipmentId)
+                      if (equipment) {
+                        // 构建符合后端DTO格式的对象
+                        const updateData = {
+                          Id: equipment.id || equipment.Id,
+                          Name: equipment.name || equipment.Name,
+                          DeviceCode: equipment.deviceCode || equipment.DeviceCode,
+                          SerialNumber: equipment.serialNumber || equipment.SerialNumber,
+                          Brand: equipment.brand || equipment.Brand,
+                          Model: equipment.model || equipment.Model,
+                          Quantity: equipment.quantity || equipment.Quantity,
+                          Unit: equipment.unit || equipment.Unit,
+                          Accessories: equipment.accessories || equipment.Accessories,
+                          ImageUrl: equipment.imageUrl || equipment.ImageUrl,
+                          Warehouse: equipment.warehouse || equipment.Warehouse,
+                          Company: equipment.company || equipment.Company,
+                          Status: equipment.status || equipment.Status,
+                          UseStatus: "未使用",
+                          ProjectName: equipment.projectName || equipment.ProjectName,
+                          ProjectTime: equipment.projectTime || equipment.ProjectTime,
+                          Location: equipment.location || equipment.Location,
+                          Description: equipment.description || equipment.Description,
+                          PurchaseDate: equipment.purchaseDate || equipment.PurchaseDate,
+                          PurchasePrice: equipment.purchasePrice || equipment.PurchasePrice
+                        }
+                        await deviceApi.updateSpecialEquipment(equipmentId, updateData)
+                      } else {
+                        console.log(`专用设备不存在 (ID: ${equipmentId})，跳过状态更新`)
+                      }
+                    } catch (e) {
+                      console.log(`获取专用设备详情失败 (ID: ${equipmentId}):`, e)
+                    }
+                  } else if (itemType === 2) {
+                    // 通用设备
+                    try {
+                      const equipment = await deviceApi.getGeneralEquipment(equipmentId)
+                      if (equipment) {
+                        // 构建符合后端DTO格式的对象
+                        const updateData = {
+                          Id: equipment.id || equipment.Id,
+                          Name: equipment.name || equipment.Name,
+                          DeviceCode: equipment.deviceCode || equipment.DeviceCode,
+                          SerialNumber: equipment.serialNumber || equipment.SerialNumber,
+                          Brand: equipment.brand || equipment.Brand,
+                          Model: equipment.model || equipment.Model,
+                          Quantity: equipment.quantity || equipment.Quantity,
+                          Unit: equipment.unit || equipment.Unit,
+                          Accessories: equipment.accessories || equipment.Accessories,
+                          ImageUrl: equipment.imageUrl || equipment.ImageUrl,
+                          Warehouse: equipment.warehouse || equipment.Warehouse,
+                          Company: equipment.company || equipment.Company,
+                          Status: equipment.status || equipment.Status,
+                          UseStatus: "未使用",
+                          ProjectName: equipment.projectName || equipment.ProjectName,
+                          ProjectTime: equipment.projectTime || equipment.ProjectTime,
+                          Location: equipment.location || equipment.Location,
+                          Description: equipment.description || equipment.Description,
+                          PurchaseDate: equipment.purchaseDate || equipment.PurchaseDate,
+                          PurchasePrice: equipment.purchasePrice || equipment.PurchasePrice
+                        }
+                        await deviceApi.updateGeneralEquipment(equipmentId, updateData)
+                      } else {
+                        console.log(`通用设备不存在 (ID: ${equipmentId})，跳过状态更新`)
+                      }
+                    } catch (e) {
+                      console.log(`获取通用设备详情失败 (ID: ${equipmentId}):`, e)
+                    }
+                  }
             } catch (e) {
               console.log(`释放设备使用状态失败 (ID: ${equipmentId}, Type: ${itemType}):`, e)
             }
@@ -379,6 +589,9 @@ function ProjectInbound() {
         }
       }
       
+      // 清除缓存
+      cacheManager.invalidate('project-inbounds')
+      cacheManager.invalidate('project-outbounds')
       // 刷新数据
       await fetchData()
       message.success('部分入库成功')
@@ -396,11 +609,80 @@ function ProjectInbound() {
       content: '您确定所有设备都已归还吗？',
       onOk: async () => {
         try {
+          // 准备入库数据，确保 items 包含正确的 ItemType
+          const itemsData = record.items ? record.items.map(item => ({
+            id: item.id || item.Id || 0,
+            projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
+            equipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0,
+            equipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
+            brand: item.brand || item.Brand || '',
+            model: item.model || item.Model || '',
+            quantity: item.quantity || item.Quantity || 0,
+            unit: item.unit || item.Unit || '',
+            status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
+            itemType: item.itemType || item.ItemType || 1
+          })) : []
+          
+          const inboundData = {
+            id: record.id || record.Id || 0,
+            inboundNumber: record.inboundNumber || record.InboundNumber || '',
+            outboundOrderId: record.outboundOrderId || record.OutboundOrderId || record.outboundId || record.OutboundId || 0,
+            projectName: record.projectName || record.ProjectName || '',
+            projectManager: record.projectManager || record.ProjectManager || '',
+            contactPhone: record.contactPhone || record.ContactPhone || '',
+            projectTime: record.projectTime || record.ProjectTime || '',
+            usageLocation: record.usageLocation || record.UsageLocation || '',
+            handler: record.handler || record.Handler || '',
+            inspector: record.inspector || record.Inspector || '',
+            warehouseKeeper: record.warehouseKeeper || record.WarehouseKeeper || '',
+            inboundDate: record.inboundDate || record.InboundDate || '',
+            remark: record.remark || record.Remark || '',
+            status: '全部入库',
+            isCompleted: true,
+            items: itemsData
+          }
+          
           // 标记为全部入库
-          const response = await axios.put(`${API_BASE_URL}/project-inbounds/${record.id}`, {
-            ...record,
-            status: '全部入库'
-          })
+          const response = await projectInboundApi.updateProjectInbound(record.id, inboundData)
+          
+          // 更新对应出库记录的入库状态
+          console.log('入库记录详情:', record)
+          console.log('入库记录的所有键:', Object.keys(record))
+          console.log('入库记录的 OutboundOrderId:', record.OutboundOrderId)
+          console.log('入库记录的 outboundOrderId:', record.outboundOrderId)
+          console.log('入库记录的 OutboundId:', record.OutboundId)
+          console.log('入库记录的 outboundId:', record.outboundId)
+          const outboundOrderId = record.outboundOrderId || record.OutboundOrderId || record.outboundId || record.OutboundId
+          console.log('获取到的出库单ID:', outboundOrderId)
+          if (outboundOrderId) {
+            try {
+              // 使用 projectOutboundApi 获取出库记录
+              console.log('尝试获取出库记录，ID:', outboundOrderId)
+              const outboundRecord = await projectOutboundApi.getProjectOutbound(outboundOrderId)
+              console.log('获取到的出库记录:', outboundRecord)
+              if (outboundRecord) {
+                // 更新出库记录的入库状态为已完成
+                const updateData = {
+                  ...outboundRecord,
+                  isCompleted: true,
+                  completedAt: new Date().toISOString(),
+                  inboundStatus: '已完成',
+                  id: outboundOrderId, // 确保包含 id 字段
+                  Id: outboundOrderId // 确保包含 Id 字段（兼容不同大小写）
+                }
+                console.log('准备更新的出库记录数据:', updateData)
+                await projectOutboundApi.updateProjectOutbound(outboundOrderId, updateData)
+                console.log(`出库记录 (ID: ${outboundOrderId}) 入库状态已更新为已完成`)
+              } else {
+                console.log(`未找到出库记录 (ID: ${outboundOrderId})`)
+              }
+            } catch (e) {
+              console.log(`更新出库记录入库状态失败 (ID: ${outboundOrderId}):`, e)
+              console.log('错误堆栈:', e.stack)
+            }
+          } else {
+            console.log('未找到出库单ID')
+          }
           
           // 释放设备使用状态
           if (record.items && record.items.length > 0) {
@@ -413,21 +695,73 @@ function ProjectInbound() {
                 try {
                   if (itemType === 1) {
                     // 专用设备
-                    const equipment = await deviceApi.getSpecialEquipment(equipmentId)
-                    if (equipment) {
-                      await deviceApi.updateSpecialEquipment(equipmentId, {
-                        ...equipment,
-                        useStatus: "未使用"
-                      })
+                    try {
+                      const equipment = await deviceApi.getSpecialEquipment(equipmentId)
+                      if (equipment) {
+                        // 构建符合后端DTO格式的对象
+                        const updateData = {
+                          Id: equipment.id || equipment.Id,
+                          Name: equipment.name || equipment.Name,
+                          DeviceCode: equipment.deviceCode || equipment.DeviceCode,
+                          SerialNumber: equipment.serialNumber || equipment.SerialNumber,
+                          Brand: equipment.brand || equipment.Brand,
+                          Model: equipment.model || equipment.Model,
+                          Quantity: equipment.quantity || equipment.Quantity,
+                          Unit: equipment.unit || equipment.Unit,
+                          Accessories: equipment.accessories || equipment.Accessories,
+                          ImageUrl: equipment.imageUrl || equipment.ImageUrl,
+                          Warehouse: equipment.warehouse || equipment.Warehouse,
+                          Company: equipment.company || equipment.Company,
+                          Status: equipment.status || equipment.Status,
+                          UseStatus: "未使用",
+                          ProjectName: equipment.projectName || equipment.ProjectName,
+                          ProjectTime: equipment.projectTime || equipment.ProjectTime,
+                          Location: equipment.location || equipment.Location,
+                          Description: equipment.description || equipment.Description,
+                          PurchaseDate: equipment.purchaseDate || equipment.PurchaseDate,
+                          PurchasePrice: equipment.purchasePrice || equipment.PurchasePrice
+                        }
+                        await deviceApi.updateSpecialEquipment(equipmentId, updateData)
+                      } else {
+                        console.log(`专用设备不存在 (ID: ${equipmentId})，跳过状态更新`)
+                      }
+                    } catch (e) {
+                      console.log(`获取专用设备详情失败 (ID: ${equipmentId}):`, e)
                     }
                   } else if (itemType === 2) {
                     // 通用设备
-                    const equipment = await deviceApi.getGeneralEquipment(equipmentId)
-                    if (equipment) {
-                      await deviceApi.updateGeneralEquipment(equipmentId, {
-                        ...equipment,
-                        useStatus: "未使用"
-                      })
+                    try {
+                      const equipment = await deviceApi.getGeneralEquipment(equipmentId)
+                      if (equipment) {
+                        // 构建符合后端DTO格式的对象
+                        const updateData = {
+                          Id: equipment.id || equipment.Id,
+                          Name: equipment.name || equipment.Name,
+                          DeviceCode: equipment.deviceCode || equipment.DeviceCode,
+                          SerialNumber: equipment.serialNumber || equipment.SerialNumber,
+                          Brand: equipment.brand || equipment.Brand,
+                          Model: equipment.model || equipment.Model,
+                          Quantity: equipment.quantity || equipment.Quantity,
+                          Unit: equipment.unit || equipment.Unit,
+                          Accessories: equipment.accessories || equipment.Accessories,
+                          ImageUrl: equipment.imageUrl || equipment.ImageUrl,
+                          Warehouse: equipment.warehouse || equipment.Warehouse,
+                          Company: equipment.company || equipment.Company,
+                          Status: equipment.status || equipment.Status,
+                          UseStatus: "未使用",
+                          ProjectName: equipment.projectName || equipment.ProjectName,
+                          ProjectTime: equipment.projectTime || equipment.ProjectTime,
+                          Location: equipment.location || equipment.Location,
+                          Description: equipment.description || equipment.Description,
+                          PurchaseDate: equipment.purchaseDate || equipment.PurchaseDate,
+                          PurchasePrice: equipment.purchasePrice || equipment.PurchasePrice
+                        }
+                        await deviceApi.updateGeneralEquipment(equipmentId, updateData)
+                      } else {
+                        console.log(`通用设备不存在 (ID: ${equipmentId})，跳过状态更新`)
+                      }
+                    } catch (e) {
+                      console.log(`获取通用设备详情失败 (ID: ${equipmentId}):`, e)
                     }
                   }
                 } catch (e) {
@@ -437,6 +771,9 @@ function ProjectInbound() {
             }
           }
           
+          // 清除缓存
+          cacheManager.invalidate('project-inbounds')
+          cacheManager.invalidate('project-outbounds')
           // 刷新数据
           await fetchData()
           message.success('全部入库成功')
@@ -451,13 +788,19 @@ function ProjectInbound() {
   // 删除入库记录
   const handleDeleteInbound = async (id) => {
     try {
+      console.log('开始删除入库记录，ID:', id)
       // 调用 API 删除入库记录
-      await axios.delete(`${API_BASE_URL}/project-inbounds/${id}`)
+      const response = await projectInboundApi.deleteProjectInbound(id)
+      console.log('删除入库记录响应:', response)
+      // 清除缓存
+      cacheManager.invalidate('project-inbounds')
+      cacheManager.invalidate('project-outbounds')
       // 刷新数据
       await fetchData()
       message.success('删除入库记录成功')
     } catch (error) {
       console.error('删除入库记录失败:', error)
+      console.error('错误堆栈:', error.stack)
       message.error('删除入库记录失败，请重试')
     }
   }
@@ -485,51 +828,80 @@ function ProjectInbound() {
       return
     }
 
-    // 初始状态为未入库
-    const status = '未入库'
+    // 对于编辑操作，保持原有的状态；对于新创建的入库记录，初始状态为未入库
+    const status = currentEditInbound ? (currentEditInbound.status || currentEditInbound.Status || '未入库') : '未入库'
 
     setSubmitting(true)
     try {
       // 构建入库数据
-      const inboundData = {
-        InboundNumber: currentEditInbound ? (currentEditInbound.inboundNumber || currentEditInbound.InboundNumber) : inboundNumber,
-        OutboundOrderId: selectedOutboundOrder.id,
-        ProjectName: selectedOutboundOrder.projectName,
-        ProjectManager: selectedOutboundOrder.projectManager,
-        ContactPhone: selectedOutboundOrder.contactPhone,
-        ProjectTime: selectedOutboundOrder.projectTime || '',
-        UsageLocation: selectedOutboundOrder.usageLocation || selectedOutboundOrder.UsageLocation || '',
-        Handler: values.handler,
-        Inspector: values.inspector,
-        WarehouseKeeper: values.warehouseKeeper,
-        InboundDate: values.inboundDate ? values.inboundDate.format('YYYY-MM-DD') : '',
-        Remark: values.remark || '',
-        Status: status,
-        Items: selectedItems
-          .filter(item => item.isMarkedInbound)
-          .map(item => ({
-            EquipmentId: item.equipmentId || item.EquipmentId,
-            EquipmentName: item.equipmentName || item.EquipmentName || item.ItemName,
-            Brand: item.brand || item.Brand || '',
-            Model: item.model || item.Model || '',
-            Quantity: item.inboundQuantity,
-            Unit: item.unit || item.Unit || '',
-            Status: item.status || item.DeviceStatus || '',
-            ItemType: item.itemType || item.ItemType || 1 // 1=专用设备, 2=通用设备, 3=耗材
-          }))
+      const itemsData = selectedItems
+        .filter(item => item.isMarkedInbound)
+        .map(item => ({
+          id: 0, // 使用0作为新项的ID，让后端自动生成
+          projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
+          equipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0,
+          equipmentName: item.equipmentName || item.EquipmentName || item.ItemName || '',
+          brand: item.brand || item.Brand || '',
+          model: item.model || item.Model || '',
+          quantity: item.inboundQuantity || 0,
+          unit: item.unit || item.Unit || '',
+          status: item.status || item.DeviceStatus || '正常',
+          itemType: item.itemType || item.ItemType || 1, // 1=专用设备, 2=通用设备, 3=耗材
+          deviceCode: item.deviceCode || item.DeviceCode || '',
+          accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || ''
+        }))
+      
+      // 确保selectedOutboundOrder存在
+      if (!selectedOutboundOrder) {
+        message.error('请选择出库单');
+        setSubmitting(false);
+        return;
       }
+      
+      // 构建完整的dto对象，确保包含所有必填字段
+      const dto = {
+        id: currentEditInbound ? (currentEditInbound.id || currentEditInbound.Id || 0) : 0,
+        inboundNumber: currentEditInbound ? (currentEditInbound.inboundNumber || currentEditInbound.InboundNumber) : inboundNumber,
+        outboundOrderId: selectedOutboundOrder.id || 0,
+        projectName: selectedOutboundOrder.projectName || '',
+        projectManager: selectedOutboundOrder.projectManager || '',
+        contactPhone: selectedOutboundOrder.contactPhone || '',
+        projectTime: selectedOutboundOrder.projectTime || '',
+        usageLocation: selectedOutboundOrder.usageLocation || selectedOutboundOrder.UsageLocation || '',
+        handler: values.handler || '',
+        inspector: values.inspector || '',
+        warehouseKeeper: values.warehouseKeeper || '',
+        inboundDate: values.inboundDate ? values.inboundDate.format('YYYY-MM-DD') : '',
+        remark: values.remark || '',
+        status: status,
+        isCompleted: currentEditInbound ? (currentEditInbound.isCompleted || false) : false,
+        items: itemsData
+      };
+      
+      // 确保所有必填字段都有值
+      if (!dto.inboundNumber) dto.inboundNumber = inboundNumber;
+      if (!dto.projectName) dto.projectName = selectedOutboundOrder.projectName || '';
+      if (!dto.projectManager) dto.projectManager = selectedOutboundOrder.projectManager || '';
+      if (!dto.contactPhone) dto.contactPhone = selectedOutboundOrder.contactPhone || '';
+      
+      const inboundData = dto;
+      
+      console.log('发送的请求数据:', JSON.stringify(inboundData, null, 2));
 
       // 判断是创建还是更新
       if (currentEditInbound) {
         // 更新现有入库记录
-        const response = await axios.put(`${API_BASE_URL}/project-inbounds/${currentEditInbound.id}`, inboundData)
+        const response = await projectInboundApi.updateProjectInbound(currentEditInbound.id, inboundData)
         message.success(`项目${status === '全部入库' ? '全部' : '部分'}入库更新成功`)
       } else {
         // 创建新入库记录
-        const response = await axios.post(`${API_BASE_URL}/project-inbounds`, inboundData)
+        const response = await projectInboundApi.createProjectInbound(inboundData)
         message.success(`项目${status === '全部入库' ? '全部' : '部分'}入库成功`)
       }
       
+      // 清除缓存
+      cacheManager.invalidate('project-inbounds')
+      cacheManager.invalidate('project-outbounds')
       // 刷新数据
       await fetchData()
       
@@ -567,23 +939,21 @@ function ProjectInbound() {
       console.log('在现有出库历史中未找到出库单，重新获取数据...')
       try {
         // 获取出库历史
-        const outboundResponse = await axios.get(`${API_BASE_URL}/project-outbounds`)
+        const outboundData = await get('/InOutbound/project-outbounds')
         // 处理可能的value字段包装
-        const outboundData = outboundResponse.data.value || outboundResponse.data
-        // 筛选已确认出库的出库单
-        const confirmedOutbounds = outboundData.filter(order => order.isCompleted === true)
-        console.log('重新获取的出库单:', confirmedOutbounds)
+        const processedOutboundData = outboundData.value || outboundData
+        console.log('重新获取的出库单:', processedOutboundData)
         // 再次尝试查找
-        outboundOrder = confirmedOutbounds.find(o => o.id === outboundOrderId)
+        outboundOrder = processedOutboundData.find(o => o.id === outboundOrderId)
         
         // 如果通过ID找不到，尝试通过项目名称匹配
         if (!outboundOrder && record.projectName) {
           console.log('通过ID未找到出库单，尝试通过项目名称匹配...')
-          outboundOrder = confirmedOutbounds.find(o => o.projectName === record.projectName)
+          outboundOrder = processedOutboundData.find(o => o.projectName === record.projectName)
         }
         
         // 更新outboundHistory
-        setOutboundHistory(confirmedOutbounds)
+        setOutboundHistory(processedOutboundData)
       } catch (error) {
         console.error('获取出库历史失败:', error)
       }
@@ -605,25 +975,33 @@ function ProjectInbound() {
         const itemEquipId = item.equipmentId || item.EquipmentId
         const itemEquipName = item.equipmentName || item.EquipmentName || item.itemName || item.ItemName
         
-        const existingItem = record.items.find(i => {
-          const iEquipId = i.equipmentId || i.EquipmentId
-          
-          // 只使用设备 ID 进行匹配，不使用名称作为后备方案
-          // 这样可以确保只有真正已入库的设备才会被标记为已入库
-          return itemEquipId && iEquipId && itemEquipId === iEquipId
-        })
-        console.log('物品:', itemEquipName, '现有入库项:', existingItem)
         // 检测是否为耗材类型（根据物品名称或类型）
         const isConsumable = item.itemType === 3 || item.ItemType === 3 || 
                           item.name?.includes('耗材') || item.Name?.includes('耗材') ||
                           item.equipmentName?.includes('别针') || item.EquipmentName?.includes('别针') ||
-                          item.equipmentName?.includes('耗材') || item.EquipmentName?.includes('耗材')
+                          item.equipmentName?.includes('耗材') || item.EquipmentName?.includes('耗材') ||
+                          item.itemName?.includes('耗材') || item.ItemName?.includes('耗材')
+        
+        const existingItem = record.items.find(i => {
+          const iEquipId = i.equipmentId || i.EquipmentId
+          const iEquipName = i.equipmentName || i.EquipmentName || i.itemName || i.ItemName
+          
+          // 对于非耗材类型的设备，优先使用设备ID进行匹配
+          // 对于耗材类型的物品，使用物品名称进行匹配
+          if (!isConsumable && itemEquipId && iEquipId) {
+            return itemEquipId === iEquipId
+          } else {
+            // 对于耗材或无设备ID的物品，使用物品名称进行匹配
+            return itemEquipName && iEquipName && itemEquipName === iEquipName
+          }
+        })
+        console.log('物品:', itemEquipName, '现有入库项:', existingItem)
         
         // 从设备表获取设备详细信息
         let deviceCode = item.DeviceCode || item.deviceCode
         let accessories = item.Accessories || item.accessories || item.accessory || item.Accessory || item.equipmentAccessories || item.EquipmentAccessories
         
-        const equipmentId = item.equipmentId || item.EquipmentId
+        const equipmentId = item.equipmentId || item.EquipmentId || item.itemId || item.ItemId
         const itemType = item.ItemType || item.itemType || (isConsumable ? 3 : 1)
         console.log('设备ID:', equipmentId, '设备类型:', itemType)
         
@@ -664,6 +1042,28 @@ function ProjectInbound() {
           }
         }
         
+        // 确定设备名称
+        let equipmentName = item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || item.Name || item.name
+        // 确定品牌
+        let brand = item.brand || item.Brand
+        // 确定型号
+        let model = item.model || item.Model
+        // 确定单位
+        let unit = item.unit || item.Unit
+        // 确定数量
+        let quantity = item.quantity || item.Quantity
+        
+        // 如果是已入库的设备，使用已入库记录中的信息
+        if (existingItem) {
+          equipmentName = existingItem.equipmentName || existingItem.EquipmentName || existingItem.itemName || existingItem.ItemName || equipmentName
+          brand = existingItem.brand || existingItem.Brand || brand
+          model = existingItem.model || existingItem.Model || model
+          unit = existingItem.unit || existingItem.Unit || unit
+          quantity = existingItem.quantity || existingItem.Quantity || quantity
+          deviceCode = existingItem.deviceCode || existingItem.DeviceCode || deviceCode
+          accessories = existingItem.accessories || existingItem.Accessories || existingItem.accessory || existingItem.Accessory || existingItem.equipmentAccessories || existingItem.EquipmentAccessories || accessories
+        }
+        
         return {
           ...item,
           id: `${outboundOrder.id}-${index}`, // 添加唯一ID
@@ -673,7 +1073,20 @@ function ProjectInbound() {
           deviceCode: deviceCode || '无',
           accessories: accessories || '无',
           itemType: itemType,
-          isConsumable: isConsumable
+          isConsumable: isConsumable,
+          equipmentName: equipmentName,
+          ItemName: equipmentName,
+          brand: brand,
+          Brand: brand,
+          model: model,
+          Model: model,
+          unit: unit,
+          Unit: unit,
+          quantity: quantity,
+          Quantity: quantity,
+          // 使用已入库记录中的状态，如果存在
+          status: existingItem ? (existingItem.status || existingItem.Status || existingItem.deviceStatus || existingItem.DeviceStatus) : (item.status || item.Status || item.deviceStatus || item.DeviceStatus),
+          DeviceStatus: existingItem ? (existingItem.status || existingItem.Status || existingItem.deviceStatus || existingItem.DeviceStatus) : (item.status || item.Status || item.deviceStatus || item.DeviceStatus)
         }
       }))
       
@@ -868,25 +1281,23 @@ function ProjectInbound() {
               if (isMarked) {
                 // 取消标记入库
                 setSelectedItems(prev => {
-                  const updatedItems = prev.map(item => 
+                  return prev.map(item => 
                     item.id === record.id ? { ...item, isMarkedInbound: false, inboundQuantity: record.isConsumable ? (item.quantity || item.Quantity || 0) : 0 } : item
                   )
-                  message.info('已取消标记入库')
-                  return updatedItems
                 })
+                message.info('已取消标记入库')
               } else {
                 // 标记入库操作
                 setSelectedItems(prev => {
-                  const updatedItems = prev.map(item => 
+                  return prev.map(item => 
                     item.id === record.id ? { 
                       ...item, 
                       isMarkedInbound: true,
                       inboundQuantity: record.isConsumable ? item.inboundQuantity : (item.quantity || item.Quantity || 0)
                     } : item
                   )
-                  message.success('标记入库成功')
-                  return updatedItems
                 })
+                message.success('标记入库成功')
               }
             }}
           >
@@ -935,10 +1346,10 @@ function ProjectInbound() {
               编辑
             </Button>
           )}
-          <Button type="primary" onClick={() => handlePartialInbound(record)}>
+          <Button type="primary" onClick={() => handlePartialInbound(record)} disabled={record.status === '全部入库'}>
             部分入库
           </Button>
-          <Button type="default" onClick={() => handleFullInbound(record)}>
+          <Button type="default" onClick={() => handleFullInbound(record)} disabled={record.status === '全部入库'}>
             全部入库
           </Button>
           <Popconfirm
@@ -962,6 +1373,12 @@ function ProjectInbound() {
   // 预览入库记录
   const previewInbound = async (record) => {
     console.log('预览入库记录:', record)
+    console.log('入库记录items:', record.items)
+    
+    // 如果有items，打印第一个item的所有字段
+    if (record.items && record.items.length > 0) {
+      console.log('第一个item的所有字段:', JSON.stringify(record.items[0], null, 2))
+    }
     
     // 构建预览数据
     const inboundItems = record.items || []
@@ -978,19 +1395,23 @@ function ProjectInbound() {
       warehouseKeeper: record.warehouseKeeper || '',
       inboundDate: record.inboundDate ? new Date(record.inboundDate).toISOString().split('T')[0] : '',
       remark: record.remark || '',
-      items: inboundItems.map(item => ({
-        type: item.itemType === 1 ? '专用设备' : item.itemType === 2 ? '通用设备' : '耗材',
-        name: item.itemName || item.equipmentName || '',
-        deviceId: item.deviceCode || item.equipmentId || '',
-        brand: item.brand || '',
-        model: item.model || '',
-        quantity: item.quantity || 0,
-        unit: item.unit || '',
-        accessories: item.accessories || '',
-        status: item.status || item.deviceStatus || '',
-        remark: item.remark || item.Remark || '',
-        isInbound: true
-      }))
+      items: inboundItems.map((item, index) => {
+        console.log(`处理item ${index}:`, item)
+        return {
+          id: `${record.id}-${index}`, // 添加唯一ID
+          type: item.itemType === 1 ? '专用设备' : item.itemType === 2 ? '通用设备' : '耗材',
+          name: item.ItemName || item.EquipmentName || item.equipmentName || item.itemName || item.Name || item.name || '',
+          deviceId: item.deviceCode || item.DeviceCode || item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || item.deviceId || item.DeviceId || '',
+          brand: item.brand || item.Brand || '',
+          model: item.model || item.Model || '',
+          quantity: item.quantity || item.Quantity || 0,
+          unit: item.unit || item.Unit || '',
+          accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || item.equipmentAccessories || item.EquipmentAccessories || '',
+          status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '',
+          remark: item.remark || item.Remark || '',
+          isInbound: true
+        }
+      })
     }
     
     console.log('预览数据:', previewDataObj)
@@ -1016,10 +1437,11 @@ function ProjectInbound() {
       inboundDate: values.inboundDate ? values.inboundDate.format('YYYY-MM-DD') : '',
       remark: values.remark || '',
       items: selectedItems
-        .map(item => ({
+        .map((item, index) => ({
+          id: `${inboundNumber}-${index}`, // 添加唯一ID
           type: item.itemType === 1 ? '专用设备' : item.itemType === 2 ? '通用设备' : '耗材',
           name: item.ItemName || item.EquipmentName || item.equipmentName || '',
-          deviceId: item.deviceCode || item.DeviceCode || item.equipmentId || item.EquipmentId || '',
+          deviceId: item.deviceCode || item.DeviceCode || item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || '',
           brand: item.Brand || item.brand || '',
           model: item.Model || item.model || '',
           quantity: item.isMarkedInbound ? (item.inboundQuantity || 0) : 0,
@@ -1076,11 +1498,11 @@ function ProjectInbound() {
           </div>
         ) : (
           <Table 
-              columns={historyColumns} 
-              dataSource={inboundHistory} 
-              rowKey="id"
-              pagination={{ pageSize: 10 }}
-            />
+            columns={historyColumns} 
+            dataSource={inboundHistory} 
+            rowKey="id"
+            pagination={{ pageSize: 10 }}
+          />
         )}
       </Card>
 
@@ -1255,7 +1677,6 @@ function ProjectInbound() {
               取消
             </Button>
             <Button 
-              icon={<EyeOutlined />}
               onClick={() => {
                 form.validateFields().then(values => {
                   handlePreview(values)
@@ -1272,7 +1693,6 @@ function ProjectInbound() {
                   handleSubmit(values)
                 })
               }}
-              size="large"
             >
               提交入库
             </Button>
@@ -1287,319 +1707,192 @@ function ProjectInbound() {
         title="入库单预览"
         open={previewModalVisible}
         onCancel={() => setPreviewModalVisible(false)}
-        width="80%"
+        width="90%"
         zIndex={9999}
         mask={true}
         styles={{
           modal: { 
-            top: 20, 
-            maxWidth: 1000, 
+            top: 50, 
+            maxWidth: 1400, 
             zIndex: 9999, 
             backgroundColor: '#fff',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-            borderRadius: '12px'
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            borderRadius: '8px'
           },
           body: { 
             padding: 0,
-            backgroundColor: '#f5f5f5',
+            backgroundColor: '#fff',
             overflow: 'auto'
           },
           header: {
-            backgroundColor: '#1890ff',
-            borderBottom: 'none',
-            padding: '16px 24px'
+            backgroundColor: '#fff',
+            borderBottom: '1px solid #e8e8e8'
           },
           footer: {
             backgroundColor: '#fff',
-            borderTop: '1px solid #e8e8e8',
-            padding: '16px 24px'
+            borderTop: '1px solid #e8e8e8'
           },
           mask: {
-            backgroundColor: 'rgba(0, 0, 0, 0.45)'
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
           }
         }}
         className="preview-modal"
         footer={[
-          <Button key="close" onClick={() => setPreviewModalVisible(false)} size="large">
+          <Button key="close" onClick={() => setPreviewModalVisible(false)}>
             关闭
           </Button>,
-          <Button key="print" type="default" onClick={handlePrint} style={{ marginRight: 16 }} size="large" icon={<EyeOutlined />}>
+          <Button key="print" type="default" onClick={handlePrint} style={{ marginRight: 16 }}>
             打印
           </Button>,
-          <Button key="save" type="primary" onClick={handlePrint} size="large" icon={<CheckOutlined />}>
+          <Button key="save" type="primary" onClick={handlePrint}>
             保存PDF
           </Button>
         ]}
       >
-        <div ref={printRef} className="preview-content" style={{ padding: '15px', maxHeight: '85vh', overflow: 'auto', backgroundColor: '#fff' }}>
-          {/* 标题区域 */}
-          <div style={{ 
-            marginBottom: '20px', 
-            textAlign: 'center',
-            borderBottom: '3px solid #1890ff',
-            paddingBottom: '15px'
-          }}>
-            <h1 style={{ 
-              margin: 0, 
-              fontSize: '32px', 
-              fontWeight: 'bold',
-              color: '#1890ff',
-              letterSpacing: '2px'
-            }}>项目入库单</h1>
-            <p style={{ margin: '6px 0 0 0', color: '#666', fontSize: '18px' }}>
-              入库单号: <span style={{ fontWeight: 'bold', color: '#333', fontSize: '18px' }}>{previewData.inboundNumber || '待生成'}</span>
-            </p>
+        <div ref={printRef} className="preview-content" style={{ padding: '20px', maxHeight: '75vh', overflow: 'auto', backgroundColor: '#fff' }}>
+          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <h2>项目入库单</h2>
           </div>
           
-          {/* 项目信息卡片 */}
-          <div style={{ 
-            marginBottom: '16px', 
-            backgroundColor: '#fafafa',
-            borderRadius: '8px',
-            padding: '15px',
-            border: '1px solid #e8e8e8'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 12px 0', 
-              color: '#1890ff',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <span style={{ 
-                display: 'inline-block', 
-                width: '4px', 
-                height: '20px', 
-                backgroundColor: '#1890ff',
-                marginRight: '8px',
-                borderRadius: '2px'
-              }}></span>
-              项目信息
-            </h3>
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={12} md={8} lg={5}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ color: '#999', fontSize: '16px', marginBottom: '2px' }}>项目名称</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.projectName || '-'}</span>
-                </div>
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            {/* 第一行：入库单号 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col span={24}>
+                <p style={{ margin: 0, fontSize: '16px' }}><strong>入库单号:</strong> {previewData.inboundNumber}</p>
               </Col>
-              <Col xs={24} sm={12} md={8} lg={4}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ color: '#999', fontSize: '16px', marginBottom: '2px' }}>项目时间</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.projectTime || '-'}</span>
-                </div>
+            </Row>
+            
+            {/* 第二行：项目名称、项目时间、使用地 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>项目名称:</strong> {previewData.projectName}</p>
               </Col>
-              <Col xs={24} sm={12} md={8} lg={5}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ color: '#999', fontSize: '16px', marginBottom: '2px' }}>使用地</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.usageLocation || '-'}</span>
-                </div>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>项目时间:</strong> {previewData.projectTime}</p>
               </Col>
-              <Col xs={24} sm={12} md={8} lg={5}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ color: '#999', fontSize: '16px', marginBottom: '2px' }}>项目负责人</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.projectManager || '-'}</span>
-                </div>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>使用地:</strong> {previewData.usageLocation}</p>
               </Col>
-              <Col xs={24} sm={12} md={8} lg={5}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ color: '#999', fontSize: '16px', marginBottom: '2px' }}>联系电话</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.contactPhone || '-'}</span>
-                </div>
+            </Row>
+            
+            {/* 第三行：项目负责人、联系电话、入库时间 */}
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>项目负责人:</strong> {previewData.projectManager}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>联系电话:</strong> {previewData.contactPhone}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>入库时间:</strong> {previewData.inboundDate}</p>
               </Col>
             </Row>
           </div>
           
-          {/* 入库物品清单 */}
-          <div style={{ 
-            marginBottom: '16px', 
-            backgroundColor: '#fff',
-            borderRadius: '8px',
-            padding: '15px',
-            border: '1px solid #e8e8e8'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 12px 0', 
-              color: '#1890ff',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <span style={{ 
-                display: 'inline-block', 
-                width: '4px', 
-                height: '20px', 
-                backgroundColor: '#1890ff',
-                marginRight: '8px',
-                borderRadius: '2px'
-              }}></span>
-              入库物品清单
-            </h3>
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>已选物品</h3>
             <Table 
               columns={[
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>状态</span>,
-                  dataIndex: 'isInbound',
-                  key: 'isInbound',
-                  width: '70px',
-                  align: 'center',
-                  render: (isInbound) => (
-                    isInbound ? (
-                      <span style={{ 
-                        color: '#52c41a',
-                        backgroundColor: '#f6ffed',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        border: '1px solid #b7eb8f',
-                        display: 'inline-block',
-                        textAlign: 'center',
-                        width: '50px'
-                      }}>已入库</span>
-                    ) : (
-                      <span style={{ 
-                        color: '#ff4d4f',
-                        backgroundColor: '#fff2f0',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        border: '1px solid #ffa39e',
-                        display: 'inline-block',
-                        textAlign: 'center',
-                        width: '50px'
-                      }}>未入库</span>
-                    )
-                  )
-                },
-                {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>类型</span>,
+                  title: '类型',
                   dataIndex: 'type',
                   key: 'type',
-                  width: '80px',
-                  align: 'center',
-                  render: (text) => <span style={{ fontSize: '16px' }}>{text || '-'}</span>
+                  width: '6%'
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>设备名称</span>,
+                  title: '设备名称',
                   dataIndex: 'name',
                   key: 'name',
-                  width: '120px',
+                  width: '12%',
                   render: (text) => (
                     <div style={{ 
                       whiteSpace: 'normal', 
                       wordBreak: 'break-all',
-                      lineHeight: '1.4',
-                      fontWeight: '500',
-                      fontSize: '16px'
+                      lineHeight: '1.4'
                     }}>
                       {text || '-'}
                     </div>
                   )
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>设备编号</span>,
+                  title: '设备编号',
                   dataIndex: 'deviceId',
                   key: 'deviceId',
-                  width: '100px',
+                  width: '10%',
                   render: (text) => (
                     <div style={{ 
                       whiteSpace: 'normal', 
                       wordBreak: 'break-all',
-                      lineHeight: '1.4',
-                      fontFamily: 'monospace',
-                      fontSize: '14px'
+                      lineHeight: '1.4'
                     }}>
                       {text || '-'}
                     </div>
                   )
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>品牌</span>,
+                  title: '品牌',
                   dataIndex: 'brand',
                   key: 'brand',
-                  width: '80px',
-                  align: 'center',
-                  render: (text) => <span style={{ fontSize: '16px' }}>{text || '-'}</span>
+                  width: '8%'
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>型号</span>,
+                  title: '型号',
                   dataIndex: 'model',
                   key: 'model',
-                  width: '90px',
+                  width: '10%',
                   render: (text) => (
                     <div style={{ 
                       whiteSpace: 'normal', 
                       wordBreak: 'break-all',
-                      lineHeight: '1.4',
-                      fontSize: '16px'
+                      lineHeight: '1.4'
                     }}>
                       {text || '-'}
                     </div>
                   )
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>入库数量</span>,
+                  title: '数量',
                   dataIndex: 'quantity',
                   key: 'quantity',
-                  width: '70px',
-                  align: 'center',
-                  render: (quantity, record) => (
-                    <span style={{ 
-                      fontWeight: 'bold',
-                      color: quantity > 0 ? '#52c41a' : '#999',
-                      fontSize: '16px'
-                    }}>
-                      {quantity}
-                    </span>
-                  )
+                  width: '5%'
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>单位</span>,
+                  title: '单位',
                   dataIndex: 'unit',
                   key: 'unit',
-                  width: '60px',
-                  align: 'center',
-                  render: (text) => <span style={{ fontSize: '16px' }}>{text || '-'}</span>
+                  width: '5%'
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>配件</span>,
+                  title: '配件',
                   dataIndex: 'accessories',
                   key: 'accessories',
-                  width: '120px',
+                  width: '25%',
                   render: (text) => (
                     <div style={{ 
                       whiteSpace: 'normal', 
                       wordBreak: 'break-all',
-                      lineHeight: '1.4',
-                      fontSize: '14px'
+                      lineHeight: '1.4'
                     }}>
                       {text || '-'}
                     </div>
                   )
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>设备状态</span>,
+                  title: '设备状态',
                   dataIndex: 'status',
                   key: 'status',
-                  width: '100px',
-                  align: 'center',
-                  render: (text) => <span style={{ fontSize: '16px' }}>{text || '-'}</span>
+                  width: '8%'
                 },
                 {
-                  title: <span style={{ fontWeight: 'bold', fontSize: '16px' }}>备注</span>,
+                  title: '备注',
                   dataIndex: 'remark',
                   key: 'remark',
-                  width: '100px',
+                  width: '10%',
                   render: (text) => (
                     <div style={{ 
                       whiteSpace: 'normal', 
                       wordBreak: 'break-all',
-                      lineHeight: '1.4',
-                      fontSize: '14px'
+                      lineHeight: '1.4'
                     }}>
                       {text || '-'}
                     </div>
@@ -1607,126 +1900,32 @@ function ProjectInbound() {
                 }
               ]} 
               dataSource={previewData.items || []} 
-              rowKey={(record) => record.deviceId || record.id || Math.random()}
+              rowKey={(record) => record.deviceId || record.id}
               pagination={false}
-              size="middle"
+              size="small"
               bordered
               style={{ width: '100%' }}
-              scroll={{ x: 1400 }}
-              rowClassName={(record) => record.isInbound ? 'preview-marked-row' : ''}
             />
           </div>
           
-          {/* 备注 */}
-          <div style={{ 
-            marginBottom: '16px', 
-            backgroundColor: '#fafafa',
-            borderRadius: '8px',
-            padding: '15px',
-            border: '1px solid #e8e8e8'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 10px 0', 
-              color: '#1890ff',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <span style={{ 
-                display: 'inline-block', 
-                width: '4px', 
-                height: '20px', 
-                backgroundColor: '#1890ff',
-                marginRight: '8px',
-                borderRadius: '2px'
-              }}></span>
-              备注
-            </h3>
-            <div style={{ 
-              whiteSpace: 'pre-line', 
-              backgroundColor: '#fff', 
-              padding: '12px', 
-              borderRadius: '6px',
-              minHeight: '40px',
-              border: '1px solid #e8e8e8',
-              color: '#333',
-              lineHeight: '1.5',
-              fontSize: '16px'
-            }}>
-              {previewData.remark || '无'}
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>备注</h3>
+            <div style={{ whiteSpace: 'pre-line', backgroundColor: '#fafafa', padding: '12px', borderRadius: '4px', minHeight: '60px' }}>
+              {previewData.remark}
             </div>
           </div>
           
-          {/* 签收信息 */}
-          <div style={{ 
-            backgroundColor: '#fafafa',
-            borderRadius: '8px',
-            padding: '15px',
-            border: '1px solid #e8e8e8'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 12px 0', 
-              color: '#1890ff',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <span style={{ 
-                display: 'inline-block', 
-                width: '4px', 
-                height: '20px', 
-                backgroundColor: '#1890ff',
-                marginRight: '8px',
-                borderRadius: '2px'
-              }}></span>
-              签收信息
-            </h3>
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={12} md={6}>
-                <div style={{ 
-                  backgroundColor: '#fff',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #e8e8e8'
-                }}>
-                  <span style={{ color: '#999', fontSize: '16px', display: 'block', marginBottom: '2px' }}>经办人</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.handler || '-'}</span>
-                </div>
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>签收信息</h3>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>经办人:</strong> {previewData.handler}</p>
               </Col>
-              <Col xs={24} sm={12} md={6}>
-                <div style={{ 
-                  backgroundColor: '#fff',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #e8e8e8'
-                }}>
-                  <span style={{ color: '#999', fontSize: '16px', display: 'block', marginBottom: '2px' }}>检测人</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.inspector || '-'}</span>
-                </div>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>检测人:</strong> {previewData.inspector}</p>
               </Col>
-              <Col xs={24} sm={12} md={6}>
-                <div style={{ 
-                  backgroundColor: '#fff',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #e8e8e8'
-                }}>
-                  <span style={{ color: '#999', fontSize: '16px', display: 'block', marginBottom: '2px' }}>库管</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.warehouseKeeper || '-'}</span>
-                </div>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <div style={{ 
-                  backgroundColor: '#fff',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #e8e8e8'
-                }}>
-                  <span style={{ color: '#999', fontSize: '16px', display: 'block', marginBottom: '2px' }}>入库时间</span>
-                  <span style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>{previewData.inboundDate || '-'}</span>
-                </div>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}><strong>库管:</strong> {previewData.warehouseKeeper}</p>
               </Col>
             </Row>
           </div>

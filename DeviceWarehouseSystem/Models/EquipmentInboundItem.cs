@@ -29,6 +29,10 @@ public partial class EquipmentInboundItem
 
     public string? Remark { get; set; }
 
+    public string? SnCode { get; set; }
+
+    public string? Accessories { get; set; }
+
     public int EquipmentType { get; set; }
 
     public DateTime CreatedAt { get; set; }

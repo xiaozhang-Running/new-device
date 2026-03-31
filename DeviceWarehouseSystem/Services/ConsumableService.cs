@@ -1,7 +1,6 @@
 using DeviceWarehouseSystem.DTOs;
 using DeviceWarehouseSystem.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -23,10 +22,29 @@ public class ConsumableService
         {
             if (_context.Consumables == null)
             {
-                return new List<ConsumableDTO>();
+                return [];
             }
             return await _context.Consumables
-                .Select(c => MapToConsumableDTO(c))
+                .Select(c => new ConsumableDTO
+                {
+                    Id = c.Id,
+                    Name = c.Name ?? "",
+                    Brand = c.Brand ?? "",
+                    ModelSpecification = c.ModelSpecification ?? "",
+                    TotalQuantity = c.TotalQuantity,
+                    OriginalQuantity = c.OriginalQuantity,
+                    UsedQuantity = c.UsedQuantity,
+                    RemainingQuantity = c.RemainingQuantity,
+                    Unit = c.Unit ?? "",
+                    Company = c.Company ?? "",
+                    Status = c.Status ?? "",
+                    Accessories = c.Accessories ?? "",
+                    Remark = c.Remark ?? "",
+                    Image = c.Image ?? "",
+                    Location = c.Location ?? "",
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt
+                })
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -65,14 +83,14 @@ public class ConsumableService
         try
         {
             // 验证输入数据
-            if (string.IsNullOrWhiteSpace(dto.name))
+            if (string.IsNullOrWhiteSpace(dto.Name))
             {
                 throw new Exception("耗材名称不能为空");
             }
 
             // 计算总数量，处理可能的null值
-            int usedQuantity = dto.usedQuantity;
-            int remainingQuantity = dto.remainingQuantity;
+            int usedQuantity = dto.UsedQuantity;
+            int remainingQuantity = dto.RemainingQuantity;
             int totalQuantity = remainingQuantity + usedQuantity;
 
             // 根据剩余数量设置状态
@@ -80,20 +98,20 @@ public class ConsumableService
 
             var consumable = new Consumable
             {
-                Name = dto.name ?? "",
-                Brand = dto.brand ?? "",
-                ModelSpecification = dto.modelSpecification ?? "",
+                Name = dto.Name ?? "",
+                Brand = dto.Brand ?? "",
+                ModelSpecification = dto.ModelSpecification ?? "",
                 TotalQuantity = totalQuantity,
-                OriginalQuantity = dto.originalQuantity,
+                OriginalQuantity = dto.OriginalQuantity,
                 UsedQuantity = usedQuantity,
                 RemainingQuantity = remainingQuantity,
-                Unit = dto.unit ?? "",
-                Company = dto.company ?? "",
+                Unit = dto.Unit ?? "",
+                Company = dto.Company ?? "",
                 Status = status,
-                Accessories = dto.accessories ?? "",
-                Remark = dto.remark ?? "",
-                Image = dto.image ?? "",
-                Location = dto.location ?? "",
+                Accessories = dto.Accessories ?? "",
+                Remark = dto.Remark ?? "",
+                Image = dto.Image ?? "",
+                Location = dto.Location ?? "",
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -132,18 +150,18 @@ public class ConsumableService
             }
 
             // 更新字段
-            if (dto.name != null) consumable.Name = dto.name;
-            if (dto.brand != null) consumable.Brand = dto.brand;
-            if (dto.modelSpecification != null) consumable.ModelSpecification = dto.modelSpecification;
-            if (dto.originalQuantity.HasValue) consumable.OriginalQuantity = dto.originalQuantity.Value;
-            if (dto.usedQuantity.HasValue) consumable.UsedQuantity = dto.usedQuantity.Value;
-            if (dto.remainingQuantity.HasValue) consumable.RemainingQuantity = dto.remainingQuantity.Value;
-            if (dto.unit != null) consumable.Unit = dto.unit;
-            if (dto.company != null) consumable.Company = dto.company;
-            if (dto.accessories != null) consumable.Accessories = dto.accessories;
-            if (dto.remark != null) consumable.Remark = dto.remark;
-            if (dto.image != null) consumable.Image = dto.image;
-            if (dto.location != null) consumable.Location = dto.location;
+            if (dto.Name != null) consumable.Name = dto.Name;
+            if (dto.Brand != null) consumable.Brand = dto.Brand;
+            if (dto.ModelSpecification != null) consumable.ModelSpecification = dto.ModelSpecification;
+            if (dto.OriginalQuantity.HasValue) consumable.OriginalQuantity = dto.OriginalQuantity.Value;
+            if (dto.UsedQuantity.HasValue) consumable.UsedQuantity = dto.UsedQuantity.Value;
+            if (dto.RemainingQuantity.HasValue) consumable.RemainingQuantity = dto.RemainingQuantity.Value;
+            if (dto.Unit != null) consumable.Unit = dto.Unit;
+            if (dto.Company != null) consumable.Company = dto.Company;
+            if (dto.Accessories != null) consumable.Accessories = dto.Accessories;
+            if (dto.Remark != null) consumable.Remark = dto.Remark;
+            if (dto.Image != null) consumable.Image = dto.Image;
+            if (dto.Location != null) consumable.Location = dto.Location;
 
             // 重新计算总数量和状态
             consumable.TotalQuantity = consumable.RemainingQuantity + consumable.UsedQuantity;
@@ -197,14 +215,33 @@ public class ConsumableService
         {
             if (_context.Consumables == null)
             {
-                return new List<ConsumableDTO>();
+                return [];
             }
             searchText = searchText?.ToLower() ?? "";
             return await _context.Consumables
                 .Where(c => (c.Name != null && c.Name.ToLower().Contains(searchText)) ||
                             (c.Brand != null && c.Brand.ToLower().Contains(searchText)) ||
                             (c.ModelSpecification != null && c.ModelSpecification.ToLower().Contains(searchText)))
-                .Select(c => MapToConsumableDTO(c))
+                .Select(c => new ConsumableDTO
+                {
+                    Id = c.Id,
+                    Name = c.Name ?? "",
+                    Brand = c.Brand ?? "",
+                    ModelSpecification = c.ModelSpecification ?? "",
+                    TotalQuantity = c.TotalQuantity,
+                    OriginalQuantity = c.OriginalQuantity,
+                    UsedQuantity = c.UsedQuantity,
+                    RemainingQuantity = c.RemainingQuantity,
+                    Unit = c.Unit ?? "",
+                    Company = c.Company ?? "",
+                    Status = c.Status ?? "",
+                    Accessories = c.Accessories ?? "",
+                    Remark = c.Remark ?? "",
+                    Image = c.Image ?? "",
+                    Location = c.Location ?? "",
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt
+                })
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -220,11 +257,30 @@ public class ConsumableService
         {
             if (_context.Consumables == null)
             {
-                return new List<ConsumableDTO>();
+                return [];
             }
             return await _context.Consumables
                 .Where(c => c.Status == status)
-                .Select(c => MapToConsumableDTO(c))
+                .Select(c => new ConsumableDTO
+                {
+                    Id = c.Id,
+                    Name = c.Name ?? "",
+                    Brand = c.Brand ?? "",
+                    ModelSpecification = c.ModelSpecification ?? "",
+                    TotalQuantity = c.TotalQuantity,
+                    OriginalQuantity = c.OriginalQuantity,
+                    UsedQuantity = c.UsedQuantity,
+                    RemainingQuantity = c.RemainingQuantity,
+                    Unit = c.Unit ?? "",
+                    Company = c.Company ?? "",
+                    Status = c.Status ?? "",
+                    Accessories = c.Accessories ?? "",
+                    Remark = c.Remark ?? "",
+                    Image = c.Image ?? "",
+                    Location = c.Location ?? "",
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt
+                })
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -240,11 +296,30 @@ public class ConsumableService
         {
             if (_context.Consumables == null)
             {
-                return new List<ConsumableDTO>();
+                return [];
             }
             return await _context.Consumables
                 .Where(c => c.Location == location)
-                .Select(c => MapToConsumableDTO(c))
+                .Select(c => new ConsumableDTO
+                {
+                    Id = c.Id,
+                    Name = c.Name ?? "",
+                    Brand = c.Brand ?? "",
+                    ModelSpecification = c.ModelSpecification ?? "",
+                    TotalQuantity = c.TotalQuantity,
+                    OriginalQuantity = c.OriginalQuantity,
+                    UsedQuantity = c.UsedQuantity,
+                    RemainingQuantity = c.RemainingQuantity,
+                    Unit = c.Unit ?? "",
+                    Company = c.Company ?? "",
+                    Status = c.Status ?? "",
+                    Accessories = c.Accessories ?? "",
+                    Remark = c.Remark ?? "",
+                    Image = c.Image ?? "",
+                    Location = c.Location ?? "",
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt
+                })
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -297,23 +372,23 @@ public class ConsumableService
     {
         return new ConsumableDTO
         {
-            id = consumable.Id,
-            name = consumable.Name ?? "",
-            brand = consumable.Brand ?? "",
-            modelSpecification = consumable.ModelSpecification ?? "",
-            totalQuantity = consumable.TotalQuantity,
-            originalQuantity = consumable.OriginalQuantity,
-            usedQuantity = consumable.UsedQuantity,
-            remainingQuantity = consumable.RemainingQuantity,
-            unit = consumable.Unit ?? "",
-            company = consumable.Company ?? "",
-            status = consumable.Status ?? "",
-            accessories = consumable.Accessories ?? "",
-            remark = consumable.Remark ?? "",
-            image = consumable.Image ?? "",
-            location = consumable.Location ?? "",
-            createdAt = consumable.CreatedAt,
-            updatedAt = consumable.UpdatedAt
+            Id = consumable.Id,
+            Name = consumable.Name ?? "",
+            Brand = consumable.Brand ?? "",
+            ModelSpecification = consumable.ModelSpecification ?? "",
+            TotalQuantity = consumable.TotalQuantity,
+            OriginalQuantity = consumable.OriginalQuantity,
+            UsedQuantity = consumable.UsedQuantity,
+            RemainingQuantity = consumable.RemainingQuantity,
+            Unit = consumable.Unit ?? "",
+            Company = consumable.Company ?? "",
+            Status = consumable.Status ?? "",
+            Accessories = consumable.Accessories ?? "",
+            Remark = consumable.Remark ?? "",
+            Image = consumable.Image ?? "",
+            Location = consumable.Location ?? "",
+            CreatedAt = consumable.CreatedAt,
+            UpdatedAt = consumable.UpdatedAt
         };
     }
 }

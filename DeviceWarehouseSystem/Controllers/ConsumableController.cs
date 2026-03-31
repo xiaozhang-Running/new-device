@@ -62,23 +62,23 @@ public class ConsumableController : ControllerBase
         // 转换为ConsumableCreateDTO
         var createDTO = new ConsumableCreateDTO
         {
-            name = consumableDTO.name,
-            brand = consumableDTO.brand,
-            modelSpecification = consumableDTO.modelSpecification,
-            totalQuantity = consumableDTO.totalQuantity,
-            originalQuantity = consumableDTO.originalQuantity,
-            usedQuantity = consumableDTO.usedQuantity,
-            remainingQuantity = consumableDTO.remainingQuantity,
-            unit = consumableDTO.unit,
-            company = consumableDTO.company,
-            accessories = consumableDTO.accessories,
-            remark = consumableDTO.remark,
-            image = consumableDTO.image,
-            location = consumableDTO.location
+            Name = consumableDTO.Name,
+            Brand = consumableDTO.Brand,
+            ModelSpecification = consumableDTO.ModelSpecification,
+            TotalQuantity = consumableDTO.TotalQuantity,
+            OriginalQuantity = consumableDTO.OriginalQuantity,
+            UsedQuantity = consumableDTO.UsedQuantity,
+            RemainingQuantity = consumableDTO.RemainingQuantity,
+            Unit = consumableDTO.Unit,
+            Company = consumableDTO.Company,
+            Accessories = consumableDTO.Accessories,
+            Remark = consumableDTO.Remark,
+            Image = consumableDTO.Image,
+            Location = consumableDTO.Location
         };
         
         var consumable = await _consumableService.CreateConsumableAsync(createDTO);
-        return CreatedAtAction(nameof(GetConsumable), new { id = consumable.id }, consumable);
+        return CreatedAtAction(nameof(GetConsumable), new { id = consumable.Id }, consumable);
     }
 
     // PUT: api/Consumable/5
@@ -88,19 +88,19 @@ public class ConsumableController : ControllerBase
         // 转换为ConsumableUpdateDTO
         var updateDTO = new ConsumableUpdateDTO
         {
-            name = consumableDTO.name,
-            brand = consumableDTO.brand,
-            modelSpecification = consumableDTO.modelSpecification,
-            totalQuantity = consumableDTO.totalQuantity,
-            originalQuantity = consumableDTO.originalQuantity,
-            usedQuantity = consumableDTO.usedQuantity,
-            remainingQuantity = consumableDTO.remainingQuantity,
-            unit = consumableDTO.unit,
-            company = consumableDTO.company,
-            accessories = consumableDTO.accessories,
-            remark = consumableDTO.remark,
-            image = consumableDTO.image,
-            location = consumableDTO.location
+            Name = consumableDTO.Name,
+            Brand = consumableDTO.Brand,
+            ModelSpecification = consumableDTO.ModelSpecification,
+            TotalQuantity = consumableDTO.TotalQuantity,
+            OriginalQuantity = consumableDTO.OriginalQuantity,
+            UsedQuantity = consumableDTO.UsedQuantity,
+            RemainingQuantity = consumableDTO.RemainingQuantity,
+            Unit = consumableDTO.Unit,
+            Company = consumableDTO.Company,
+            Accessories = consumableDTO.Accessories,
+            Remark = consumableDTO.Remark,
+            Image = consumableDTO.Image,
+            Location = consumableDTO.Location
         };
         
         var consumable = await _consumableService.UpdateConsumableAsync(id, updateDTO);
