@@ -1,0 +1,618 @@
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Table, Button, Space, Modal, message, Popconfirm, Input, Select, Card, Row, Col, Descriptions, Tag, Image } from 'antd'
+import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons'
+import ConsumableForm from './ConsumableForm'
+import FileUpload from './FileUpload'
+import * as XLSX from 'xlsx'
+import { get, post, put, del } from '../services/request'
+import { useListData, useImageLoader, useImagePreview } from '../hooks'
+
+// 默认耗材图片
+const DEFAULT_CONSUMABLE_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiBmaWxsPSIjZmZmZmZmIi8+Cjx0ZXh0IHg9IjI1NiIgeT0iMjU2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM4ODgiPuiuvuaYj+iDveaYjzwvdGV4dD4KPC9zdmc+'
+
+const { Option } = Select
+const { Search } = Input
+
+// 数据处理函数
+const processConsumableData = (data) => {
+  return data.map((item, index) => ({
+    ...item,
+    key: item.id || index,
+    image: ((item.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_CONSUMABLE_IMAGE,
+    images: []
+  }))
+}
+
+const ConsumableList = () => {
+  // 使用useCallback稳定fetchApi函数，避免无限循环
+  const fetchApi = useCallback(() => get('/Consumable'), []);
+  
+  // 使用通用列表数据Hook
+  const {
+    data: consumables,
+    filteredData: filteredConsumables,
+    setFilteredData,
+    loading,
+    error,
+    refresh,
+    updateItem,
+    deleteItem,
+    addItem
+  } = useListData({
+    fetchApi,
+    processData: processConsumableData,
+    errorMessage: '获取耗材列表失败'
+  })
+
+  // 使用图片加载Hook
+  const imageLoaderOptions = useMemo(() => ({
+    equipmentType: 3, // 3 表示耗材
+    defaultImage: DEFAULT_CONSUMABLE_IMAGE,
+    loadDelay: 100
+  }), []);
+  
+  const {
+    loadImagesBatch,
+    getEquipmentImages,
+    refreshImages
+  } = useImageLoader(imageLoaderOptions);
+
+  // 使用图片预览Hook
+  const {
+    previewVisible,
+    previewImages,
+    currentImageIndex,
+    openPreview,
+    closePreview,
+    setCurrentImageIndex
+  } = useImagePreview()
+
+  // 本地状态
+  const [showForm, setShowForm] = useState(false)
+  const [editingConsumable, setEditingConsumable] = useState(null)
+  const [showDetail, setShowDetail] = useState(false)
+  const [selectedConsumable, setSelectedConsumable] = useState(null)
+  const [searchText, setSearchText] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [locationFilter, setLocationFilter] = useState('')
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
+
+  // 延迟加载图片 - 只加载当前页面的耗材图片
+  // 使用useMemo计算当前页面的耗材ID列表，避免不必要的重新计算
+  const currentPageConsumableIds = useMemo(() => {
+    if (filteredConsumables.length === 0) return [];
+    const startIndex = (pagination.current - 1) * pagination.pageSize;
+    const endIndex = startIndex + pagination.pageSize;
+    return filteredConsumables.slice(startIndex, endIndex).map(c => c.id);
+  }, [filteredConsumables, pagination.current, pagination.pageSize]);
+
+  // 使用ref跟踪已经加载过的图片ID，避免重复加载
+  const loadedImageIdsRef = useRef(new Set());
+  
+  // 使用ref存储loadImagesBatch函数，避免依赖变化导致的无限循环
+  const loadImagesBatchRef = useRef(loadImagesBatch);
+  loadImagesBatchRef.current = loadImagesBatch;
+
+  // 延迟加载图片
+  useEffect(() => {
+    if (currentPageConsumableIds.length > 0) {
+      // 过滤掉已经加载过的图片ID
+      const unloadedIds = currentPageConsumableIds.filter(id => !loadedImageIdsRef.current.has(id));
+      
+      if (unloadedIds.length > 0) {
+        unloadedIds.forEach(id => loadedImageIdsRef.current.add(id));
+        loadImagesBatchRef.current(unloadedIds);
+      }
+    }
+  }, [currentPageConsumableIds]);
+
+  // 处理搜索和筛选
+  useEffect(() => {
+    let result = [...consumables]
+    
+    if (searchText) {
+      const text = searchText.toLowerCase()
+      result = result.filter(consumable => 
+        (consumable.name && consumable.name.toLowerCase().includes(text)) ||
+        (consumable.brand && consumable.brand.toLowerCase().includes(text)) ||
+        (consumable.modelSpecification && consumable.modelSpecification.toLowerCase().includes(text))
+      )
+    }
+    
+    if (statusFilter) {
+      result = result.filter(consumable => consumable.status === statusFilter)
+    }
+    
+    if (locationFilter) {
+      result = result.filter(consumable => consumable.location === locationFilter)
+    }
+    
+    setFilteredData(result)
+  }, [consumables, searchText, statusFilter, locationFilter])
+
+  const handleAdd = () => {
+    setEditingConsumable(null)
+    setShowForm(true)
+  }
+
+  const handleEdit = (consumable) => {
+    setEditingConsumable(consumable)
+    setShowForm(true)
+  }
+
+  const handleDetail = (consumable) => {
+    setSelectedConsumable(consumable)
+    setShowDetail(true)
+  }
+
+  const handleImagePreview = (images) => {
+    const imageUrls = images.map(img => img.url)
+    openPreview(imageUrls, 0)
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await del(`/Consumable/${id}`)
+      deleteItem(id)
+      message.success('耗材删除成功')
+    } catch (error) {
+      message.error('删除耗材失败')
+    }
+  }
+
+  const handleSave = async (consumable) => {
+    try {
+      if (consumable.id) {
+        // 编辑现有耗材
+        const updatedConsumable = await put(`/Consumable/${consumable.id}`, consumable)
+        const updatedConsumableWithKey = {
+          ...updatedConsumable,
+          key: updatedConsumable.id,
+          image: ((updatedConsumable.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_CONSUMABLE_IMAGE,
+          images: []
+        }
+        updateItem(consumable.id, updatedConsumableWithKey)
+        message.success('耗材更新成功')
+      } else {
+        // 添加新耗材
+        const newConsumable = await post('/Consumable', consumable)
+        const newConsumableWithKey = {
+          ...newConsumable,
+          key: newConsumable.id,
+          image: ((newConsumable.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_CONSUMABLE_IMAGE,
+          images: []
+        }
+        addItem(newConsumableWithKey)
+        message.success('耗材添加成功')
+      }
+      setShowForm(false)
+    } catch (error) {
+      message.error('保存耗材失败')
+    }
+  }
+
+  const handleImport = async (data) => {
+    const importedConsumables = data.map(item => {
+      const name = item['耗材名称'] || item['名称'] || item['consumableName'] || item.name
+      const brand = item['品牌'] || item['brand'] || item.brand
+      const modelSpecification = item['型号规格'] || item['规格'] || item['model'] || item.modelSpecification || item.model
+      const unit = item['单位'] || item['unit'] || item.unit
+      const location = item['位置'] || item['location'] || item.location
+      const remark = item['备注'] || item['remark'] || item.remark || ''
+      
+      let usedQuantityValue = parseInt(item['已用数量'] || item['usedQuantity'] || item.usedQuantity || 0)
+      let remainingQuantityValue = parseInt(item['剩余数量'] || item['remainingQuantity'] || item.remainingQuantity || 0)
+      const totalQty = remainingQuantityValue + usedQuantityValue
+      
+      let itemStatus = remainingQuantityValue <= 0 ? '无货' : remainingQuantityValue < 10 ? '短缺' : '正常'
+      
+      return {
+        name,
+        brand,
+        modelSpecification,
+        totalQuantity: totalQty,
+        originalQuantity: totalQty,
+        usedQuantity: usedQuantityValue,
+        remainingQuantity: remainingQuantityValue,
+        unit,
+        company: '科技有限公司',
+        status: itemStatus,
+        accessories: '',
+        remark,
+        image: '',
+        location
+      }
+    })
+    
+    let successCount = 0
+    for (const consumable of importedConsumables) {
+      try {
+        await post('/Consumable', consumable)
+        successCount++
+      } catch (error) {
+        console.error('导入耗材失败:', error)
+      }
+    }
+    
+    await refresh()
+    message.success(`成功导入 ${successCount} 个耗材`)
+  }
+
+  const handleClearAll = async () => {
+    try {
+      await del('/Consumable')
+      setFilteredData([])
+      message.success('所有耗材已清空')
+    } catch (error) {
+      console.error('清空耗材失败:', error)
+      message.error('清空耗材失败')
+    }
+  }
+
+  const handleExport = () => {
+    const exportData = filteredConsumables.map(item => ({
+      '耗材名称': item.name,
+      '品牌': item.brand || '',
+      '型号规格': item.modelSpecification || '',
+      '总数量': item.totalQuantity,
+      '已用数量': item.usedQuantity,
+      '剩余数量': item.remainingQuantity,
+      '单位': item.unit || '',
+      '状态': item.status || '',
+      '所在仓库': item.location || '',
+      '所属公司': item.company || '',
+      '备注': item.remark || ''
+    }))
+
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet(exportData)
+    XLSX.utils.book_append_sheet(wb, ws, '耗材数据')
+    XLSX.writeFile(wb, `耗材数据_${new Date().toISOString().split('T')[0]}.xlsx`)
+    message.success('耗材数据导出成功')
+  }
+
+  const columns = [
+    { title: '耗材名称', dataIndex: 'name', key: 'name', width: 120 },
+    { title: '品牌', dataIndex: 'brand', key: 'brand', width: 100 },
+    { title: '型号规格', dataIndex: 'modelSpecification', key: 'modelSpecification', width: 150 },
+    { title: '总数量', dataIndex: 'totalQuantity', key: 'totalQuantity', width: 80, align: 'center' },
+    { title: '已用数量', dataIndex: 'usedQuantity', key: 'usedQuantity', width: 80, align: 'center' },
+    {
+      title: '剩余数量',
+      dataIndex: 'remainingQuantity',
+      key: 'remainingQuantity',
+      width: 80,
+      align: 'center',
+      render: (remainingQuantity) => {
+        const color = remainingQuantity < 10 ? 'red' : remainingQuantity < 30 ? 'orange' : 'green'
+        return <span style={{ color }}>{remainingQuantity}</span>
+      }
+    },
+    { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, align: 'center' },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status) => {
+        const colorMap = { '正常': 'green', '短缺': 'orange', '无货': 'red' }
+        return <span style={{ color: colorMap[status] || 'blue' }}>{status}</span>
+      }
+    },
+    {
+      title: '图片',
+      dataIndex: 'images',
+      key: 'images',
+      width: 100,
+      render: (images, record) => {
+        const consumableImages = getEquipmentImages(record.id)
+        const hasImages = consumableImages.images && consumableImages.images.length > 0
+        const displayImage = hasImages ? consumableImages.mainImage : record.image
+        
+        return (
+          <div 
+            style={{ position: 'relative', cursor: 'pointer' }}
+            onClick={async () => {
+              if (!hasImages) {
+                await refreshImages(record.id)
+              }
+              const updatedImages = getEquipmentImages(record.id)
+              if (updatedImages.images && updatedImages.images.length > 0) {
+                handleImagePreview(updatedImages.images)
+              } else {
+                message.info('该耗材暂无图片')
+              }
+            }}
+          >
+            <img 
+              src={displayImage} 
+              alt="耗材图片" 
+              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4 }}
+            />
+            {hasImages && consumableImages.images.length > 1 && (
+              <div style={{ 
+                position: 'absolute', bottom: 0, right: 0, 
+                backgroundColor: 'rgba(0, 0, 0, 0.6)', color: 'white', 
+                fontSize: '12px', padding: '2px 6px', borderRadius: '10px'
+              }}>
+                +{consumableImages.images.length - 1}
+              </div>
+            )}
+          </div>
+        )
+      }
+    },
+    { title: '所在仓库', dataIndex: 'location', key: 'location', width: 100 },
+    { title: '所属公司', dataIndex: 'company', key: 'company', width: 120 },
+    {
+      title: '操作',
+      key: 'action',
+      width: 150,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space size="middle">
+          <Button icon={<EyeOutlined />} onClick={() => handleDetail(record)}>查看</Button>
+          <Button type="primary" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+          <Popconfirm
+            title="确定要删除这个耗材吗？"
+            onConfirm={() => handleDelete(record.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button danger icon={<DeleteOutlined />}>删除</Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ]
+
+  // 计算耗材状态统计
+  const statusStats = {
+    normal: consumables.filter(consumable => consumable.status === '正常').length,
+    shortage: consumables.filter(consumable => consumable.status === '短缺').length,
+    outOfStock: consumables.filter(consumable => consumable.status === '无货').length,
+    total: consumables.length
+  }
+
+  // 计算总数量统计
+  const quantityStats = {
+    total: consumables.reduce((sum, c) => sum + c.totalQuantity, 0),
+    used: consumables.reduce((sum, c) => sum + c.usedQuantity, 0),
+    remaining: consumables.reduce((sum, c) => sum + c.remainingQuantity, 0)
+  }
+
+  return (
+    <div className="consumable-list">
+      <div className="page-header">
+        <h2>耗材管理</h2>
+        <Space>
+          <FileUpload onImport={handleImport} module="consumable" />
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加耗材</Button>
+          <Popconfirm
+            title="确定要清空所有耗材吗？此操作不可恢复！"
+            onConfirm={handleClearAll}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button danger>清空耗材</Button>
+          </Popconfirm>
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>导出耗材</Button>
+        </Space>
+      </div>
+      
+      {/* 耗材状态统计卡片 */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={6}>
+          <Card>
+            <div className="stat-card">
+              <h3>耗材总数</h3>
+              <p className="stat-number">{statusStats.total}</p>
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div className="stat-card" style={{ color: '#52c41a' }}>
+              <h3>正常耗材</h3>
+              <p className="stat-number">{statusStats.normal}</p>
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div className="stat-card" style={{ color: '#faad14' }}>
+              <h3>短缺耗材</h3>
+              <p className="stat-number">{statusStats.shortage}</p>
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div className="stat-card" style={{ color: '#f5222d' }}>
+              <h3>无货耗材</h3>
+              <p className="stat-number">{statusStats.outOfStock}</p>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+      
+      {/* 耗材数量统计卡片 */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={8}>
+          <Card>
+            <div className="stat-card">
+              <h3>总数量</h3>
+              <p className="stat-number">{quantityStats.total}</p>
+            </div>
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <div className="stat-card" style={{ color: '#1890ff' }}>
+              <h3>已用数量</h3>
+              <p className="stat-number">{quantityStats.used}</p>
+            </div>
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card>
+            <div className="stat-card" style={{ color: '#52c41a' }}>
+              <h3>剩余数量</h3>
+              <p className="stat-number">{quantityStats.remaining}</p>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+      
+      {/* 搜索和筛选区域 */}
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]}>
+          <Col span={8}>
+            <Search
+              placeholder="搜索耗材名称、品牌或型号规格"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: '100%' }}
+              prefix={<SearchOutlined />}
+            />
+          </Col>
+          <Col span={6}>
+            <Select
+              placeholder="按状态筛选"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              style={{ width: '100%' }}
+              allowClear
+            >
+              <Option value="正常">正常</Option>
+              <Option value="短缺">短缺</Option>
+              <Option value="无货">无货</Option>
+            </Select>
+          </Col>
+          <Col span={6}>
+            <Select
+              placeholder="按仓库筛选"
+              value={locationFilter}
+              onChange={setLocationFilter}
+              style={{ width: '100%' }}
+              allowClear
+            >
+              <Option value="仓库A">仓库A</Option>
+              <Option value="仓库B">仓库B</Option>
+              <Option value="仓库C">仓库C</Option>
+            </Select>
+          </Col>
+          <Col span={4}>
+            <Button 
+              onClick={() => {
+                setSearchText('')
+                setStatusFilter('')
+                setLocationFilter('')
+              }}
+            >
+              重置筛选
+            </Button>
+          </Col>
+        </Row>
+      </Card>
+      
+      <Table 
+        columns={columns} 
+        dataSource={filteredConsumables} 
+        loading={loading}
+        rowKey="id"
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          showTotal: (total) => `共 ${total} 个耗材`,
+          onChange: (page, pageSize) => {
+            setPagination({ current: page, pageSize });
+          }
+        }}
+        scroll={{ x: 1200 }}
+        locale={{ emptyText: '暂无数据' }}
+      />
+
+      <Modal
+        title={editingConsumable ? '编辑耗材' : '添加耗材'}
+        open={showForm}
+        onCancel={() => setShowForm(false)}
+        footer={null}
+        width={700}
+      >
+        <ConsumableForm 
+          consumable={editingConsumable}
+          onSave={handleSave}
+          onCancel={() => setShowForm(false)}
+        />
+      </Modal>
+
+      {/* 耗材详情模态框 */}
+      <Modal
+        title="耗材详情"
+        open={showDetail}
+        onCancel={() => setShowDetail(false)}
+        footer={[<Button key="close" onClick={() => setShowDetail(false)}>关闭</Button>]}
+        width={800}
+      >
+        {selectedConsumable && (
+          <Descriptions bordered column={1}>
+            <Descriptions.Item label="耗材名称">{selectedConsumable.name}</Descriptions.Item>
+            <Descriptions.Item label="品牌">{selectedConsumable.brand}</Descriptions.Item>
+            <Descriptions.Item label="型号规格">{selectedConsumable.modelSpecification}</Descriptions.Item>
+            <Descriptions.Item label="总数量">{selectedConsumable.totalQuantity} {selectedConsumable.unit}</Descriptions.Item>
+            <Descriptions.Item label="已用数量">{selectedConsumable.usedQuantity} {selectedConsumable.unit}</Descriptions.Item>
+            <Descriptions.Item label="剩余数量">
+              <Tag color={
+                selectedConsumable.remainingQuantity < 10 ? 'red' :
+                selectedConsumable.remainingQuantity < 30 ? 'orange' : 'green'
+              }>
+                {selectedConsumable.remainingQuantity} {selectedConsumable.unit}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={
+                selectedConsumable.status === '正常' ? 'green' :
+                selectedConsumable.status === '短缺' ? 'orange' : 'red'
+              }>
+                {selectedConsumable.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="所在仓库">{selectedConsumable.location}</Descriptions.Item>
+            <Descriptions.Item label="备注">{selectedConsumable.remark || '-'}</Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
+      
+      {/* 图片预览模态框 */}
+      <Modal
+        title={`图片预览 (${currentImageIndex + 1}/${previewImages.length})`}
+        open={previewVisible}
+        onCancel={closePreview}
+        footer={[<Button key="close" onClick={closePreview}>关闭</Button>]}
+        width={800}
+      >
+        {previewImages.length > 0 && (
+          <div style={{ textAlign: 'center' }}>
+            <Image
+              src={previewImages[currentImageIndex]}
+              style={{ maxWidth: '100%', maxHeight: 500 }}
+            />
+            {previewImages.length > 1 && (
+              <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
+                <Button onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? previewImages.length - 1 : prev - 1))}>
+                  上一张
+                </Button>
+                <Button onClick={() => setCurrentImageIndex((prev) => (prev === previewImages.length - 1 ? 0 : prev + 1))}>
+                  下一张
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+    </div>
+  )
+}
+
+export default ConsumableList
