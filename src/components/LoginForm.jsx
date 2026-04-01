@@ -22,8 +22,8 @@ const LoginForm = ({ onLogin }) => {
       const response = await userApi.login({ Username: username, Password: password });
       onLogin({
         id: 1,
-        username: response.Username,
-        role: response.Role
+        username: response.Username || response.username,
+        role: response.Role || response.role
       });
       message.success('登录成功');
     } catch (error) {
@@ -31,6 +31,14 @@ const LoginForm = ({ onLogin }) => {
       console.warn('API登录失败，使用模拟登录:', error);
       const foundUser = mockUsers.find(u => u.username === username && u.password === password);
       if (foundUser) {
+        // 模拟登录时，生成一个假的token并存储到localStorage中
+        // 假token格式: fake-token-<role>-<timestamp>
+        // 对角色名称进行编码，避免空格导致的分割问题
+        const encodedRole = encodeURIComponent(foundUser.role);
+        const fakeToken = `fake-token-${encodedRole}-${Date.now()}`;
+        localStorage.setItem('token', fakeToken);
+        localStorage.setItem('user', JSON.stringify(foundUser));
+        console.log('模拟登录成功，token长度:', fakeToken.length);
         onLogin(foundUser);
         message.success('登录成功');
       } else {

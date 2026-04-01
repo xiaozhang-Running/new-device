@@ -40,9 +40,20 @@ const LogList = () => {
 
       const data = await request.get(`/Log?${params.toString()}`)
       
+      // 检查数据是否存在
+      if (!data || !data[0]) {
+        // 数据不存在，使用空数组
+        setLogs([])
+        setTotal(0)
+        setUserOptions([])
+        setTypeOptions([])
+        return
+      }
+      
       // 转换日期格式
       const formattedLogs = data[0].map(log => ({
         ...log,
+        username: log.User?.Username || '未知用户',
         createdAt: dayjs(log.createdAt)
       }))
       

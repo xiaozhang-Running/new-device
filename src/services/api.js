@@ -3,9 +3,9 @@ import { message } from 'antd';
 
 // 内存缓存配置
 const CACHE_CONFIG = {
-  DURATION: 5 * 60 * 1000, // 5分钟缓存
+  DURATION: 30 * 1000, // 30秒缓存（减少多用户场景下的数据不一致）
   MAX_SIZE: 100, // 最大缓存条目数
-  CLEANUP_INTERVAL: 10 * 60 * 1000 // 10分钟清理一次过期缓存
+  CLEANUP_INTERVAL: 1 * 60 * 1000 // 1分钟清理一次过期缓存
 };
 
 // 简单的内存缓存
@@ -60,6 +60,17 @@ const cacheManager = {
       valid,
       invalid: cache.size - valid
     };
+  },
+  // 获取所有缓存条目（用于恢复状态）
+  getAll: () => {
+    const result = new Map();
+    const now = Date.now();
+    for (const [key, item] of cache.entries()) {
+      if (now - item.timestamp < CACHE_CONFIG.DURATION) {
+        result.set(key, item.data);
+      }
+    }
+    return result;
   }
 };
 
@@ -111,7 +122,7 @@ const cachedRequest = async (key, requestFn, useCache = true, options = {}) => {
 
 export const deviceApi = {
   // 获取专用设备列表
-  getSpecialEquipments: async (useCache = true) => {
+  getSpecialEquipments: async (useCache = false) => {
     return await cachedRequest('special-equipments', () => 
       get('/Device/special-equipments'), useCache, { retry: 1 });
   },
@@ -157,7 +168,7 @@ export const deviceApi = {
   },
 
   // 获取通用设备列表
-  getGeneralEquipments: async (useCache = true) => {
+  getGeneralEquipments: async (useCache = false) => {
     return await cachedRequest('general-equipments', () => 
       get('/Device/general-equipments'), useCache, { retry: 1 });
   },
@@ -215,23 +226,23 @@ export const deviceApi = {
   },
 
   // 获取专用设备详细清单
-  getSpecialEquipmentDetails: async (deviceName, brand) => {
+  getSpecialEquipmentDetails: async (deviceName, brand, useCache = false) => {
     const cacheKey = `special-equipment-details-${deviceName}-${brand || ''}`;
     let url = `/Device/special-equipment-details?deviceName=${encodeURIComponent(deviceName)}`;
     if (brand) {
       url += `&brand=${encodeURIComponent(brand)}`;
     }
-    return await cachedRequest(cacheKey, () => get(url), true, { retry: 1 });
+    return await cachedRequest(cacheKey, () => get(url), useCache, { retry: 1 });
   },
 
   // 获取通用设备详细清单
-  getGeneralEquipmentDetails: async (deviceName, brand) => {
+  getGeneralEquipmentDetails: async (deviceName, brand, useCache = false) => {
     const cacheKey = `general-equipment-details-${deviceName}-${brand || ''}`;
     let url = `/Device/general-equipment-details?deviceName=${encodeURIComponent(deviceName)}`;
     if (brand) {
       url += `&brand=${encodeURIComponent(brand)}`;
     }
-    return await cachedRequest(cacheKey, () => get(url), true, { retry: 1 });
+    return await cachedRequest(cacheKey, () => get(url), useCache, { retry: 1 });
   },
 
   // 获取耗材列表
@@ -263,14 +274,17 @@ export const userApi = {
     try {
       const result = await cachedRequest('login', () => 
         post('/Auth/login', credentials), false, { retry: 1 });
-      // 存储token到localStorage
-      if (result.Token) {
-        localStorage.setItem('token', result.Token);
+      // 存储token到localStorage（支持大小写不同的字段名）
+      const token = result.Token || result.token;
+      if (token) {
+        localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify({
           id: 1,
-          username: result.Username,
-          role: result.Role
+          username: result.Username || result.username,
+          role: result.Role || result.role
         }));
+        console.log('API登录成功，token长度:', token.length);
+        console.log('API登录成功，token:', token);
       }
       return result;
     } catch (error) {
@@ -400,12 +414,9 @@ export const imageApi = {
     formData.append('orderId', orderId);
     formData.append('orderType', orderType === 'outbound' ? 1 : 2);
     // 直接传递FormData，让后端处理参数绑定
+    // 不设置Content-Type，让浏览器自动处理
     return await cachedRequest(`upload-inoutbound-image-${orderId}-${orderType}`, () => 
-      post('/Image/in-outbound', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }), false, { retry: 1 });
+      post('/Image/in-outbound', formData), false, { retry: 1 });
   },
 
   // 获取出入库图片列表

@@ -5,10 +5,10 @@ import * as XLSX from 'xlsx'
 import RawMaterialForm from './RawMaterialForm'
 import FileUpload from './FileUpload'
 import { get, post, put, del as deleteRequest } from '../services/request'
+import { imageApi, cacheManager } from '../services/api'
 import { useListData, useImageLoader, useImagePreview } from '../hooks'
 
-// 默认原材料图片
-const DEFAULT_RAWMATERIAL_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiBmaWxsPSIjZmZmZmZmIi8+Cjx0ZXh0IHg9IjI1NiIgeT0iMjU2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM4ODgiPuW8gOWPkeaWmeahiDwvdGV4dD4KPC9zdmc+'
+
 
 const { Option } = Select
 const { Search } = Input
@@ -23,10 +23,13 @@ const processRawMaterialData = (data) => {
     return {
       ...item,
       key: item.id || index,
+      // 字段映射：后端字段 -> 前端字段
+      name: item.productName || item.name,
+      modelSpecification: item.specification || item.modelSpecification,
       totalQuantity: totalQty,
       usedQuantity: usedQty,
       remainingQuantity: remainingQty,
-      image: ((item.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_RAWMATERIAL_IMAGE,
+      image: item.image ? item.image.replace(/apiapi/g, '/api/') : null,
       images: []
     }
   })
@@ -56,7 +59,6 @@ const RawMaterialList = () => {
   // 使用图片加载Hook
   const imageLoaderOptions = useMemo(() => ({
     equipmentType: 4, // 4 表示原材料
-    defaultImage: DEFAULT_RAWMATERIAL_IMAGE,
     loadDelay: 100
   }), []);
   
@@ -139,13 +141,22 @@ const RawMaterialList = () => {
     setShowForm(true)
   }
 
-  const handleEdit = (rawMaterial) => {
+  const handleEdit = async (rawMaterial) => {
+    // 确保加载原材料的最新图片
+    await refreshImages(rawMaterial.id)
     setEditingRawMaterial(rawMaterial)
     setShowForm(true)
   }
 
-  const handleDetail = (rawMaterial) => {
-    setSelectedRawMaterial(rawMaterial)
+  const handleDetail = async (rawMaterial) => {
+    // 确保加载原材料的最新图片
+    await refreshImages(rawMaterial.id)
+    // 获取最新的原材料数据
+    const updatedRawMaterial = {
+      ...rawMaterial,
+      images: getEquipmentImages(rawMaterial.id).images
+    }
+    setSelectedRawMaterial(updatedRawMaterial)
     setShowDetail(true)
   }
 
@@ -166,34 +177,151 @@ const RawMaterialList = () => {
 
   const handleSave = async (rawMaterial) => {
     try {
-      const processedRawMaterial = {
-        ...rawMaterial,
-        totalQuantity: parseInt(rawMaterial.totalQuantity) || 0,
-        usedQuantity: parseInt(rawMaterial.usedQuantity) || 0
-      }
-      
       if (rawMaterial.id) {
-        const result = await put(`/RawMaterials/${processedRawMaterial.id}`, processedRawMaterial)
-        const processedResult = processRawMaterialData([result])[0]
-        updateItem(rawMaterial.id, processedResult)
-        message.success('原材料更新成功')
+        // 编辑现有原材料
+        await handleUpdateRawMaterial(rawMaterial);
       } else {
-        const result = await post('/RawMaterials', processedRawMaterial)
-        const processedResult = processRawMaterialData([result])[0]
-        addItem(processedResult)
-        message.success('原材料添加成功')
+        // 添加新原材料
+        await handleCreateRawMaterial(rawMaterial);
       }
-      setShowForm(false)
     } catch (error) {
-      message.error('保存原材料失败')
+      console.error('保存原材料失败:', error);
+      message.error('保存原材料失败');
+    } finally {
+      setShowForm(false);
     }
-  }
+  };
+
+  const handleUpdateRawMaterial = async (rawMaterial) => {
+    const processedRawMaterial = {
+      ...rawMaterial,
+      totalQuantity: parseInt(rawMaterial.totalQuantity) || 0,
+      usedQuantity: parseInt(rawMaterial.usedQuantity) || 0
+    };
+    
+    // 获取当前原材料的所有图片
+    const currentImages = await imageApi.getEquipmentImages(rawMaterial.id, 4);
+    const currentImageIds = currentImages.map(img => img.Id || img.id);
+    
+    // 获取用户保留的图片ID
+    const retainedImageIds = (rawMaterial.images || [])
+      .filter(img => img.id && typeof img.id === 'string' && !img.id.startsWith('temp_'))
+      .map(img => img.id);
+    
+    // 删除用户已移除的图片
+    for (const imageId of currentImageIds) {
+      if (!retainedImageIds.includes(imageId)) {
+        try {
+          await imageApi.deleteEquipmentImage(imageId);
+        } catch (error) {
+          console.error('删除图片失败:', error);
+        }
+      }
+    }
+    
+    // 上传新的临时图片
+    const tempImages = (rawMaterial.images || [])
+      .filter(img => img.id && typeof img.id === 'string' && img.id.startsWith('temp_') && img.originFileObj);
+    
+    if (tempImages.length > 0) {
+      const formData = new FormData();
+      tempImages.forEach(img => {
+        if (img.originFileObj) {
+          formData.append('files', img.originFileObj);
+        }
+      });
+      
+      try {
+        await imageApi.uploadEquipmentImage(rawMaterial.id, 4, formData);
+      } catch (error) {
+        console.error('上传临时图片失败:', error);
+        message.error('上传图片失败');
+      }
+    }
+    
+    // 清除图片缓存
+    cacheManager.invalidate(`equipment-images-${rawMaterial.id}-4`);
+    
+    // 获取最新的图片信息
+    const updatedImages = await imageApi.getEquipmentImages(rawMaterial.id, 4);
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055';
+    const cleanBaseUrl = baseUrl.replace(/\/api$/, '');
+    const imageUrl = updatedImages && updatedImages.length > 0 
+      ? `${cleanBaseUrl}/api/Image/data/${updatedImages[0].Id || updatedImages[0].id}` 
+      : '';
+    
+    // 构建更新的图片数组
+    const rawMaterialImages = updatedImages.map(img => ({
+      id: img.Id || img.id,
+      url: `${cleanBaseUrl}/api/Image/data/${img.Id || img.id}`
+    }));
+    
+    const result = await put(`/RawMaterials/${processedRawMaterial.id}`, {
+      ...processedRawMaterial,
+      image: imageUrl
+    });
+    
+    const processedResult = {
+      ...processRawMaterialData([result])[0],
+      image: imageUrl || '',
+      imageUrl: imageUrl || '',
+      images: rawMaterialImages
+    };
+    
+    // 刷新数据
+    await refresh();
+    // 刷新图片
+    await refreshImages(rawMaterial.id);
+    // 更新原材料数据中的图片信息
+    updateItem(rawMaterial.id, processedResult);
+    message.success('原材料更新成功');
+  };
+
+  const handleCreateRawMaterial = async (rawMaterial) => {
+    const processedRawMaterial = {
+      ...rawMaterial,
+      totalQuantity: parseInt(rawMaterial.totalQuantity) || 0,
+      usedQuantity: parseInt(rawMaterial.usedQuantity) || 0,
+      image: ''
+    };
+
+    const result = await post('/RawMaterials', processedRawMaterial);
+    
+    // 如果有临时图片，上传它们
+    if (rawMaterial.images && rawMaterial.images.length > 0) {
+      const tempImages = rawMaterial.images.filter(img => 
+        img.id && typeof img.id === 'string' && img.id.startsWith('temp_')
+      );
+      
+      if (tempImages.length > 0) {
+        const formData = new FormData();
+        tempImages.forEach(img => {
+          if (img.originFileObj) {
+            formData.append('files', img.originFileObj);
+          }
+        });
+        
+        try {
+          await imageApi.uploadEquipmentImage(result.id || result.Id, 4, formData);
+        } catch (error) {
+          console.error('上传临时图片失败:', error);
+          message.error('上传图片失败');
+        }
+      }
+    }
+
+    // 刷新数据
+    await refresh();
+    // 刷新图片
+    await refreshImages(result.id || result.Id);
+    message.success('原材料添加成功');
+  };
 
   const handleImport = async (data) => {
     const importedRawMaterials = data.map(item => {
-      const name = item['原材料名称'] || item['名称'] || item.name
+      const productName = item['原材料名称'] || item['名称'] || item.name || item.productName
       const brand = item['品牌'] || item.brand
-      const modelSpecification = item['型号规格'] || item['规格'] || item.modelSpecification
+      const specification = item['型号规格'] || item['规格'] || item.modelSpecification || item.specification
       const unit = item['单位'] || item.unit
       const location = item['位置'] || item.location
       const remark = item['备注'] || item.remark || ''
@@ -202,9 +330,9 @@ const RawMaterialList = () => {
       const usedQty = parseInt(item['已用数量'] || item.usedQuantity || 0)
       
       return {
-        name,
+        productName,
         brand,
-        modelSpecification,
+        specification,
         totalQuantity: totalQty,
         usedQuantity: usedQty,
         remainingQuantity: totalQty - usedQty,
@@ -288,7 +416,7 @@ const RawMaterialList = () => {
       render: (images, record) => {
         const rawMaterialImages = getEquipmentImages(record.id)
         const hasImages = rawMaterialImages.images && rawMaterialImages.images.length > 0
-        const displayImage = hasImages ? rawMaterialImages.mainImage : record.image
+        const displayImage = hasImages ? rawMaterialImages.mainImage : (record.image || null)
         
         return (
           <div 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Table, Button, Space, Modal, message, Popconfirm, Input, Select, Card, Row, Col, Descriptions, Tag, Image } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, FilterOutlined, EyeOutlined, ExportOutlined } from '@ant-design/icons'
 import DeviceForm from './DeviceForm'
@@ -6,8 +6,7 @@ import FileUpload from './FileUpload'
 import { deviceApi, imageApi, cacheManager } from '../services/api'
 import { useListData, useImageLoader, useImagePreview } from '../hooks'
 
-// 默认设备图片
-const DEFAULT_DEVICE_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiBmaWxsPSIjZmZmZmZmIi8+Cjx0ZXh0IHg9IjI1NiIgeT0iMjU2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM4ODgiPuihj+S4i+W/teaKpeS7mzwvdGV4dD4KPC9zdmc+' // 白色背景的设备图标
+
 
 const { Option } = Select
 const { Search } = Input
@@ -24,13 +23,13 @@ const processDeviceData = (data) => {
     quantity: item.quantity || item.Quantity || 1,
     unit: item.unit || item.Unit || '台',
     accessories: item.accessories || item.Accessories || '',
-    image: ((item.imageUrl || item.ImageUrl || item.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_DEVICE_IMAGE,
-    imageUrl: ((item.imageUrl || item.ImageUrl || item.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_DEVICE_IMAGE,
+    image: ((item.imageUrl || item.ImageUrl || item.image) || '').replace(/apiapi/g, '/api/') || '',
+    imageUrl: ((item.imageUrl || item.ImageUrl || item.image) || '').replace(/apiapi/g, '/api/') || '',
     images: [],
     warehouse: item.warehouse || item.Warehouse || '主仓库',
     company: item.company || item.Company || '',
     status: item.status || item.Status || '正常',
-    useStatus: item.useStatus === '未使用' || item.UseStatus === 0 ? '未使用' : '使用中',
+    useStatus: item.useStatus || (item.UseStatus === 0 ? '未使用' : item.UseStatus === 1 ? '使用中' : item.UseStatus === 2 ? '停用' : item.UseStatus === 3 ? '闲置' : '未使用'),
     projectName: item.projectName || item.ProjectName || '',
     projectTime: item.projectTime || item.ProjectTime || '',
     location: item.location || item.Location || '',
@@ -70,7 +69,6 @@ const DeviceList = () => {
   // 使用图片加载Hook
   const imageLoaderOptions = useMemo(() => ({
     equipmentType: 1,
-    defaultImage: DEFAULT_DEVICE_IMAGE,
     loadDelay: 100
   }), []);
   
@@ -79,6 +77,12 @@ const DeviceList = () => {
     getEquipmentImages,
     refreshImages
   } = useImageLoader(imageLoaderOptions);
+
+  // 使用ref存储loadImagesBatch，避免useEffect频繁触发
+  const loadImagesBatchRef = useRef(loadImagesBatch);
+  useEffect(() => {
+    loadImagesBatchRef.current = loadImagesBatch;
+  }, [loadImagesBatch]);
 
   // 使用图片预览Hook
   const {
@@ -98,21 +102,16 @@ const DeviceList = () => {
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [useStatusFilter, setUseStatusFilter] = useState('')
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
 
-  // 延迟加载图片 - 只加载当前页面的设备图片
+  // 批量加载图片 - 只在filteredDevices变化时触发
   useEffect(() => {
     if (filteredDevices.length > 0) {
-      // 计算当前页面的设备范围
-      const startIndex = (pagination.current - 1) * pagination.pageSize;
-      const endIndex = startIndex + pagination.pageSize;
-      const currentPageDevices = filteredDevices.slice(startIndex, endIndex);
-      const deviceIds = currentPageDevices.map(d => d.id);
-      loadImagesBatch(deviceIds);
+      const deviceIds = filteredDevices.map(device => device.id);
+      loadImagesBatchRef.current(deviceIds);
     }
-  }, [filteredDevices, loadImagesBatch, pagination]);
+  }, [filteredDevices]);
 
-  // 处理搜索
+  // 搜索处理
   const handleSearch = useCallback(() => {
     let result = [...devices];
     
@@ -138,7 +137,7 @@ const DeviceList = () => {
     setFilteredData(result);
   }, [devices, searchText, statusFilter, useStatusFilter, setFilteredData]);
 
-  // 当过滤条件变化时执行搜索
+  // 当搜索条件变化时自动搜索
   useEffect(() => {
     handleSearch();
   }, [searchText, statusFilter, useStatusFilter, handleSearch]);
@@ -148,13 +147,22 @@ const DeviceList = () => {
     setShowForm(true);
   };
 
-  const handleEdit = (device) => {
+  const handleEdit = async (device) => {
+    // 确保加载设备的最新图片
+    await refreshImages(device.id);
     setEditingDevice(device);
     setShowForm(true);
   };
 
-  const handleDetail = (device) => {
-    setSelectedDevice(device);
+  const handleDetail = async (device) => {
+    // 确保加载设备的最新图片
+    await refreshImages(device.id);
+    // 获取最新的设备数据
+    const updatedDevice = {
+      ...device,
+      images: getEquipmentImages(device.id).images
+    };
+    setSelectedDevice(updatedDevice);
     setShowDetail(true);
   };
 
@@ -191,7 +199,6 @@ const DeviceList = () => {
         message.error('保存设备失败');
       }
     } finally {
-      setLoading(false);
       setShowForm(false);
     }
   };
@@ -219,7 +226,7 @@ const DeviceList = () => {
     
     // 上传新的临时图片
     const tempImages = (device.images || [])
-      .filter(img => img.id && typeof img.id === 'string' && img.id.startsWith('temp_'));
+      .filter(img => img.id && typeof img.id === 'string' && img.id.startsWith('temp_') && img.originFileObj);
     
     if (tempImages.length > 0) {
       const formData = new FormData();
@@ -239,6 +246,8 @@ const DeviceList = () => {
     
     // 清除图片缓存
     cacheManager.invalidate(`equipment-images-${device.id}-1`);
+    // 清除设备列表缓存，确保其他用户的修改能够及时反映
+    cacheManager.invalidate('special-equipments');
     
     // 获取最新的图片信息
     const updatedImages = await imageApi.getEquipmentImages(device.id, 1);
@@ -247,6 +256,12 @@ const DeviceList = () => {
     const imageUrl = updatedImages && updatedImages.length > 0 
       ? `${cleanBaseUrl}/api/Image/data/${updatedImages[0].Id || updatedImages[0].id}` 
       : '';
+    
+    // 构建更新的图片数组
+    const deviceImages = updatedImages.map(img => ({
+      id: img.Id || img.id,
+      url: `${cleanBaseUrl}/api/Image/data/${img.Id || img.id}`
+    }));
     
     const updatedDevice = await deviceApi.updateSpecialEquipment(device.id, {
       Name: device.name || '',
@@ -267,6 +282,14 @@ const DeviceList = () => {
 
     // 刷新数据
     await refresh();
+    // 刷新图片
+    await refreshImages(device.id);
+    // 更新设备数据中的图片信息
+    updateItem(device.id, {
+      image: imageUrl || '',
+      imageUrl: imageUrl || '',
+      images: deviceImages
+    });
     message.success('设备更新成功');
   };
 
@@ -315,10 +338,80 @@ const DeviceList = () => {
 
     // 刷新数据
     await refresh();
+    // 刷新图片
+    await refreshImages(newDevice.id || newDevice.Id);
     message.success('设备添加成功');
   };
 
   // 导出设备数据到Excel
+  const handleImport = async (data) => {
+    try {
+      if (!data || data.length === 0) {
+        message.warning('没有有效的数据可以导入');
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // 获取所有现有的设备，以检查设备编号是否已存在
+      const existingDevices = await deviceApi.getSpecialEquipments();
+      const existingDeviceCodes = new Set(existingDevices.map(device => device.DeviceCode));
+
+      for (const item of data) {
+        try {
+          // 验证必填字段
+          if (!item['设备名称'] || !item['设备编号']) {
+            errorCount++;
+            continue;
+          }
+
+          // 检查设备编号是否已存在
+          const deviceCode = item['设备编号'] || '';
+          if (existingDeviceCodes.has(deviceCode)) {
+            console.error('设备编号已存在:', deviceCode);
+            errorCount++;
+            continue;
+          }
+
+          // 构建设备数据
+          const deviceData = {
+            Name: item['设备名称'] || '',
+            DeviceCode: deviceCode,
+            SerialNumber: item['SN码'] ? String(item['SN码']) : '',
+            Brand: item['品牌'] || '',
+            Model: item['型号'] || '',
+            Quantity: item['数量'] || 1,
+            Unit: item['单位'] || '台',
+            Accessories: item['配件'] || '',
+            ImageUrl: '',
+            Warehouse: item['所在仓库'] || '主仓库',
+            Company: item['所属公司'] || '',
+            Status: item['设备状态'] || '正常',
+            UseStatus: item['使用状态'] || '未使用',
+            Description: item['描述'] || ''
+          };
+
+          // 调用API创建设备
+          await deviceApi.createSpecialEquipment(deviceData);
+          successCount++;
+          // 将新设备的编号添加到集合中，以避免重复导入同一批次中的重复编号
+          existingDeviceCodes.add(deviceCode);
+        } catch (error) {
+          console.error('导入设备失败:', error);
+          errorCount++;
+        }
+      }
+
+      // 刷新设备列表
+      await refresh();
+      message.success(`成功导入 ${successCount} 条设备，失败 ${errorCount} 条`);
+    } catch (error) {
+      console.error('导入失败:', error);
+      message.error('导入失败: ' + (error.message || '未知错误'));
+    }
+  };
+
   const handleExport = async () => {
     try {
       const dataToExport = filteredDevices.length > 0 ? filteredDevices : devices;
@@ -341,10 +434,7 @@ const DeviceList = () => {
         '所属公司': device.company || '',
         '设备状态': device.status || '',
         '使用状态': device.useStatus || '',
-        '位置': device.location || '',
-        '描述': device.description || '',
-        '购买日期': device.purchaseDate || '',
-        '购买价格': device.purchasePrice || 0
+        '描述': device.description || ''
       }));
 
       const XLSX = await import('xlsx');
@@ -355,8 +445,7 @@ const DeviceList = () => {
       const colWidths = [
         { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
         { wch: 15 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
-        { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 10 },
-        { wch: 12 }, { wch: 25 }, { wch: 12 }, { wch: 12 }
+        { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 25 }
       ];
       ws['!cols'] = colWidths;
 
@@ -374,8 +463,8 @@ const DeviceList = () => {
   const handleClearAll = async () => {
     try {
       await deviceApi.clearAllSpecialEquipments();
-      // 清空本地状态
-      setFilteredData([]);
+      // 刷新设备列表
+      await refresh();
       message.success('所有专用设备已清空');
     } catch (error) {
       console.error('清空设备失败:', error);
@@ -383,7 +472,6 @@ const DeviceList = () => {
     }
   };
 
-  // 表格列定义
   const columns = [
     { title: '设备名称', dataIndex: 'name', key: 'name', width: 120 },
     { title: '设备编号', dataIndex: 'deviceCode', key: 'deviceCode', width: 120 },
@@ -418,11 +506,29 @@ const DeviceList = () => {
               }
             }}
           >
-            <img 
-              src={displayImage} 
-              alt="设备图片" 
-              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4 }}
-            />
+            {displayImage ? (
+              <img 
+                src={displayImage} 
+                alt="设备图片" 
+                style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4 }}
+              />
+            ) : (
+              <div 
+                style={{ 
+                  width: 60, 
+                  height: 60, 
+                  backgroundColor: '#f0f0f0', 
+                  borderRadius: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                  fontSize: '12px'
+                }}
+              >
+                无图片
+              </div>
+            )}
             {hasImages && deviceImages.images.length > 1 && (
               <div style={{ 
                 position: 'absolute', bottom: 0, right: 0, 
@@ -444,8 +550,14 @@ const DeviceList = () => {
       key: 'status',
       width: 100,
       render: (status) => {
-        const colorMap = { '正常': 'green', '待维修': 'orange', '报废': 'red' };
-        return <span style={{ color: colorMap[status] || 'blue' }}>{status}</span>;
+        let color = '';
+        switch (status) {
+          case '正常': color = 'green'; break;
+          case '待维修': color = 'orange'; break;
+          case '报废': color = 'red'; break;
+          default: color = 'blue';
+        }
+        return <span style={{ color }}>{status}</span>;
       }
     },
     {
@@ -454,7 +566,12 @@ const DeviceList = () => {
       key: 'useStatus',
       width: 150,
       render: (useStatus, record) => {
-        const color = useStatus === '使用中' ? 'green' : 'gray';
+        let color = '';
+        switch (useStatus) {
+          case '使用中': color = 'green'; break;
+          case '未使用': color = 'gray'; break;
+          default: color = 'gray';
+        }
         if (useStatus === '使用中' && (record.projectName || record.projectTime)) {
           return (
             <div style={{ color }} title={`项目名称: ${record.projectName || '未知'}\n项目时间: ${record.projectTime || '未知'}`}>
@@ -502,16 +619,17 @@ const DeviceList = () => {
       <div className="page-header">
         <h2>专用设备管理</h2>
         <Space>
-          <FileUpload onImport={() => message.info('导入功能开发中')} />
-          <Button icon={<ExportOutlined />} onClick={handleExport}>导出数据</Button>
+          <FileUpload onImport={handleImport} />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加设备</Button>
+          <Button onClick={handleExport}>导出设备</Button>
           <Popconfirm
-            title="确定要清空所有专用设备吗？此操作不可撤销！"
+            title="确定要清空所有专用设备吗？此操作不可恢复！"
             onConfirm={handleClearAll}
             okText="确定"
             cancelText="取消"
+            okType="danger"
           >
-            <Button danger>清空设备</Button>
+            <Button danger icon={<DeleteOutlined />}>清空设备</Button>
           </Popconfirm>
         </Space>
       </div>
@@ -560,6 +678,8 @@ const DeviceList = () => {
               placeholder="搜索设备名称、品牌、型号或序列号"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              onSearch={() => handleSearch()}
+              onPressEnter={() => handleSearch()}
               style={{ width: '100%' }}
               prefix={<SearchOutlined />}
               enterButton
@@ -591,15 +711,14 @@ const DeviceList = () => {
             </Select>
           </Col>
           <Col span={4}>
-            <Button 
-              onClick={() => {
+            <Space>
+              <Button type="primary" onClick={handleSearch}>搜索</Button>
+              <Button onClick={() => {
                 setSearchText('');
                 setStatusFilter('');
                 setUseStatusFilter('');
-              }}
-            >
-              重置
-            </Button>
+              }}>重置</Button>
+            </Space>
           </Col>
         </Row>
       </Card>
@@ -609,16 +728,8 @@ const DeviceList = () => {
         dataSource={filteredDevices} 
         loading={loading}
         rowKey="id"
-        pagination={{
-          current: pagination.current,
-          pageSize: pagination.pageSize,
-          showTotal: (total) => `共 ${total} 个设备`,
-          onChange: (page, pageSize) => {
-            setPagination({ current: page, pageSize });
-          }
-        }}
+        pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 个设备` }}
         scroll={{ x: 1500 }}
-        locale={{ emptyText: '暂无数据' }}
       />
 
       <Modal
@@ -632,6 +743,7 @@ const DeviceList = () => {
           device={editingDevice}
           onSave={handleSave}
           onCancel={() => setShowForm(false)}
+          deviceType="special"
         />
       </Modal>
 
@@ -644,46 +756,58 @@ const DeviceList = () => {
         width={800}
       >
         {selectedDevice && (
-          <Row gutter={16} style={{ marginBottom: 20 }}>
-            <Col span={12}>
-              <Descriptions bordered column={1}>
-                <Descriptions.Item label="设备名称">{selectedDevice.name}</Descriptions.Item>
-                <Descriptions.Item label="设备编号">{selectedDevice.deviceCode}</Descriptions.Item>
-                <Descriptions.Item label="SN码">{selectedDevice.serialNumber}</Descriptions.Item>
-                <Descriptions.Item label="品牌">{selectedDevice.brand}</Descriptions.Item>
-                <Descriptions.Item label="型号">{selectedDevice.model}</Descriptions.Item>
-                <Descriptions.Item label="数量">{selectedDevice.quantity}</Descriptions.Item>
-                <Descriptions.Item label="单位">{selectedDevice.unit}</Descriptions.Item>
-                <Descriptions.Item label="配件">{selectedDevice.accessories || '-'}</Descriptions.Item>
-              </Descriptions>
-            </Col>
-            <Col span={12}>
-              <Descriptions bordered column={1}>
-                <Descriptions.Item label="所在仓库">{selectedDevice.warehouse}</Descriptions.Item>
-                <Descriptions.Item label="所属公司">{selectedDevice.company}</Descriptions.Item>
-                <Descriptions.Item label="设备状态">
-                  <Tag color={selectedDevice.status === '正常' ? 'green' : selectedDevice.status === '待维修' ? 'orange' : 'red'}>
-                    {selectedDevice.status}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="使用状态">
-                  <Tag color={selectedDevice.useStatus === '使用中' ? 'green' : 'gray'}>
-                    {selectedDevice.useStatus}
-                  </Tag>
-                </Descriptions.Item>
-                {selectedDevice.useStatus === '使用中' && (
-                  <>
-                    <Descriptions.Item label="项目名称">{selectedDevice.projectName || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="项目时间">{selectedDevice.projectTime || '-'}</Descriptions.Item>
-                  </>
-                )}
-                <Descriptions.Item label="位置">{selectedDevice.location}</Descriptions.Item>
-                <Descriptions.Item label="购买日期">{selectedDevice.purchaseDate}</Descriptions.Item>
-                <Descriptions.Item label="购买价格">¥{selectedDevice.purchasePrice}</Descriptions.Item>
-                <Descriptions.Item label="描述">{selectedDevice.description || '-'}</Descriptions.Item>
-              </Descriptions>
-            </Col>
-          </Row>
+          <>
+            <Row gutter={16} style={{ marginBottom: 20 }}>
+              <Col span={12}>
+                <Descriptions bordered column={1}>
+                  <Descriptions.Item label="设备名称">{selectedDevice.name}</Descriptions.Item>
+                  <Descriptions.Item label="设备编号">{selectedDevice.deviceCode}</Descriptions.Item>
+                  <Descriptions.Item label="SN码">{selectedDevice.serialNumber}</Descriptions.Item>
+                  <Descriptions.Item label="品牌">{selectedDevice.brand}</Descriptions.Item>
+                  <Descriptions.Item label="型号">{selectedDevice.model}</Descriptions.Item>
+                  <Descriptions.Item label="数量">{selectedDevice.quantity}</Descriptions.Item>
+                  <Descriptions.Item label="单位">{selectedDevice.unit}</Descriptions.Item>
+                  <Descriptions.Item label="配件">{selectedDevice.accessories || '-'}</Descriptions.Item>
+                </Descriptions>
+              </Col>
+              <Col span={12}>
+                <Descriptions bordered column={1}>
+                  <Descriptions.Item label="所在仓库">{selectedDevice.warehouse}</Descriptions.Item>
+                  <Descriptions.Item label="所属公司">{selectedDevice.company}</Descriptions.Item>
+                  <Descriptions.Item label="设备状态">
+                    <Tag color={selectedDevice.status === '正常' ? 'green' : selectedDevice.status === '待维修' ? 'orange' : 'red'}>
+                      {selectedDevice.status}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="使用状态">
+                    <Tag color={selectedDevice.useStatus === '使用中' ? 'green' : 'gray'}>
+                      {selectedDevice.useStatus}
+                    </Tag>
+                  </Descriptions.Item>
+                  {selectedDevice.useStatus === '使用中' && (
+                    <>
+                      <Descriptions.Item label="项目名称">{selectedDevice.projectName || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="项目时间">{selectedDevice.projectTime || '-'}</Descriptions.Item>
+                    </>
+                  )}
+                  <Descriptions.Item label="描述">{selectedDevice.description || '-'}</Descriptions.Item>
+                </Descriptions>
+              </Col>
+            </Row>
+            {/* 显示设备图片 */}
+            {selectedDevice.images && selectedDevice.images.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <h4>设备图片</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                  {selectedDevice.images.map((img, index) => (
+                    <div key={`detail-image-${index}`} style={{ cursor: 'pointer' }} onClick={() => handleImagePreview(selectedDevice.images)}>
+                      <Image src={img.url} style={{ width: 150, height: 150, objectFit: 'cover' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </Modal>
       
@@ -697,18 +821,11 @@ const DeviceList = () => {
       >
         {previewImages.length > 0 && (
           <div style={{ textAlign: 'center' }}>
-            <Image
-              src={previewImages[currentImageIndex]}
-              style={{ maxWidth: '100%', maxHeight: 500 }}
-            />
+            <Image src={previewImages[currentImageIndex]} style={{ maxWidth: '100%', maxHeight: 500 }} />
             {previewImages.length > 1 && (
               <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 10 }}>
-                <Button onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? previewImages.length - 1 : prev - 1))}>
-                  上一张
-                </Button>
-                <Button onClick={() => setCurrentImageIndex((prev) => (prev === previewImages.length - 1 ? 0 : prev + 1))}>
-                  下一张
-                </Button>
+                <Button onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? previewImages.length - 1 : prev - 1))}>上一张</Button>
+                <Button onClick={() => setCurrentImageIndex((prev) => (prev === previewImages.length - 1 ? 0 : prev + 1))}>下一张</Button>
               </div>
             )}
           </div>

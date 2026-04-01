@@ -80,6 +80,7 @@ namespace DeviceWarehouseSystem.DTOs
         public int EquipmentId { get; set; }
         public required string EquipmentName { get; set; }
         public string? DeviceCode { get; set; }
+        public string? SerialNumber { get; set; }
         public required string Brand { get; set; }
         public required string Model { get; set; }
         public int Quantity { get; set; }

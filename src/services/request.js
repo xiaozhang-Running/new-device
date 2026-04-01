@@ -1,5 +1,5 @@
 // 统一的请求封装函数
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // 请求超时时间
 const TIMEOUT = 30000;
@@ -41,12 +41,18 @@ const request = async (config) => {
   const token = localStorage.getItem('token');
   
   // 验证token是否存在且有效（简单验证）
-  if (token && token.length < 10) {
-    // 无效token，清除并重新登录
+  console.log('Token:', token);
+  console.log('Token长度:', token ? token.length : 0);
+  // 假token格式为 fake-token-<role>-<timestamp>，长度会超过10
+  // 只检查token是否存在，不检查长度
+  // 跳过登录和注册接口的token检查
+  if (!token && !url.includes('/Auth/login') && !url.includes('/Auth/register')) {
+    // 无token且不是登录/注册请求，跳转到登录页面
+    console.log('未找到token，跳转到登录页面');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/';
-    throw new Error('登录已过期，请重新登录');
+    throw new Error('请先登录');
   }
   
   // 设置默认选项
@@ -98,18 +104,24 @@ const request = async (config) => {
     // 检查响应状态
     if (!response.ok) {
       try {
-        const errorData = await response.json();
-        console.error('后端错误:', JSON.stringify(errorData, null, 2));
-        
-        // 处理401未授权错误
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/';
-          throw new Error('登录已过期，请重新登录');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          console.error('后端错误:', JSON.stringify(errorData, null, 2));
+          
+          // 处理401未授权错误
+          if (response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+            throw new Error('登录已过期，请重新登录');
+          }
+          
+          throw new Error(errorData.message || `请求失败: ${response.status}`);
+        } else {
+          // 非JSON响应，直接抛出状态码错误
+          throw new Error(`请求失败: ${response.status}`);
         }
-        
-        throw new Error(errorData.message || `请求失败: ${response.status}`);
       } catch (e) {
         console.error('请求错误:', e);
         throw new Error(`请求失败: ${response.status}`);
@@ -159,15 +171,40 @@ export const post = (url, data, options = {}) => {
   // 检查是否为FormData对象
   if (data instanceof FormData) {
     console.log('请求数据: FormData对象');
-    // 完全覆盖headers，不使用默认的application/json
-    return request({
-      url,
+    // 保留token，但不设置Content-Type，让浏览器自动处理
+    // 创建一个新的options对象，将headers设置为null
+    // 这样request函数就不会使用默认的Content-Type头
+    const formDataOptions = {
       ...options,
+      headers: null, // 不使用默认的headers
+    };
+    // 直接使用fetch发送请求，避免request函数的默认headers干扰
+    const token = localStorage.getItem('token');
+    const fetchOptions = {
       method: 'POST',
       body: data,
-      // 完全不设置headers，让浏览器自动处理
-      headers: null,
-    });
+      headers: {},
+    };
+    // 添加Authorization头
+    if (token) {
+      fetchOptions.headers['Authorization'] = `Bearer ${token}`;
+    }
+    // 添加其他headers
+    if (options.headers) {
+      Object.keys(options.headers).forEach(key => {
+        if (key !== 'Content-Type') {
+          fetchOptions.headers[key] = options.headers[key];
+        }
+      });
+    }
+    // 发送请求
+    return fetch(`${API_BASE_URL}${url}`, fetchOptions)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`请求失败: ${response.status}`);
+        }
+        return response.json();
+      });
   } else {
     console.log('请求数据:', JSON.stringify(data, null, 2));
     return request({
@@ -180,16 +217,17 @@ export const post = (url, data, options = {}) => {
 };
 
 export const put = (url, data, options = {}) => {
-  return request({
+  const requestOptions = {
     url,
     ...options,
     method: 'PUT',
-    body: JSON.stringify(data),
-    headers: {
-      ...options.headers,
-      'Content-Type': 'application/json',
-    },
-  });
+  };
+  
+  if (data !== undefined) {
+    requestOptions.body = JSON.stringify(data);
+  }
+  
+  return request(requestOptions);
 };
 
 export const del = (url, options = {}) => {
@@ -199,6 +237,12 @@ export const del = (url, options = {}) => {
     method: 'DELETE',
   });
 };
+
+// 为 request 对象添加方法，使其可以像 request.get() 这样使用
+request.get = get;
+request.post = post;
+request.put = put;
+request.del = del;
 
 // 同时导出默认和命名导出
 export { request };

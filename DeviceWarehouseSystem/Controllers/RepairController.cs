@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DeviceWarehouseSystem.Models;
+using DeviceWarehouseSystem.Enums;
+using DeviceWarehouseSystem.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 
@@ -80,28 +82,16 @@ namespace DeviceWarehouseSystem.Controllers
                 var specialEquipment = await _context.SpecialEquipments.FindAsync(repairEquipment.EquipmentId);
                 if (specialEquipment != null)
                 {
-                    // 根据维修状态更新设备状态
-                    if (repairEquipment.RepairStatus == "待维修")
+                    // 使用映射配置更新设备状态
+                    specialEquipment.DeviceStatus = RepairStatusMapping.ToDeviceStatusValue(repairEquipment.RepairStatus);
+                    specialEquipment.RepairStatus = RepairStatusMapping.ToRepairStatusValue(repairEquipment.RepairStatus);
+                    
+                    // 同时更新Status字符串字段，确保前端显示正确
+                    specialEquipment.Status = repairEquipment.RepairStatus == "已完成" ? "正常" : repairEquipment.RepairStatus == "无法维修" ? "报废" : repairEquipment.RepairStatus;
+
+                    // 如果无法维修，添加到报废设备表
+                    if (repairEquipment.RepairStatus == "无法维修")
                     {
-                        specialEquipment.DeviceStatus = 2; // 维修中
-                        specialEquipment.RepairStatus = 1; // 待维修
-                    }
-                    else if (repairEquipment.RepairStatus == "维修中")
-                    {
-                        specialEquipment.DeviceStatus = 2; // 维修中
-                        specialEquipment.RepairStatus = 2; // 维修中
-                    }
-                    else if (repairEquipment.RepairStatus == "已完成")
-                    {
-                        specialEquipment.DeviceStatus = 1; // 正常
-                        specialEquipment.RepairStatus = 3; // 已完成
-                    }
-                    else if (repairEquipment.RepairStatus == "无法维修")
-                    {
-                        specialEquipment.DeviceStatus = 3; // 报废
-                        specialEquipment.RepairStatus = 4; // 无法维修
-                        
-                        // 检查是否存在报废设备管理表，如果存在则添加记录
                         if (_context.ScrapEquipments != null)
                         {
                             var scrapEquipment = new ScrapEquipment
@@ -109,8 +99,20 @@ namespace DeviceWarehouseSystem.Controllers
                                 SpecialEquipmentId = specialEquipment.Id,
                                 DeviceName = specialEquipment.DeviceName,
                                 DeviceCode = specialEquipment.DeviceCode,
+                                Brand = specialEquipment.Brand,
+                                Model = specialEquipment.Model,
+                                SerialNumber = specialEquipment.SerialNumber,
+                                Specification = specialEquipment.Specification,
+                                Quantity = specialEquipment.Quantity,
+                                Unit = specialEquipment.Unit,
+                                ImageUrl = specialEquipment.ImageUrl,
+                                DeviceType = 1, // 1=专用设备
+                                Location = specialEquipment.Location,
+                                Company = specialEquipment.Company,
+                                Accessories = specialEquipment.Accessories,
                                 ScrapReason = repairEquipment.FaultDescription,
                                 ScrapDate = System.DateTime.Now,
+                                ScrappedBy = "系统",
                                 Remark = repairEquipment.Remark,
                                 CreatedAt = System.DateTime.Now,
                                 UpdatedAt = System.DateTime.Now
@@ -128,28 +130,16 @@ namespace DeviceWarehouseSystem.Controllers
                 var generalEquipment = await _context.GeneralEquipments.FindAsync(repairEquipment.EquipmentId);
                 if (generalEquipment != null)
                 {
-                    // 根据维修状态更新设备状态
-                    if (repairEquipment.RepairStatus == "待维修")
+                    // 使用映射配置更新设备状态
+                    generalEquipment.DeviceStatus = RepairStatusMapping.ToDeviceStatusValue(repairEquipment.RepairStatus);
+                    generalEquipment.RepairStatus = RepairStatusMapping.ToRepairStatusValue(repairEquipment.RepairStatus);
+                    
+                    // 同时更新Status字符串字段，确保前端显示正确
+                    generalEquipment.Status = repairEquipment.RepairStatus == "已完成" ? "正常" : repairEquipment.RepairStatus == "无法维修" ? "报废" : repairEquipment.RepairStatus;
+
+                    // 如果无法维修，添加到报废设备表
+                    if (repairEquipment.RepairStatus == "无法维修")
                     {
-                        generalEquipment.DeviceStatus = 2; // 维修中
-                        generalEquipment.RepairStatus = 1; // 待维修
-                    }
-                    else if (repairEquipment.RepairStatus == "维修中")
-                    {
-                        generalEquipment.DeviceStatus = 2; // 维修中
-                        generalEquipment.RepairStatus = 2; // 维修中
-                    }
-                    else if (repairEquipment.RepairStatus == "已完成")
-                    {
-                        generalEquipment.DeviceStatus = 1; // 正常
-                        generalEquipment.RepairStatus = 3; // 已完成
-                    }
-                    else if (repairEquipment.RepairStatus == "无法维修")
-                    {
-                        generalEquipment.DeviceStatus = 3; // 报废
-                        generalEquipment.RepairStatus = 4; // 无法维修
-                        
-                        // 检查是否存在报废设备管理表，如果存在则添加记录
                         if (_context.ScrapEquipments != null)
                         {
                             var scrapEquipment = new ScrapEquipment
@@ -157,8 +147,20 @@ namespace DeviceWarehouseSystem.Controllers
                                 GeneralEquipmentId = generalEquipment.Id,
                                 DeviceName = generalEquipment.DeviceName,
                                 DeviceCode = generalEquipment.DeviceCode,
+                                Brand = generalEquipment.Brand,
+                                Model = generalEquipment.Model,
+                                SerialNumber = generalEquipment.SerialNumber,
+                                Specification = generalEquipment.Specification,
+                                Quantity = generalEquipment.Quantity,
+                                Unit = generalEquipment.Unit,
+                                ImageUrl = generalEquipment.ImageUrl,
+                                DeviceType = 2, // 2=通用设备
+                                Location = generalEquipment.Location,
+                                Company = generalEquipment.Company,
+                                Accessories = generalEquipment.Accessories,
                                 ScrapReason = repairEquipment.FaultDescription,
                                 ScrapDate = System.DateTime.Now,
+                                ScrappedBy = "系统",
                                 Remark = repairEquipment.Remark,
                                 CreatedAt = System.DateTime.Now,
                                 UpdatedAt = System.DateTime.Now
@@ -241,8 +243,8 @@ namespace DeviceWarehouseSystem.Controllers
                 equipmentCode = specialEquipment.DeviceCode;
 
                 // 更新设备状态为维修中
-                specialEquipment.DeviceStatus = 2; // 假设2表示维修中
-                specialEquipment.RepairStatus = 1; // 假设1表示待维修
+                specialEquipment.DeviceStatus = (int)DeviceStatus.PendingRepair;
+                specialEquipment.RepairStatus = (int)RepairStatus.Pending;
                 specialEquipment.FaultReason = request.FaultDescription;
                 specialEquipment.UpdatedAt = System.DateTime.Now;
             }
@@ -261,8 +263,8 @@ namespace DeviceWarehouseSystem.Controllers
                 equipmentCode = generalEquipment.DeviceCode;
 
                 // 更新设备状态为维修中
-                generalEquipment.DeviceStatus = 2; // 假设2表示维修中
-                generalEquipment.RepairStatus = 1; // 假设1表示待维修
+                generalEquipment.DeviceStatus = (int)DeviceStatus.PendingRepair;
+                generalEquipment.RepairStatus = (int)RepairStatus.Pending;
                 generalEquipment.FaultReason = request.FaultDescription;
                 generalEquipment.UpdatedAt = System.DateTime.Now;
             }

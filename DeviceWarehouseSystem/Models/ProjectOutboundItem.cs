@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DeviceWarehouseSystem.Models;
@@ -16,6 +16,8 @@ public partial class ProjectOutboundItem
     public string ItemName { get; set; } = null!;
 
     public string? DeviceCode { get; set; }
+
+    public string? SerialNumber { get; set; }
 
     public string? Brand { get; set; }
 

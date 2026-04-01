@@ -17,6 +17,7 @@ import {
 } from 'antd'
 import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import { get, post, del } from '../services/request'
+import { cacheManager } from '../services/api'
 import { useReactToPrint } from 'react-to-print'
 
 const { Option } = Select
@@ -188,13 +189,123 @@ function GeneralEquipmentPurchaseInbound() {
     documentTitle: `通用设备入库单-${previewData.inboundNumber || '预览'}`,
     pageStyle: `
       @page {
-        size: A4 landscape;
+        size: A4;
         margin: 5mm;
       }
       @media print {
         body {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+          font-size: 8px;
+          line-height: 0.9;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .preview-content {
+          max-height: none !important;
+          overflow: visible !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        table {
+          page-break-inside: auto;
+          line-height: 0.9;
+          margin: 2px 0 !important;
+          border-collapse: collapse !important;
+        }
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+          line-height: 0.9;
+        }
+        thead {
+          display: table-header-group;
+        }
+        tfoot {
+          display: table-footer-group;
+        }
+        table, th, td {
+          font-size: 9px;
+          line-height: 0.9;
+          padding: 1px !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          font-size: 11px;
+          line-height: 0.9;
+          margin: 0.1em 0 !important;
+          padding: 0 !important;
+        }
+        p {
+          font-size: 8px;
+          line-height: 0.9;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .preview-content h2 {
+          font-size: 14px !important;
+          line-height: 0.9;
+          margin: 0.15em 0 !important;
+        }
+        .preview-content h3 {
+          font-size: 10px !important;
+          line-height: 0.9;
+          margin: 0.1em 0 !important;
+        }
+        /* 入库单号样式 */
+        .preview-content > div:nth-child(2) p:first-child {
+          font-size: 10px !important;
+        }
+        /* 入库物品表格样式 */
+        .preview-content > div:nth-child(3) table {
+          font-size: 9px !important;
+        }
+        .preview-content > div:nth-child(3) table th,
+        .preview-content > div:nth-child(3) table td {
+          font-size: 9px !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+        }
+        /* 送货人、检验人、库管、入库日期样式 */
+        .preview-content > div:nth-child(4) p {
+          font-size: 10px !important;
+        }
+        /* 备注栏样式 */
+        .preview-content > div:nth-child(5) {
+          font-size: 9px !important;
+          font-style: italic !important;
+          font-weight: bold !important;
+          margin: 0.15em 0 !important;
+        }
+        .preview-content > div:nth-child(5) p {
+          font-size: 9px !important;
+          font-style: italic !important;
+          font-weight: bold !important;
+          line-height: 1.2;
+          margin: 0.05em 0 !important;
+          padding: 4px !important;
+          min-height: 30px !important;
+        }
+        /* 减小div之间的间距 */
+        .preview-content > div {
+          margin: 2px 0 !important;
+          padding: 8px !important;
+        }
+        /* 减小表格内边距 */
+        .preview-content table {
+          border-collapse: collapse !important;
+        }
+        /* 减小标题与内容之间的间距 */
+        .preview-content h3 {
+          margin-bottom: 8px !important;
+        }
+        /* 移除滚动条 */
+        ::-webkit-scrollbar {
+          display: none !important;
+        }
+        scrollbar {
+          display: none !important;
         }
       }
     `,
@@ -502,6 +613,10 @@ function GeneralEquipmentPurchaseInbound() {
   // 确认入库
   const confirmInbound = async (record) => {
     try {
+      // 打印入库记录的详细信息，包括SN码
+      console.log('确认入库记录:', record);
+      console.log('入库记录中的items:', record.items);
+      
       await post(`/InOutbound/general-equipment-purchase-inbounds/${record.id}/confirm`);
       message.success('确认入库成功');
       // 重新加载入库历史
@@ -509,9 +624,10 @@ function GeneralEquipmentPurchaseInbound() {
       setInboundHistory(history);
       
       // 清除设备列表缓存并刷新
-      if (typeof window !== 'undefined' && window.cacheManager) {
-        window.cacheManager.invalidate('general-equipments');
-      }
+      cacheManager.invalidate('general-equipments');
+      
+      // 提示用户刷新页面以查看新入库的设备
+      message.info('入库成功，刷新页面以查看新入库的设备');
     } catch (error) {
       console.error('确认入库失败:', error);
       message.error('确认入库失败');
@@ -528,9 +644,7 @@ function GeneralEquipmentPurchaseInbound() {
         setInboundHistory(history);
         
         // 清除设备列表缓存并刷新
-        if (typeof window !== 'undefined' && window.cacheManager) {
-          window.cacheManager.invalidate('general-equipments');
-        }
+        cacheManager.invalidate('general-equipments');
       }
     } catch (error) {
       console.error('删除入库记录失败:', error);
@@ -963,19 +1077,19 @@ function GeneralEquipmentPurchaseInbound() {
             <Col xs={24} sm={12} md={6}>
               <Form.Item 
                 name="inspector" 
-                label="检验人员" 
-                rules={[{ required: true, message: '请输入检验人员' }]}
+                label="检验人" 
+                rules={[{ required: true, message: '请输入检验人' }]}
               >
-                <Input placeholder="请输入检验人员" />
+                <Input placeholder="请输入检验人" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item 
                 name="inboundPerson" 
-                label="入库人" 
-                rules={[{ required: true, message: '请输入入库人' }]}
+                label="库管" 
+                rules={[{ required: true, message: '请输入库管' }]}
               >
-                <Input placeholder="请输入入库人" />
+                <Input placeholder="请输入库管" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
@@ -1081,32 +1195,6 @@ function GeneralEquipmentPurchaseInbound() {
             <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
               <Col span={24}>
                 <p style={{ margin: 0, fontSize: '16px' }}><strong>入库单号:</strong> {previewData.inboundNumber}</p>
-              </Col>
-            </Row>
-            
-            {/* 第二行：送货人、检验人员、入库人 */}
-            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
-              <Col xs={24} sm={8} md={8}>
-                <p style={{ margin: 0 }}><strong>送货人:</strong> {previewData.deliveryPerson}</p>
-              </Col>
-              <Col xs={24} sm={8} md={8}>
-                <p style={{ margin: 0 }}><strong>检验人员:</strong> {previewData.inspector}</p>
-              </Col>
-              <Col xs={24} sm={8} md={8}>
-                <p style={{ margin: 0 }}><strong>入库人:</strong> {previewData.inboundPerson}</p>
-              </Col>
-            </Row>
-            
-            {/* 第三行：入库日期、操作人、备注 */}
-            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
-              <Col xs={24} sm={8} md={8}>
-                <p style={{ margin: 0 }}><strong>入库日期:</strong> {previewData.inboundDate}</p>
-              </Col>
-              <Col xs={24} sm={8} md={8}>
-                <p style={{ margin: 0 }}><strong>操作人:</strong> {previewData.operator}</p>
-              </Col>
-              <Col xs={24} sm={8} md={8}>
-                <p style={{ margin: 0 }}><strong>备注:</strong> {previewData.remark || '无'}</p>
               </Col>
             </Row>
           </div>
@@ -1222,6 +1310,30 @@ function GeneralEquipmentPurchaseInbound() {
               bordered
               style={{ width: '100%' }}
             />
+          </div>
+          
+          {/* 送货人、检验人、库管、入库日期 - 放在入库物品下方，备注栏上方 */}
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>送货人:</strong> {previewData.deliveryPerson}</p>
+              </Col>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>检验人:</strong> {previewData.inspector}</p>
+              </Col>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>库管:</strong> {previewData.inboundPerson}</p>
+              </Col>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>入库日期:</strong> {previewData.inboundDate}</p>
+              </Col>
+            </Row>
+          </div>
+          
+          {/* 备注栏移动到最下方 */}
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>备注</h3>
+            <p style={{ margin: 0 }}>{previewData.remark || '无'}</p>
           </div>
         </div>
       </Modal>

@@ -70,28 +70,28 @@ const Dashboard = () => {
       let errorCount = 0
       
       try {
-        specialDevices = await deviceApi.getSpecialInventoryDevices()
+        specialDevices = await deviceApi.getSpecialEquipments(false)
       } catch (error) {
         console.error('获取专用设备数据失败:', error)
         errorCount++
       }
       
       try {
-        generalDevices = await deviceApi.getGeneralInventoryDevices()
+        generalDevices = await deviceApi.getGeneralEquipments(false)
       } catch (error) {
         console.error('获取通用设备数据失败:', error)
         errorCount++
       }
       
       try {
-        consumables = await deviceApi.getConsumables()
+        consumables = await deviceApi.getConsumables(false)
       } catch (error) {
         console.error('获取耗材数据失败:', error)
         errorCount++
       }
       
       try {
-        rawMaterials = await deviceApi.getRawMaterials()
+        rawMaterials = await deviceApi.getRawMaterials(false)
       } catch (error) {
         console.error('获取原材料数据失败:', error)
         errorCount++
@@ -173,21 +173,46 @@ const Dashboard = () => {
         }
       })
       
+      // 按设备名称和品牌分组计算库存数量
+      const specialDeviceGroups = {}
       specialDevices.forEach(item => {
-        if (item.inventoryQuantity < 5) {
+        const key = `${item.name || item.Name}-${item.brand || item.Brand || ''}`
+        if (!specialDeviceGroups[key]) {
+          specialDeviceGroups[key] = {
+            name: item.name || item.Name,
+            count: 0
+          }
+        }
+        specialDeviceGroups[key].count += item.quantity || item.Quantity || 1
+      })
+      
+      Object.values(specialDeviceGroups).forEach(group => {
+        if (group.count < 5) {
           inventoryAlerts.push({
             type: 'warning',
-            message: `${item.name}库存不足，剩余${item.inventoryQuantity}台`,
+            message: `${group.name}库存不足，剩余${group.count}台`,
             icon: '⚠️'
           })
         }
       })
       
+      const generalDeviceGroups = {}
       generalDevices.forEach(item => {
-        if (item.inventoryQuantity < 5) {
+        const key = `${item.name || item.Name}-${item.brand || item.Brand || ''}`
+        if (!generalDeviceGroups[key]) {
+          generalDeviceGroups[key] = {
+            name: item.name || item.Name,
+            count: 0
+          }
+        }
+        generalDeviceGroups[key].count += item.quantity || item.Quantity || 1
+      })
+      
+      Object.values(generalDeviceGroups).forEach(group => {
+        if (group.count < 5) {
           inventoryAlerts.push({
             type: 'warning',
-            message: `${item.name}库存不足，剩余${item.inventoryQuantity}台`,
+            message: `${group.name}库存不足，剩余${group.count}台`,
             icon: '⚠️'
           })
         }

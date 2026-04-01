@@ -849,7 +849,7 @@ namespace DeviceWarehouseSystem.Services
             if (_context.SpecialEquipments != null)
             {
                 var specialEquipments = await _context.SpecialEquipments
-                    .Where(e => e.RepairStatus == 1) // 假设1表示待维修
+                    .Where(e => e.RepairStatus == (int)RepairStatus.Pending)
                     .ToListAsync();
 
                 foreach (var equipment in specialEquipments)
@@ -870,7 +870,7 @@ namespace DeviceWarehouseSystem.Services
             if (_context.GeneralEquipments != null)
             {
                 var generalEquipments = await _context.GeneralEquipments
-                    .Where(e => e.RepairStatus == 1) // 假设1表示待维修
+                    .Where(e => e.RepairStatus == (int)RepairStatus.Pending)
                     .ToListAsync();
 
                 foreach (var equipment in generalEquipments)
@@ -903,8 +903,17 @@ namespace DeviceWarehouseSystem.Services
             {
                 Id = e.Id,
                 EquipmentId = e.SpecialEquipmentId ?? e.GeneralEquipmentId ?? 0,
-                EquipmentName = e.SpecialEquipment?.DeviceName ?? e.GeneralEquipment?.DeviceName ?? "",
-                ScrapReason = e.Remark ?? "",
+                EquipmentName = e.DeviceName ?? "",
+                DeviceCode = e.DeviceCode ?? "",
+                SerialNumber = e.SerialNumber ?? "",
+                Brand = e.Brand ?? "",
+                Model = e.Model ?? "",
+                Quantity = e.Quantity,
+                Unit = e.Unit ?? "",
+                Accessories = e.Accessories ?? "",
+                Warehouse = e.SpecialEquipment?.Warehouse ?? e.GeneralEquipment?.Warehouse ?? "",
+                Company = e.Company ?? e.SpecialEquipment?.Company ?? e.GeneralEquipment?.Company ?? "",
+                ScrapReason = e.ScrapReason ?? e.Remark ?? "",
                 ScrapDate = e.ScrapDate,
                 ScrapStatus = "已报废"
             }).ToList();

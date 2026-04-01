@@ -5,10 +5,10 @@ import ConsumableForm from './ConsumableForm'
 import FileUpload from './FileUpload'
 import * as XLSX from 'xlsx'
 import { get, post, put, del } from '../services/request'
+import { imageApi, cacheManager } from '../services/api'
 import { useListData, useImageLoader, useImagePreview } from '../hooks'
 
-// 默认耗材图片
-const DEFAULT_CONSUMABLE_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiBmaWxsPSIjZmZmZmZmIi8+Cjx0ZXh0IHg9IjI1NiIgeT0iMjU2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM4ODgiPuiuvuaYj+iDveaYjzwvdGV4dD4KPC9zdmc+'
+
 
 const { Option } = Select
 const { Search } = Input
@@ -18,7 +18,7 @@ const processConsumableData = (data) => {
   return data.map((item, index) => ({
     ...item,
     key: item.id || index,
-    image: ((item.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_CONSUMABLE_IMAGE,
+    image: ((item.image) || '').replace(/apiapi/g, '/api/') || '',
     images: []
   }))
 }
@@ -47,7 +47,6 @@ const ConsumableList = () => {
   // 使用图片加载Hook
   const imageLoaderOptions = useMemo(() => ({
     equipmentType: 3, // 3 表示耗材
-    defaultImage: DEFAULT_CONSUMABLE_IMAGE,
     loadDelay: 100
   }), []);
   
@@ -135,13 +134,22 @@ const ConsumableList = () => {
     setShowForm(true)
   }
 
-  const handleEdit = (consumable) => {
+  const handleEdit = async (consumable) => {
+    // 确保加载耗材的最新图片
+    await refreshImages(consumable.id)
     setEditingConsumable(consumable)
     setShowForm(true)
   }
 
-  const handleDetail = (consumable) => {
-    setSelectedConsumable(consumable)
+  const handleDetail = async (consumable) => {
+    // 确保加载耗材的最新图片
+    await refreshImages(consumable.id)
+    // 获取最新的耗材数据
+    const updatedConsumable = {
+      ...consumable,
+      images: getEquipmentImages(consumable.id).images
+    }
+    setSelectedConsumable(updatedConsumable)
     setShowDetail(true)
   }
 
@@ -164,32 +172,136 @@ const ConsumableList = () => {
     try {
       if (consumable.id) {
         // 编辑现有耗材
-        const updatedConsumable = await put(`/Consumable/${consumable.id}`, consumable)
-        const updatedConsumableWithKey = {
-          ...updatedConsumable,
-          key: updatedConsumable.id,
-          image: ((updatedConsumable.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_CONSUMABLE_IMAGE,
-          images: []
-        }
-        updateItem(consumable.id, updatedConsumableWithKey)
-        message.success('耗材更新成功')
+        await handleUpdateConsumable(consumable);
       } else {
         // 添加新耗材
-        const newConsumable = await post('/Consumable', consumable)
-        const newConsumableWithKey = {
-          ...newConsumable,
-          key: newConsumable.id,
-          image: ((newConsumable.image) || '').replace(/\/api\/api\//g, '/api/') || DEFAULT_CONSUMABLE_IMAGE,
-          images: []
-        }
-        addItem(newConsumableWithKey)
-        message.success('耗材添加成功')
+        await handleCreateConsumable(consumable);
       }
-      setShowForm(false)
     } catch (error) {
-      message.error('保存耗材失败')
+      console.error('保存耗材失败:', error);
+      message.error('保存耗材失败');
+    } finally {
+      setShowForm(false);
     }
-  }
+  };
+
+  const handleUpdateConsumable = async (consumable) => {
+    // 获取当前耗材的所有图片
+    const currentImages = await imageApi.getEquipmentImages(consumable.id, 3);
+    const currentImageIds = currentImages.map(img => img.Id || img.id);
+    
+    // 获取用户保留的图片ID
+    const retainedImageIds = (consumable.images || [])
+      .filter(img => img.id && typeof img.id === 'string' && !img.id.startsWith('temp_'))
+      .map(img => img.id);
+    
+    // 删除用户已移除的图片
+    for (const imageId of currentImageIds) {
+      if (!retainedImageIds.includes(imageId)) {
+        try {
+          await imageApi.deleteEquipmentImage(imageId);
+        } catch (error) {
+          console.error('删除图片失败:', error);
+        }
+      }
+    }
+    
+    // 上传新的临时图片
+    const tempImages = (consumable.images || [])
+      .filter(img => img.id && typeof img.id === 'string' && img.id.startsWith('temp_') && img.originFileObj);
+    
+    if (tempImages.length > 0) {
+      const formData = new FormData();
+      tempImages.forEach(img => {
+        if (img.originFileObj) {
+          formData.append('files', img.originFileObj);
+        }
+      });
+      
+      try {
+        await imageApi.uploadEquipmentImage(consumable.id, 3, formData);
+      } catch (error) {
+        console.error('上传临时图片失败:', error);
+        message.error('上传图片失败');
+      }
+    }
+    
+    // 清除图片缓存
+    cacheManager.invalidate(`equipment-images-${consumable.id}-3`);
+    
+    // 获取最新的图片信息
+    const updatedImages = await imageApi.getEquipmentImages(consumable.id, 3);
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055';
+    const cleanBaseUrl = baseUrl.replace(/\/api$/, '');
+    const imageUrl = updatedImages && updatedImages.length > 0 
+      ? `${cleanBaseUrl}/api/Image/data/${updatedImages[0].Id || updatedImages[0].id}` 
+      : '';
+    
+    // 构建更新的图片数组
+    const consumableImages = updatedImages.map(img => ({
+      id: img.Id || img.id,
+      url: `${cleanBaseUrl}/api/Image/data/${img.Id || img.id}`
+    }));
+    
+    const updatedConsumable = await put(`/Consumable/${consumable.id}`, {
+      ...consumable,
+      image: imageUrl
+    });
+    
+    const updatedConsumableWithKey = {
+      ...updatedConsumable,
+      key: updatedConsumable.id,
+      image: imageUrl || '',
+      imageUrl: imageUrl || '',
+      images: consumableImages
+    };
+    
+    // 刷新数据
+    await refresh();
+    // 刷新图片
+    await refreshImages(consumable.id);
+    // 更新耗材数据中的图片信息
+    updateItem(consumable.id, updatedConsumableWithKey);
+    message.success('耗材更新成功');
+  };
+
+  const handleCreateConsumable = async (consumable) => {
+    const consumableData = {
+      ...consumable,
+      image: ''
+    };
+
+    const newConsumable = await post('/Consumable', consumableData);
+    
+    // 如果有临时图片，上传它们
+    if (consumable.images && consumable.images.length > 0) {
+      const tempImages = consumable.images.filter(img => 
+        img.id && typeof img.id === 'string' && img.id.startsWith('temp_')
+      );
+      
+      if (tempImages.length > 0) {
+        const formData = new FormData();
+        tempImages.forEach(img => {
+          if (img.originFileObj) {
+            formData.append('files', img.originFileObj);
+          }
+        });
+        
+        try {
+          await imageApi.uploadEquipmentImage(newConsumable.id || newConsumable.Id, 3, formData);
+        } catch (error) {
+          console.error('上传临时图片失败:', error);
+          message.error('上传图片失败');
+        }
+      }
+    }
+
+    // 刷新数据
+    await refresh();
+    // 刷新图片
+    await refreshImages(newConsumable.id || newConsumable.Id);
+    message.success('耗材添加成功');
+  };
 
   const handleImport = async (data) => {
     const importedConsumables = data.map(item => {

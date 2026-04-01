@@ -163,7 +163,14 @@ const ImageUpload = ({ entityId, entityType, type, onImagesUpdated }) => {
         multiple
         accept="image/*"
         action="#" // 设置为#防止默认上传行为
-        onBeforeUpload={() => false} // 完全阻止自动上传
+        customRequest={({ file, onSuccess }) => {
+          // 自定义上传处理，直接标记为成功
+          // 实际上传会在handleUpload中处理
+          setTimeout(() => {
+            onSuccess();
+          }, 0);
+        }}
+        onBeforeUpload={() => false} // 阻止默认上传
         onChange={(info) => {
           // 如果正在处理上传，不处理新的文件选择
           if (isProcessing) {
@@ -171,10 +178,13 @@ const ImageUpload = ({ entityId, entityType, type, onImagesUpdated }) => {
           }
           
           // 处理文件选择，只处理新增的文件
-          // 检查是否有新添加的文件（有originFileObj的文件）
+          // 检查是否有新添加的文件（有originFileObj且不在selectedImages中的文件）
           const newFiles = [];
+          const existingUids = new Set(selectedImages.map(img => img.uid));
+          
           info.fileList.forEach(item => {
-            if (item.originFileObj) {
+            // 只处理有originFileObj且uid不在selectedImages中的文件
+            if (item.originFileObj && !existingUids.has(item.uid)) {
               newFiles.push(item.originFileObj);
             }
           });

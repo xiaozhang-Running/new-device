@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { Form, Input, Select, InputNumber, Upload, message, Button } from 'antd'
-import { UploadOutlined } from '@ant-design/icons'
+import { Form, Input, Select, InputNumber, message, Button } from 'antd'
 import request from '../services/request'
+import ImageUpload from './ImageUpload'
 
 const { Option } = Select
 
 const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
   const [form] = Form.useForm()
-  const [imageUrl, setImageUrl] = useState('')
   const [warehouses, setWarehouses] = useState([])
   const [companies, setCompanies] = useState([])
   const [fetchingData, setFetchingData] = useState(false)
+  const [images, setImages] = useState([])
 
   // 获取仓库和公司列表
   useEffect(() => {
@@ -36,10 +36,11 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
   useEffect(() => {
     if (rawMaterial) {
       form.setFieldsValue(rawMaterial)
-      setImageUrl(rawMaterial.image || '')
+      // 重置图片数组，确保ImageUpload组件重新加载原材料的图片
+      setImages([])
     } else {
       form.resetFields()
-      setImageUrl('')
+      setImages([])
     }
   }, [rawMaterial, form])
 
@@ -52,42 +53,14 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
     const rawMaterialData = {
       ...values,
       remainingQuantity,
-      image: imageUrl,
+      images: images, // 添加图片数组
       updatedAt: new Date().toISOString().split('T')[0]
     }
 
     onSave(rawMaterialData)
   }
 
-  const handleUpload = async (info) => {
-    if (info.file.status === 'done') {
-      try {
-        // 创建FormData对象
-        const formData = new FormData()
-        formData.append('file', info.file.originFileObj)
-        
-        // 临时使用0作为设备ID，后续会在保存设备时更新
-        const equipmentId = rawMaterial?.id || 0
-        const equipmentType = 3 // 3表示原材料（暂时使用，后续可能需要为原材料添加专门的类型）
-        
-        // 调用后端API上传图片
-        const imagePaths = await request.post(`/Image/equipment/${equipmentId}/type/${equipmentType}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-        
-        if (imagePaths && imagePaths.length > 0) {
-          const imageUrl = imagePaths[0]
-          setImageUrl(imageUrl)
-          message.success(`${info.file.name} 上传成功`)
-        } else {
-          message.error('图片上传失败：未返回图片路径')
-        }
-      } catch (error) {
-        console.error('图片上传失败:', error)
-        message.error(`${info.file.name} 上传失败: ${error.message || '未知错误'}`)
-      }
-    } else if (info.file.status === 'error') {
-      message.error(`${info.file.name} 上传失败`)
-    }
-  }
+
 
   return (
     <Form
@@ -189,23 +162,14 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
       </Form.Item>
 
       <Form.Item
-        name="image"
         label="图片"
       >
-        <Upload
-          name="file"
-          beforeUpload={() => false}
-          onChange={handleUpload}
-          listType="picture"
-          maxCount={1}
-        >
-          <Button icon={<UploadOutlined />}>上传图片</Button>
-        </Upload>
-        {imageUrl && (
-          <div style={{ marginTop: 10 }}>
-            <img src={imageUrl} alt="原材料图片" style={{ width: 100, height: 100, objectFit: 'cover' }} />
-          </div>
-        )}
+        <ImageUpload 
+          entityId={rawMaterial?.id || 0} 
+          entityType={4} // 4表示原材料
+          type="equipment"
+          onImagesUpdated={setImages}
+        />
       </Form.Item>
 
       <Form.Item>

@@ -47,7 +47,8 @@ const DeviceForm = ({ device, onSave, onCancel, deviceType = 'special' }) => {
       }
       form.setFieldsValue(formattedDevice)
       setOriginalStatus(device.status || '')
-      // 不要重置图片数组，让ImageUpload组件自己加载
+      // 重置图片数组，确保ImageUpload组件重新加载设备的图片
+      setImages([])
     } else {
       form.resetFields()
       setOriginalStatus('')

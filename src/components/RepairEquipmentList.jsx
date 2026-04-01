@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Table, Button, Space, Modal, message, Popconfirm, Input, Select, DatePicker, Card, Row, Col, Descriptions, Tag, Form, InputNumber } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, FilterOutlined, EyeOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { get, post, put, del } from '../services/request'
+import dayjs from 'dayjs'
 
 const { Option } = Select
 const { RangePicker } = DatePicker
@@ -94,7 +95,7 @@ const RepairEquipmentList = () => {
       equipmentName: repair.equipmentName,
       equipmentCode: repair.equipmentCode,
       faultDescription: repair.faultDescription,
-      repairDate: repair.repairDate,
+      repairDate: repair.repairDate ? dayjs(repair.repairDate) : null,
       repairCost: repair.repairCost,
       repairPerson: repair.repairPerson,
       repairStatus: repair.repairStatus,
@@ -121,14 +122,24 @@ const RepairEquipmentList = () => {
 
   const handleSave = async (values) => {
     try {
+      // 处理日期数据，将dayjs对象转换为字符串格式
+      const processedValues = {
+        ...values,
+        repairDate: values.repairDate ? values.repairDate.format('YYYY-MM-DD') : null
+      }
+      
       if (editingRepair) {
-        // 编辑现有维修记录
-        await put(`/Repair/${editingRepair.id}`, values)
+        // 编辑现有维修记录，添加Id字段以匹配URL中的id参数
+        const updateValues = {
+          ...processedValues,
+          id: editingRepair.id
+        }
+        await put(`/Repair/${editingRepair.id}`, updateValues)
         message.success('维修记录更新成功')
         fetchRepairEquipments()
       } else {
         // 添加新维修记录
-        await post('/Repair', values)
+        await post('/Repair', processedValues)
         message.success('维修记录添加成功')
         fetchRepairEquipments()
       }
@@ -142,7 +153,7 @@ const RepairEquipmentList = () => {
   const handleCompleteRepair = async (id) => {
     try {
       const repair = repairEquipments.find(r => r.id === id)
-      const updatedRepair = { ...repair, repairStatus: '已完成' }
+      const updatedRepair = { ...repair, repairStatus: '已完成', id: id }
       await put(`/Repair/${id}`, updatedRepair)
       message.success('维修完成')
       fetchRepairEquipments()
@@ -208,6 +219,9 @@ const RepairEquipmentList = () => {
           case '已完成':
             color = 'green'
             break
+          case '无法维修':
+            color = 'red'
+            break
           default:
             color = 'gray'
         }
@@ -263,6 +277,7 @@ const RepairEquipmentList = () => {
     pending: repairEquipments.filter(repair => repair.repairStatus === '待维修').length,
     inProgress: repairEquipments.filter(repair => repair.repairStatus === '维修中').length,
     completed: repairEquipments.filter(repair => repair.repairStatus === '已完成').length,
+    unrepairable: repairEquipments.filter(repair => repair.repairStatus === '无法维修').length,
     total: repairEquipments.length
   }
 
@@ -309,6 +324,14 @@ const RepairEquipmentList = () => {
             </div>
           </Card>
         </Col>
+        <Col span={6}>
+          <Card>
+            <div className="stat-card" style={{ color: '#f5222d' }}>
+              <h3>无法维修</h3>
+              <p className="stat-number">{statusStats.unrepairable}</p>
+            </div>
+          </Card>
+        </Col>
       </Row>
       
       {/* 搜索和筛选区域 */}
@@ -334,6 +357,7 @@ const RepairEquipmentList = () => {
               <Option value="待维修">待维修</Option>
               <Option value="维修中">维修中</Option>
               <Option value="已完成">已完成</Option>
+              <Option value="无法维修">无法维修</Option>
             </Select>
           </Col>
           <Col span={6}>
@@ -431,6 +455,7 @@ const RepairEquipmentList = () => {
               <Option value="待维修">待维修</Option>
               <Option value="维修中">维修中</Option>
               <Option value="已完成">已完成</Option>
+              <Option value="无法维修">无法维修</Option>
             </Select>
           </Form.Item>
           <Form.Item

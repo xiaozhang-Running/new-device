@@ -153,13 +153,115 @@ function ProjectOutbound() {
     documentTitle: `项目出库单-${previewData.outboundId || '预览'}`,
     pageStyle: `
       @page {
-        size: A4 landscape;
+        size: A4;
         margin: 5mm;
       }
       @media print {
         body {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+          font-size: 8px;
+          line-height: 0.9;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .preview-content {
+          max-height: none !important;
+          overflow: visible !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        table {
+          page-break-inside: auto;
+          line-height: 0.9;
+          margin: 2px 0 !important;
+        }
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+          line-height: 0.9;
+        }
+        thead {
+          display: table-header-group;
+        }
+        tfoot {
+          display: table-footer-group;
+        }
+        table, th, td {
+          font-size: 9px;
+          line-height: 0.9;
+          padding: 1px !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          font-size: 11px;
+          line-height: 0.9;
+          margin: 0.1em 0 !important;
+          padding: 0 !important;
+        }
+        p {
+          font-size: 8px;
+          line-height: 0.9;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .preview-content h1 {
+          font-size: 14px !important;
+          line-height: 0.9;
+          margin: 0.15em 0 !important;
+        }
+        .preview-content h3 {
+          font-size: 10px !important;
+          line-height: 0.9;
+          margin: 0.1em 0 !important;
+        }
+        /* 出库单号样式 */
+        .preview-content > div:nth-child(2) p:first-child {
+          font-size: 10px !important;
+        }
+        /* 已选物品表格样式 */
+        .preview-content > div:nth-child(3) table {
+          font-size: 9px !important;
+        }
+        .preview-content > div:nth-child(3) table th,
+        .preview-content > div:nth-child(3) table td {
+          font-size: 9px !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+        }
+        /* 备注栏样式 */
+        .preview-content > div:nth-child(4) {
+          font-size: 9px !important;
+          font-style: italic !important;
+          font-weight: bold !important;
+          margin: 0.15em 0 !important;
+        }
+        .preview-content > div:nth-child(4) div {
+          font-size: 9px !important;
+          font-style: italic !important;
+          font-weight: bold !important;
+          line-height: 1.2;
+          margin: 0.05em 0 !important;
+          padding: 4px !important;
+          min-height: 30px !important;
+        }
+        /* 签收信息样式 */
+        .preview-content > div:nth-child(5) p {
+          font-size: 10px !important;
+        }
+        /* 减小div之间的间距 */
+        .preview-content > div {
+          margin: 2px 0 !important;
+          padding: 8px !important;
+        }
+        /* 减小表格内边距 */
+        .preview-content table {
+          border-collapse: collapse !important;
+        }
+        /* 减小标题与内容之间的间距 */
+        .preview-content h3 {
+          margin-bottom: 8px !important;
         }
       }
     `,
@@ -243,7 +345,7 @@ function ProjectOutbound() {
       // 检查数据格式
       if (Array.isArray(consumablesData)) {
         setConsumables(consumablesData.map(consumable => ({
-          id: consumable.id,
+          id: consumable.id || consumable.Id, // 支持大小写ID
           name: consumable.name,
           model: consumable.brand,
           specification: consumable.modelSpecification,
@@ -356,16 +458,17 @@ function ProjectOutbound() {
           console.log('第一个设备的id:', devices[0].id)
         }
         setFilteredDetailedDevices(devices.map(d => ({
-              id: d.id,
-              deviceId: d.deviceCode || d.DeviceCode || d.id.toString(),
+              id: d.id || d.Id || 0,
+              deviceId: d.deviceCode || d.DeviceCode || (d.id || d.Id || 0).toString(),
               deviceCode: d.deviceCode || d.DeviceCode || '',
-              name: d.name || currentDeviceGroup?.name || '',
-              brand: d.brand,
-              model: d.model,
-              specification: d.specification,
-              unit: d.unit,
-              accessories: d.accessories,
-              status: d.status
+              serialNumber: d.serialNumber || d.SerialNumber || '',
+              name: d.name || d.Name || currentDeviceGroup?.name || '',
+              brand: d.brand || d.Brand,
+              model: d.model || d.Model,
+              specification: d.specification || d.Specification,
+              unit: d.unit || d.Unit,
+              accessories: d.accessories || d.Accessories,
+              status: d.status || d.Status
             })))
       } else if (deviceType === 'general') {
         console.log('调用getGeneralEquipmentDetails API')
@@ -378,16 +481,17 @@ function ProjectOutbound() {
           console.log('第一个设备的DeviceCode:', devices[0].DeviceCode)
         }
         setFilteredDetailedDevices(devices.map(d => ({
-              id: d.id,
-              deviceId: d.deviceCode || d.DeviceCode || d.id.toString(),
+              id: d.id || d.Id || 0,
+              deviceId: d.deviceCode || d.DeviceCode || (d.id || d.Id || 0).toString(),
               deviceCode: d.deviceCode || d.DeviceCode || '',
-              name: d.name || currentDeviceGroup?.name || '',
-              brand: d.brand,
-              model: d.model,
-              specification: d.specification,
-              unit: d.unit,
-              accessories: d.accessories,
-              status: d.status
+              serialNumber: d.serialNumber || d.SerialNumber || '',
+              name: d.name || d.Name || currentDeviceGroup?.name || '',
+              brand: d.brand || d.Brand,
+              model: d.model || d.Model,
+              specification: d.specification || d.Specification,
+              unit: d.unit || d.Unit,
+              accessories: d.accessories || d.Accessories,
+              status: d.status || d.Status
             })))
       }
     } catch (error) {
@@ -409,9 +513,10 @@ function ProjectOutbound() {
       if (currentDeviceType === 'special') {
         const devices = await deviceApi.getSpecialEquipmentDetails(currentDeviceGroup.name, brand)
         setFilteredDetailedDevices(devices.map(d => ({
-              id: d.id,
-              deviceId: d.deviceCode || d.DeviceCode || d.id.toString(),
+              id: d.id || d.Id,
+              deviceId: d.deviceCode || d.DeviceCode || (d.id || d.Id).toString(),
               deviceCode: d.deviceCode || d.DeviceCode || '',
+              serialNumber: d.serialNumber || d.SerialNumber || '',
               name: d.name || currentDeviceGroup?.name || '',
               brand: d.brand,
               model: d.model,
@@ -423,9 +528,10 @@ function ProjectOutbound() {
       } else if (currentDeviceType === 'general') {
         const devices = await deviceApi.getGeneralEquipmentDetails(currentDeviceGroup.name, brand)
         setFilteredDetailedDevices(devices.map(d => ({
-              id: d.id,
-              deviceId: d.deviceCode || d.DeviceCode || d.id.toString(),
+              id: d.id || d.Id,
+              deviceId: d.deviceCode || d.DeviceCode || (d.id || d.Id).toString(),
               deviceCode: d.deviceCode || d.DeviceCode || '',
+              serialNumber: d.serialNumber || d.SerialNumber || '',
               name: d.name || currentDeviceGroup?.name || '',
               brand: d.brand,
               model: d.model,
@@ -550,6 +656,7 @@ function ProjectOutbound() {
       const itemType = item.ItemType || item.itemType
       const itemName = item.ItemName || item.itemName || item.name
       let deviceCode = item.DeviceCode || item.deviceCode || item.deviceId || item.deviceID || ''
+      const serialNumber = item.SerialNumber || item.serialNumber || ''
       const brand = item.Brand || item.brand
       const model = item.Model || item.model
       const quantity = item.Quantity || item.quantity
@@ -566,13 +673,14 @@ function ProjectOutbound() {
         ...item,
         type: itemType === 1 ? '专用设备' : itemType === 2 ? '通用设备' : '耗材',
         name: itemName,
-        deviceId: deviceCode,
-        brand: brand,
-        model: model,
+        deviceId: deviceCode || '',
+        serialNumber: serialNumber || '',
+        brand: brand || '',
+        model: model || '',
         quantity: quantity,
-        unit: unit,
-        accessories: accessories,
-        status: deviceStatus
+        unit: unit || '',
+        accessories: accessories || '',
+        status: deviceStatus || ''
       })
     }
     console.log('映射后的items:', projectOutboundItems)
@@ -608,56 +716,106 @@ function ProjectOutbound() {
     console.log('图片字段值:', imageField)
     const images = []
     
-    if (imageField) {
-      console.log('加载图片:', imageField)
-      const imageUrls = imageField.split(',').filter(url => url && url.trim())
-      console.log('图片URLs:', imageUrls)
-      
-      if (imageUrls.length > 0) {
-        // 尝试从后端获取图片数据
-        try {
-          const baseUrl = 'http://localhost:5054'
+    // 直接从后端获取图片列表，不依赖OutboundImages字段
+    if (fullRecord.id) {
+      try {
+        // baseUrl 已经是 http://192.168.10.72:5057/api，所以不需要再添加 /api
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.10.72:5057/api'
+        console.log('尝试获取出入库图片列表，出库单ID:', fullRecord.id)
+        
+        // 直接使用fetch API获取图片列表，绕过缓存
+        const token = localStorage.getItem('token')
+        const imageListResponse = await fetch(`${baseUrl}/Image/in-outbound/${fullRecord.id}?orderType=1`, {
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        })
+        
+        if (imageListResponse.ok) {
+          const imageList = await imageListResponse.json()
+          console.log('获取到的图片列表:', imageList)
           
-          // 尝试获取出入库图片列表
-          if (fullRecord.id) {
-            console.log('尝试获取出入库图片列表，出库单ID:', fullRecord.id)
-            const imageList = await imageApi.getInOutboundImages(fullRecord.id, 'outbound')
-            console.log('获取到的图片列表:', imageList)
-            
-            if (imageList && imageList.length > 0) {
-              // 使用后端返回的图片数据
-              for (const img of imageList) {
-                if (img.Id) {
-                  // 使用正确的API端点获取图片数据
-                  const imageUrl = `${baseUrl}/api/Image/data/${img.Id}`
+          if (imageList && imageList.length > 0) {
+            // 使用后端返回的图片数据
+            for (const img of imageList) {
+              // 尝试获取图片ID，支持大小写
+              const imageId = img.id || img.Id || img.ID
+              console.log('获取到的图片ID:', imageId)
+              
+              if (imageId) {
+                // 使用正确的API端点获取图片数据
+                // baseUrl 已经包含 /api，所以只需要添加 /Image/data/${imageId}
+                const imageUrl = `${baseUrl}/Image/data/${imageId}`
+                // 尝试使用fetch API获取图片数据，并带上Authorization token
+                try {
+                  const response = await fetch(imageUrl, {
+                    headers: {
+                      'Authorization': token ? `Bearer ${token}` : ''
+                    }
+                  })
+                  if (response.ok) {
+                    // 将图片数据转换为Data URL
+                    const blob = await response.blob()
+                    const dataUrl = URL.createObjectURL(blob)
+                    images.push(dataUrl)
+                    console.log('成功获取图片数据:', dataUrl)
+                  } else {
+                    console.error('获取图片失败:', response.status)
+                    images.push(imageUrl)
+                  }
+                } catch (error) {
+                  console.error('获取图片失败:', error)
                   images.push(imageUrl)
                 }
               }
-            } else {
-              // 如果无法获取图片列表，使用原始URL
+            }
+          } else if (imageField) {
+            // 如果无法获取图片列表，但有原始URL，使用原始URL
+            console.log('加载图片:', imageField)
+            const imageUrls = imageField.split(',').filter(url => url && url.trim())
+            console.log('图片URLs:', imageUrls)
+            
+            if (imageUrls.length > 0) {
               for (const url of imageUrls) {
                 const fullUrl = url.startsWith('http') ? url : baseUrl + url
                 images.push(fullUrl)
               }
             }
-          } else {
-            // 如果没有出库单ID，使用原始URL
+          }
+        } else {
+          console.error('获取图片列表失败:', imageListResponse.status)
+          // 即使失败，如果有原始URL，使用原始URL
+          if (imageField) {
+            const imageUrls = imageField.split(',').filter(url => url && url.trim())
             for (const url of imageUrls) {
               const fullUrl = url.startsWith('http') ? url : baseUrl + url
               images.push(fullUrl)
             }
           }
-        } catch (error) {
-          console.error('加载图片失败:', error)
-          // 即使失败，也使用原始URL
-          const baseUrl = 'http://localhost:5054'
+        }
+      } catch (error) {
+        console.error('加载图片失败:', error)
+        // 即使失败，如果有原始URL，使用原始URL
+        if (imageField) {
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.10.72:5057/api'
+          const imageUrls = imageField.split(',').filter(url => url && url.trim())
           for (const url of imageUrls) {
             const fullUrl = url.startsWith('http') ? url : baseUrl + url
             images.push(fullUrl)
           }
         }
       }
+    } else if (imageField) {
+      // 如果没有出库单ID，但有原始URL，使用原始URL
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.10.72:5057/api'
+      const imageUrls = imageField.split(',').filter(url => url && url.trim())
+      for (const url of imageUrls) {
+        const fullUrl = url.startsWith('http') ? url : baseUrl + url
+        images.push(fullUrl)
+      }
     }
+    
+    console.log('最终图片列表:', images)
     
     const previewDataObj = {
       outboundId: outboundId,
@@ -1005,7 +1163,8 @@ function ProjectOutbound() {
           Unit: item.unit || item.Unit,
           Accessories: item.accessories || item.Accessories || '',
           DeviceStatus: item.status || item.DeviceStatus || item.Status || '正常',
-          status: item.status || item.DeviceStatus || item.Status || '正常'
+          status: item.status || item.DeviceStatus || item.Status || '正常',
+          serialNumber: item.SerialNumber || item.serialNumber || ''
         }
       })
       console.log('映射后的物品数据:', allItems)
@@ -1111,6 +1270,7 @@ function ProjectOutbound() {
           console.log('直接从后端获取的图片列表:', images)
           
           if (images && images.length > 0) {
+            // baseUrl 已经是 http://localhost:5055/api，所以不需要再添加 /api
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api'
             const loadedImages = []
             
@@ -1125,22 +1285,61 @@ function ProjectOutbound() {
               console.log('获取到的图片ID:', imageId)
               
               if (imageId) {
-                const imageUrl = `${baseUrl}/api/Image/data/${imageId}`
+                // baseUrl 已经包含 /api，所以只需要添加 /Image/data/${imageId}
+                const imageUrl = `${baseUrl}/Image/data/${imageId}`
                 // 获取图片名称，支持大小写
                 const imageName = img.imageName || img.ImageName || img.IMAGE_NAME || `image_${imageId}.jpg`
                 console.log('获取到的图片名称:', imageName)
                 
-                // 创建一个普通对象来模拟File对象，因为File对象的name属性是只读的
-                const file = {
-                  name: imageName,
-                  url: imageUrl,
-                  type: 'image/jpeg',
-                  // 为了兼容Upload组件，添加一些必要的属性
-                  uid: `image_${imageId}`,
-                  status: 'done'
+                // 尝试使用fetch API获取图片数据，并带上Authorization token
+                try {
+                  const token = localStorage.getItem('token')
+                  const response = await fetch(imageUrl, {
+                    headers: {
+                      'Authorization': token ? `Bearer ${token}` : ''
+                    }
+                  })
+                  if (response.ok) {
+                    // 将图片数据转换为Data URL
+                    const blob = await response.blob()
+                    const dataUrl = URL.createObjectURL(blob)
+                    // 创建一个普通对象来模拟File对象，包含Data URL
+                    const file = {
+                      name: imageName,
+                      url: dataUrl,
+                      type: blob.type,
+                      // 为了兼容Upload组件，添加一些必要的属性
+                      uid: `image_${imageId}`,
+                      status: 'done'
+                    }
+                    loadedImages.push(file)
+                    console.log('添加到loadedImages的文件:', file)
+                  } else {
+                    console.error('获取图片失败:', response.status)
+                    // 如果获取失败，创建一个只包含URL的对象
+                    const file = {
+                      name: imageName,
+                      url: imageUrl,
+                      type: 'image/jpeg',
+                      // 为了兼容Upload组件，添加一些必要的属性
+                      uid: `image_${imageId}`,
+                      status: 'done'
+                    }
+                    loadedImages.push(file)
+                  }
+                } catch (error) {
+                  console.error('获取图片失败:', error)
+                  // 如果发生错误，创建一个只包含URL的对象
+                  const file = {
+                    name: imageName,
+                    url: imageUrl,
+                    type: 'image/jpeg',
+                    // 为了兼容Upload组件，添加一些必要的属性
+                    uid: `image_${imageId}`,
+                    status: 'done'
+                  }
+                  loadedImages.push(file)
                 }
-                loadedImages.push(file)
-                console.log('添加到loadedImages的文件:', file)
               } else {
                 console.log('图片对象没有ID字段:', img)
               }
@@ -1184,7 +1383,8 @@ function ProjectOutbound() {
                   for (const img of images) {
                     if (img.Id) {
                       // 使用正确的API端点获取图片数据
-                      const imageUrl = `${baseUrl}/api/Image/data/${img.Id}`
+                      // baseUrl 已经包含 /api，所以只需要添加 /Image/data/${img.Id}
+                      const imageUrl = `${baseUrl}/Image/data/${img.Id}`
                       // 创建一个虚拟的File对象，只包含URL信息
                       const file = new File([], imageUrl, { type: 'image/jpeg' })
                       // 添加一个url属性，方便前端显示
@@ -1304,8 +1504,9 @@ function ProjectOutbound() {
     // 重新获取设备和耗材数据，确保显示最新的数据库数据
     setLoading(true)
     try {
-      // 从库存表获取专用设备
-      const specialInventoryDevices = await deviceApi.getSpecialInventoryDevices()
+      // 从库存表获取专用设备（禁用缓存，确保获取最新数据）
+      const specialInventoryDevices = await deviceApi.getSpecialInventoryDevices(false)
+      console.log('库存专用设备数据:', specialInventoryDevices)
       setSpecialDevices(specialInventoryDevices.map(device => ({
         id: device.id,
         equipmentId: device.equipmentId,
@@ -1318,8 +1519,9 @@ function ProjectOutbound() {
         warehouse: device.warehouse
       })))
 
-      // 从库存表获取通用设备
-      const generalInventoryDevices = await deviceApi.getGeneralInventoryDevices()
+      // 从库存表获取通用设备（禁用缓存，确保获取最新数据）
+      const generalInventoryDevices = await deviceApi.getGeneralInventoryDevices(false)
+      console.log('库存通用设备数据:', generalInventoryDevices)
       setGeneralDevices(generalInventoryDevices.map(device => ({
         id: device.id,
         equipmentId: device.equipmentId,
@@ -1332,11 +1534,11 @@ function ProjectOutbound() {
         warehouse: device.warehouse
       })))
 
-      // 从后端获取耗材数据
-      const consumablesData = await deviceApi.getConsumables()
+      // 从后端获取耗材数据（禁用缓存，确保获取最新数据）
+      const consumablesData = await deviceApi.getConsumables(false)
       console.log('耗材数据:', consumablesData)
       setConsumables(consumablesData.map(consumable => ({
-        id: consumable.id,
+        id: consumable.id || consumable.Id, // 支持大小写ID
         name: consumable.name,
         model: consumable.brand,
         specification: consumable.modelSpecification,
@@ -1360,10 +1562,14 @@ function ProjectOutbound() {
   // 确认出库操作
   const confirmOutbound = async (outboundId) => {
     try {
-      await projectOutboundApi.completeProjectOutbound(outboundId)
+      console.log('开始确认出库，出库单ID:', outboundId);
+      const response = await projectOutboundApi.completeProjectOutbound(outboundId);
+      console.log('确认出库API响应:', response);
       
       // 重新获取出库记录，确保项目名称和项目时间正确显示
+      console.log('开始重新获取出库记录');
       const updatedOutbounds = await projectOutboundApi.getProjectOutbounds(false);
+      console.log('获取到的出库记录:', updatedOutbounds);
       const outboundHistoryData = updatedOutbounds.map(outbound => ({
         id: outbound.id,
         outboundId: outbound.outboundNumber,
@@ -1378,11 +1584,14 @@ function ProjectOutbound() {
       setOutboundHistory(outboundHistoryData);
       
       // 重新获取设备和耗材数据，确保显示最新的库存数据
+      console.log('开始重新获取设备和耗材数据');
       await fetchDevices();
+      console.log('设备和耗材数据获取完成');
       
       message.success('出库确认成功')
     } catch (error) {
       console.error('确认出库失败:', error);
+      console.error('错误堆栈:', error.stack);
       message.error('出库确认失败：' + (error.message || '未知错误'))
     }
   }
@@ -1433,7 +1642,16 @@ function ProjectOutbound() {
         ...(selectedGeneralDevices || []).map(item => ({ ...item, type: '通用设备' })),
         ...(selectedConsumables || []).map(item => ({ ...item, type: '耗材' }))
       ],
-      images: (selectedImages || []).map(file => file.url)
+      images: (selectedImages || []).map(file => {
+        if (file.url) {
+          return file.url;
+        } else if (file instanceof File) {
+          return URL.createObjectURL(file);
+        } else if (file.originFileObj && file.originFileObj instanceof File) {
+          return URL.createObjectURL(file.originFileObj);
+        }
+        return '';
+      }).filter(url => url)
     }
     
     console.log('构建预览数据:', previewDataObj)
@@ -1471,8 +1689,9 @@ function ProjectOutbound() {
       ...selectedSpecialDevices.map(item => ({
         ItemType: 1, // 1表示专用设备
         ItemId: item.id || 0, // 确保ItemId是数字类型
-        ItemName: item.name,
-        DeviceCode: item.deviceId || '', // 使用deviceId作为设备编号
+        ItemName: item.name || '',
+        DeviceCode: (item.deviceId || '').toString(), // 使用deviceId作为设备编号，确保是字符串类型
+        SerialNumber: item.serialNumber || '', // 添加S/N码
         Brand: item.brand || '',
         Model: item.model || '',
         Quantity: item.quantity || 1,
@@ -1485,8 +1704,9 @@ function ProjectOutbound() {
       ...selectedGeneralDevices.map(item => ({
         ItemType: 2, // 2表示通用设备
         ItemId: item.id || 0, // 确保ItemId是数字类型
-        ItemName: item.name,
-        DeviceCode: item.deviceId || '', // 使用deviceId作为设备编号
+        ItemName: item.name || '',
+        DeviceCode: (item.deviceId || '').toString(), // 使用deviceId作为设备编号，确保是字符串类型
+        SerialNumber: item.serialNumber || '', // 添加S/N码
         Brand: item.brand || '',
         Model: item.model || '',
         Quantity: item.quantity || 1,
@@ -1499,8 +1719,8 @@ function ProjectOutbound() {
       ...selectedConsumables.map(item => ({
         ItemType: 3, // 3表示耗材
         ItemId: item.id || 0,
-        ItemName: item.name,
-        DeviceCode: item.deviceId || '', // 使用deviceId作为设备编号
+        ItemName: item.name || '',
+        DeviceCode: (item.deviceId || '').toString(), // 使用deviceId作为设备编号，确保是字符串类型
         Brand: item.brand || '',
         Model: item.model || '',
         Quantity: item.quantity || 1,
@@ -1595,8 +1815,17 @@ function ProjectOutbound() {
       // 上传图片
       if (selectedImages.length > 0) {
         setLoading(true)
-        // 只上传用户新选择的图片，过滤掉从后端加载的虚拟File对象
-        const newFiles = selectedImages.filter(file => !file.url); // 过滤掉有url属性的文件（从后端加载的）
+        // 只上传用户新选择的本地文件，过滤掉从后端加载的虚拟File对象
+        // 处理Upload组件的文件对象结构
+        const newFiles = [];
+        selectedImages.forEach(file => {
+          // 检查是否是File实例或包含originFileObj
+          if (file instanceof File) {
+            newFiles.push(file);
+          } else if (file.originFileObj && file.originFileObj instanceof File) {
+            newFiles.push(file.originFileObj);
+          }
+        });
         console.log('准备上传的图片数量:', newFiles.length)
         
         if (newFiles.length > 0) {
@@ -1613,7 +1842,6 @@ function ProjectOutbound() {
             throw new Error('无法获取出库单ID');
           }
           
-          // 注意：不要重复添加orderId和orderType，因为imageApi.uploadInOutboundImage会处理
           // 添加所有图片
           newFiles.forEach((image, index) => {
             console.log('添加文件到FormData:', image.name, image.type);
@@ -1847,14 +2075,6 @@ function ProjectOutbound() {
                 console.log('Upload onChange info:', info);
                 // 处理文件选择，保留之前的图片
                 const existingFiles = selectedImages.filter(file => file.url); // 保留从后端加载的图片（有url属性）
-                // 保留之前用户选择的本地文件（没有url属性的）并为它们创建URL
-                const previousLocalFiles = selectedImages.filter(file => !file.url).map(file => {
-                  // 为之前选择的本地文件创建URL
-                  if (!file.url && file instanceof File) {
-                    file.url = URL.createObjectURL(file);
-                  }
-                  return file;
-                });
                 // 获取新选择的文件，并为本地文件创建URL
                 const newFiles = [];
                 info.fileList.forEach(item => {
@@ -1867,7 +2087,7 @@ function ProjectOutbound() {
                 });
                 console.log('新选择的文件数量:', newFiles.length);
                 // 合并所有文件
-                const allFiles = [...existingFiles, ...previousLocalFiles, ...newFiles];
+                const allFiles = [...existingFiles, ...newFiles];
                 console.log('所有文件数量:', allFiles.length);
                 setSelectedImages(allFiles);
               }}
@@ -1910,7 +2130,14 @@ function ProjectOutbound() {
                     {
                       title: '设备编号',
                       dataIndex: 'deviceId',
-                      key: 'deviceId'
+                      key: 'deviceId',
+                      render: (text, record) => record.type === '耗材' ? '-' : (text || '-')
+                    },
+                    {
+                      title: 'SN码',
+                      dataIndex: 'serialNumber',
+                      key: 'serialNumber',
+                      render: (text) => text || '-'
                     },
                     {
                       title: '品牌',
@@ -2445,6 +2672,21 @@ function ProjectOutbound() {
                   dataIndex: 'deviceId',
                   key: 'deviceId',
                   width: '10%',
+                  render: (text, record) => (
+                    <div style={{ 
+                      whiteSpace: 'normal', 
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4'
+                    }}>
+                      {record.type === '耗材' ? '-' : (text || '-')}
+                    </div>
+                  )
+                },
+                {
+                  title: 'SN码',
+                  dataIndex: 'serialNumber',
+                  key: 'serialNumber',
+                  width: '10%',
                   render: (text) => (
                     <div style={{ 
                       whiteSpace: 'normal', 
@@ -2459,7 +2701,7 @@ function ProjectOutbound() {
                   title: '品牌',
                   dataIndex: 'brand',
                   key: 'brand',
-                  width: '8%'
+                  width: '6%'
                 },
                 {
                   title: '型号',
@@ -2480,13 +2722,13 @@ function ProjectOutbound() {
                   title: '数量',
                   dataIndex: 'quantity',
                   key: 'quantity',
-                  width: '5%'
+                  width: '4%'
                 },
                 {
                   title: '单位',
                   dataIndex: 'unit',
                   key: 'unit',
-                  width: '5%'
+                  width: '4%'
                 },
                 {
                   title: '配件',
@@ -2585,7 +2827,7 @@ function ProjectOutbound() {
         placement="right"
         onClose={() => setDeviceDetailModalVisible(false)}
         open={deviceDetailModalVisible}
-        width={1000}
+        size={1000}
       >
         <div className="mb-4">
           <label className="mr-2">按品牌筛选:</label>
@@ -2604,6 +2846,7 @@ function ProjectOutbound() {
         <Table 
           columns={[
             { title: '设备编号', dataIndex: 'deviceId', key: 'deviceId' },
+            { title: 'SN码', dataIndex: 'serialNumber', key: 'serialNumber' },
             { title: '品牌', dataIndex: 'brand', key: 'brand' },
             { title: '型号', dataIndex: 'model', key: 'model' },
             { title: '规格', dataIndex: 'specification', key: 'specification' },

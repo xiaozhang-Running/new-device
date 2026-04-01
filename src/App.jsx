@@ -24,7 +24,6 @@ import ConsumableList from './components/ConsumableList'
 import RawMaterialList from './components/RawMaterialList'
 import RepairEquipmentList from './components/RepairEquipmentList'
 import ScrapEquipmentList from './components/ScrapEquipmentList'
-import ScrapEquipmentForm from './components/ScrapEquipmentForm'
 import ProjectOutbound from './components/ProjectOutbound'
 import ProjectInbound from './components/ProjectInbound'
 import RawMaterialOutboundList from './components/RawMaterialOutboundList'
@@ -46,7 +45,6 @@ function App() {
   const [user, setUser] = useState(null)
   const [loginVisible, setLoginVisible] = useState(true)
   const [selectedKey, setSelectedKey] = useState('dashboard')
-  const [scrapView, setScrapView] = useState('list') // 'list' or 'form'
 
   // 从localStorage读取登录状态
   useEffect(() => {
@@ -76,6 +74,44 @@ function App() {
     setSelectedKey(e.key)
   }
 
+  // 角色权限定义
+  const rolePermissions = {
+    '系统管理员': {
+      menus: ['dashboard', 'inventory', 'special-device', 'general-device', 'consumables', 'raw-materials', 'repair', 'scrap', 'outbound', 'project-outbound', 'raw-material-outbound', 'inbound', 'project-inbound', 'special-equipment-purchase-inbound', 'general-equipment-purchase-inbound', 'consumable-purchase-inbound', 'raw-material-inbound', 'warehouse', 'warehouse-settings', 'company-settings', 'users', 'logs']
+    },
+    '仓库管理员': {
+      menus: ['dashboard', 'inventory', 'special-device', 'general-device', 'consumables', 'raw-materials', 'repair', 'scrap', 'outbound', 'project-outbound', 'raw-material-outbound', 'inbound', 'project-inbound', 'special-equipment-purchase-inbound', 'general-equipment-purchase-inbound', 'consumable-purchase-inbound', 'raw-material-inbound']
+    },
+    '项目负责人': {
+      menus: ['dashboard', 'inventory', 'special-device', 'general-device', 'consumables', 'raw-materials', 'outbound', 'project-outbound', 'inbound', 'project-inbound']
+    },
+    '财务人员': {
+      menus: ['dashboard', 'inventory', 'special-device', 'general-device', 'consumables', 'raw-materials', 'logs']
+    },
+    '普通用户': {
+      menus: ['dashboard', 'inventory']
+    }
+  }
+
+  // 过滤菜单
+  const filterMenuItems = (items) => {
+    if (!user || !user.role || !rolePermissions[user.role]) {
+      return []
+    }
+
+    const userMenus = rolePermissions[user.role].menus
+
+    return items.filter(item => {
+      if (userMenus.includes(item.key)) {
+        if (item.children) {
+          item.children = item.children.filter(child => userMenus.includes(child.key))
+        }
+        return true
+      }
+      return false
+    })
+  }
+
 
   // 渲染主内容
   const renderContent = () => {
@@ -97,29 +133,8 @@ function App() {
       case 'scrap':
         return (
           <div className="page-content">
-            <div className="flex justify-between items-center mb-4">
-              <h2>报废设备管理</h2>
-              <div>
-                <Button 
-                  type={scrapView === 'list' ? 'primary' : 'default'}
-                  onClick={() => setScrapView('list')}
-                  style={{ marginRight: 8 }}
-                >
-                  报废设备列表
-                </Button>
-                <Button 
-                  type={scrapView === 'form' ? 'primary' : 'default'}
-                  onClick={() => setScrapView('form')}
-                >
-                  设备报废申请
-                </Button>
-              </div>
-            </div>
-            {scrapView === 'list' ? (
-              <ScrapEquipmentList />
-            ) : (
-              <ScrapEquipmentForm onSuccess={() => setScrapView('list')} />
-            )}
+            <h2>报废设备管理</h2>
+            <ScrapEquipmentList />
           </div>
         )
       case 'outbound':
@@ -186,7 +201,7 @@ function App() {
             selectedKeys={[selectedKey]}
             onClick={handleMenuClick}
             style={{ height: '100%', borderRight: 0 }}
-            items={[
+            items={filterMenuItems([
               {
                 key: 'dashboard',
                 icon: <DashboardOutlined />,
@@ -294,7 +309,7 @@ function App() {
                 icon: <HistoryOutlined />,
                 label: '日志管理'
               }
-            ]}
+            ])}
           />
         </Sider>
         <Content style={{ padding: '24px' }}>

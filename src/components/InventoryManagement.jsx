@@ -652,23 +652,6 @@ const InventoryManagement = () => {
       dataIndex: 'lastUpdated',
       key: 'lastUpdated',
       width: 120
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 120,
-      fixed: 'right',
-      render: (_, record) => (
-        <Space size="middle">
-          <Button 
-            type="primary" 
-            icon={<EditOutlined />} 
-            onClick={() => handleAdjustInventory(record)}
-          >
-            调整库存
-          </Button>
-        </Space>
-      )
     }
   ]
 

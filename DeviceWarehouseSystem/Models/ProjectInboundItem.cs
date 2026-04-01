@@ -17,6 +17,8 @@ public partial class ProjectInboundItem
 
     public string? DeviceCode { get; set; }
 
+    public string? SerialNumber { get; set; }
+
     public string? Brand { get; set; }
 
     public string? Model { get; set; }

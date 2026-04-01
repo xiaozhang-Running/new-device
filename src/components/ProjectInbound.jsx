@@ -72,148 +72,109 @@ function ProjectInbound() {
         body {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
-          font-family: 'Microsoft YaHei', Arial, sans-serif;
-          font-size: 9px;
-          line-height: 1.1;
+          font-size: 8px;
+          line-height: 0.9;
           margin: 0 !important;
           padding: 0 !important;
-          width: 210mm !important;
-          height: 297mm !important;
-          box-sizing: border-box !important;
         }
         .preview-content {
           max-height: none !important;
           overflow: visible !important;
-          padding: 0 !important;
           margin: 0 !important;
-          width: 100% !important;
+          padding: 0 !important;
         }
         table {
-          width: 100% !important;
-          border-collapse: collapse !important;
+          page-break-inside: auto;
+          line-height: 0.9;
           margin: 2px 0 !important;
-          font-size: 8px !important;
-          table-layout: fixed !important;
-        }
-        th, td {
-          border: 1px solid #ddd !important;
-          padding: 1.5px !important;
-          text-align: left !important;
-          font-size: 8px !important;
-          line-height: 1 !important;
-          word-break: break-all !important;
-        }
-        th:nth-child(1), td:nth-child(1) { width: 35px !important; text-align: center !important; font-size: 7px !important; }
-        th:nth-child(2), td:nth-child(2) { width: 50px !important; text-align: center !important; }
-        th:nth-child(3), td:nth-child(3) { width: 80px !important; }
-        th:nth-child(4), td:nth-child(4) { width: 70px !important; font-size: 7px !important; }
-        th:nth-child(5), td:nth-child(5) { width: 50px !important; text-align: center !important; }
-        th:nth-child(6), td:nth-child(6) { width: 60px !important; }
-        th:nth-child(7), td:nth-child(7) { width: 40px !important; text-align: center !important; }
-        th:nth-child(8), td:nth-child(8) { width: 35px !important; text-align: center !important; }
-        th:nth-child(9), td:nth-child(9) { width: 80px !important; }
-        th:nth-child(10), td:nth-child(10) { width: 70px !important; text-align: center !important; }
-        th:nth-child(11), td:nth-child(11) { width: 70px !important; }
-        th {
-          background-color: #f2f2f2 !important;
-          font-weight: bold !important;
-          padding: 1.5px !important;
-          font-size: 7.5px !important;
+          border-collapse: collapse !important;
         }
         tr {
-          line-height: 1 !important;
+          page-break-inside: avoid;
+          page-break-after: auto;
+          line-height: 0.9;
         }
-        h1 {
-          font-size: 12px !important;
-          text-align: center !important;
-          margin: 0 0 2px 0 !important;
-          line-height: 1.1 !important;
+        thead {
+          display: table-header-group;
         }
-        h3 {
-          font-size: 10px !important;
-          margin: 0 0 2px 0 !important;
-          line-height: 1.1 !important;
+        tfoot {
+          display: table-footer-group;
+        }
+        table, th, td {
+          font-size: 9px;
+          line-height: 0.9;
+          padding: 1px !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          font-size: 11px;
+          line-height: 0.9;
+          margin: 0.1em 0 !important;
+          padding: 0 !important;
         }
         p {
-          margin: 1px 0 !important;
-          line-height: 1.2 !important;
-          font-size: 14px !important;
-        }
-        /* 备注部分样式 */
-        .preview-content > div:last-child {
-          font-size: 14px !important;
-        }
-        .preview-content > div:last-child div {
-          font-size: 14px !important;
-          line-height: 1.2 !important;
-        }
-        .ant-row {
-          width: 100% !important;
-          margin: 0 !important;
-          display: flex !important;
-          flex-wrap: nowrap !important;
-        }
-        .ant-col {
-          padding: 0 !important;
-          flex: 1 !important;
-          min-width: 0 !important;
-        }
-        div {
+          font-size: 8px;
+          line-height: 0.9;
           margin: 0 !important;
           padding: 0 !important;
         }
-        .preview-content > div {
-          margin-bottom: 3px !important;
-          padding: 2px !important;
+        .preview-content h1 {
+          font-size: 14px !important;
+          line-height: 0.9;
+          margin: 0.15em 0 !important;
         }
         .preview-content h3 {
           font-size: 10px !important;
-          margin-bottom: 2px !important;
+          line-height: 0.9;
+          margin: 0.1em 0 !important;
         }
-        .preview-content .ant-row {
-          margin-bottom: 2px !important;
+        /* 入库单号样式 */
+        .preview-content > div:nth-child(2) p:first-child {
+          font-size: 10px !important;
         }
-        .preview-content .ant-col > div {
-          display: flex !important;
-          flex-direction: column !important;
-          height: 100% !important;
+        /* 已选物品表格样式 */
+        .preview-content > div:nth-child(3) table {
+          font-size: 9px !important;
         }
-        .preview-content .ant-col > div > span:first-child {
-          font-size: 12px !important;
-          margin-bottom: 1px !important;
+        .preview-content > div:nth-child(3) table th,
+        .preview-content > div:nth-child(3) table td {
+          font-size: 9px !important;
+          font-weight: normal !important;
+          font-style: normal !important;
         }
-        .preview-content .ant-col > div > span:last-child {
-          font-size: 14px !important;
-          font-weight: 500 !important;
-          line-height: 1.2 !important;
+        /* 备注栏样式 */
+        .preview-content > div:nth-child(4) {
+          font-size: 9px !important;
+          font-style: italic !important;
+          font-weight: bold !important;
+          margin: 0.15em 0 !important;
         }
-        /* 移除所有边框和背景色，使打印更简洁 */
+        .preview-content > div:nth-child(4) div {
+          font-size: 9px !important;
+          font-style: italic !important;
+          font-weight: bold !important;
+          line-height: 1.2;
+          margin: 0.05em 0 !important;
+          padding: 4px !important;
+          min-height: 30px !important;
+        }
+        /* 签收信息样式 */
+        .preview-content > div:nth-child(5) p {
+          font-size: 10px !important;
+        }
+        /* 减小div之间的间距 */
         .preview-content > div {
-          border: none !important;
-          background-color: white !important;
+          margin: 2px 0 !important;
+          padding: 8px !important;
         }
-        /* 确保表格不占用过多空间 */
-        .ant-table {
-          margin: 0 !important;
+        /* 减小表格内边距 */
+        .preview-content table {
+          border-collapse: collapse !important;
         }
-        .ant-table-container {
-          margin: 0 !important;
-        }
-        .ant-table-content {
-          overflow: visible !important;
-        }
-        /* 优化表格分页 */
-        .ant-table-tbody {
-          page-break-inside: auto;
-        }
-        .ant-table-row {
-          page-break-inside: avoid;
-          page-break-after: auto;
-        }
-        /* 确保内容适应页面 */
-        .ant-table-wrapper {
-          width: 100% !important;
-          overflow: visible !important;
+        /* 减小标题与内容之间的间距 */
+        .preview-content h3 {
+          margin-bottom: 8px !important;
         }
         /* 移除滚动条 */
         ::-webkit-scrollbar {
@@ -280,8 +241,54 @@ function ProjectInbound() {
       console.log('处理后的入库单数据:', processedInboundData)
       // 确保是数组
       if (Array.isArray(processedInboundData)) {
-        // 直接使用原始数据，不需要处理items字段
-        setInboundHistory(processedInboundData)
+        // 标准化字段名，确保入库单号正确显示
+        const normalizedInbounds = processedInboundData.map(item => {
+          // 提取标准化的字段映射函数
+          const normalizeItemFields = (item) => ({
+            ...item,
+            deviceCode: item.deviceCode || item.DeviceCode || '',
+            snCode: item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || '',
+            equipmentId: item.equipmentId || item.EquipmentId || 0,
+            equipmentName: item.equipmentName || item.EquipmentName || item.ItemName || item.itemName || '',
+            status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '',
+            accessories: item.accessories || item.Accessories || ''
+          });
+
+          // 标准化items数组中的字段
+          let normalizedItems = [];
+          if (item.items && Array.isArray(item.items)) {
+            normalizedItems = item.items.map(normalizeItemFields);
+          } else if (item.Items && Array.isArray(item.Items)) {
+            normalizedItems = item.Items.map(normalizeItemFields);
+          }
+          
+          return {
+            ...item,
+            // 标准化入库单号字段
+            inboundNumber: item.inboundNumber || item.InboundNumber,
+            // 标准化其他字段
+            projectName: item.projectName || item.ProjectName,
+            projectManager: item.projectManager || item.ProjectManager,
+            handler: item.handler || item.Handler,
+            status: item.status || item.Status,
+            // 标准化时间字段，用于排序
+            createdAt: item.createdAt || item.CreatedAt || item.inboundDate || item.InboundDate,
+            inboundDate: item.inboundDate || item.InboundDate,
+            // 标准化items数组
+            items: normalizedItems,
+            Items: normalizedItems
+          };
+        })
+        
+        // 按创建时间或入库时间降序排序，最新的放在最前面
+        const sortedInbounds = normalizedInbounds.sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.inboundDate || 0)
+          const dateB = new Date(b.createdAt || b.inboundDate || 0)
+          return dateB - dateA
+        })
+        
+        console.log('标准化并排序后的入库记录:', sortedInbounds)
+        setInboundHistory(sortedInbounds)
       } else {
         console.error('入库单数据格式错误，不是数组:', processedInboundData)
         setInboundHistory([])
@@ -379,11 +386,17 @@ function ProjectInbound() {
         let accessories = item.Accessories || item.accessories || item.accessory || item.Accessory || item.equipmentAccessories || item.EquipmentAccessories
         let equipmentName = item.EquipmentName || item.equipmentName || item.ItemName || item.itemName || item.Name || item.name
         
+        // 优先使用设备ID，其次使用itemId
         const equipmentId = item.equipmentId || item.EquipmentId || item.itemId || item.ItemId
         const itemType = item.ItemType || item.itemType || (isConsumable ? 3 : 1)
         console.log('设备ID:', equipmentId, '设备类型:', itemType)
         
-        if (equipmentId && !isConsumable) {
+        // 检查item是否有DeviceCode字段，无论其值是否为空
+        const hasDeviceCode = 'DeviceCode' in item || 'deviceCode' in item
+        if (hasDeviceCode) {
+          deviceCode = item.DeviceCode || item.deviceCode || '无'
+          console.log('直接使用出库单中的设备编号:', deviceCode)
+        } else if (equipmentId) {
           // 尝试从专用设备表获取
           try {
             console.log('尝试从专用设备表获取设备信息，equipmentId:', equipmentId)
@@ -434,8 +447,13 @@ function ProjectInbound() {
             accessories: accessories || '无',
             itemType: itemType,
             isConsumable: isConsumable,
+            equipmentId: equipmentId || 0,
+            EquipmentId: equipmentId || 0,
             equipmentName: equipmentName,
-            ItemName: equipmentName
+            ItemName: equipmentName,
+            // 标准化设备状态字段
+            status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
+            Status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常'
           }
       }))
       
@@ -465,20 +483,60 @@ function ProjectInbound() {
 
   // 处理部分入库
   const handlePartialInbound = async (record) => {
+    // 检查当前入库记录状态，如果已经是部分入库，则显示确认提示
+    const currentStatus = record.status || record.Status;
+    if (currentStatus === '部分入库') {
+      Modal.confirm({
+        title: '确认再次部分入库',
+        content: '该入库记录已经是部分入库状态，确定要再次执行部分入库操作吗？',
+        onOk: async () => {
+          await executePartialInbound(record);
+        }
+      });
+    } else {
+      await executePartialInbound(record);
+    }
+  }
+
+  // 执行部分入库操作
+  const executePartialInbound = async (record) => {
     try {
-      // 准备入库数据，确保 items 包含正确的 ItemType
-      const itemsData = record.items ? record.items.map(item => ({
+      // 准备入库数据，从 selectedItems 获取最新的设备状态
+      // 使用 selectedItems 而不是 record.items，以确保获取用户最新修改的设备状态
+      console.log('准备部分入库，selectedItems:', selectedItems)
+      const itemsData = selectedItems && selectedItems.length > 0 ? selectedItems.map(item => ({
         id: item.id || item.Id || 0,
         projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
-        equipmentId: item.equipmentId || item.EquipmentId || 0,
-        equipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
-        brand: item.brand || item.Brand || '',
-        model: item.model || item.Model || '',
-        quantity: item.quantity || item.Quantity || 0,
-        unit: item.unit || item.Unit || '',
-        status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
-        itemType: item.itemType || item.ItemType || 1
-      })) : []
+        EquipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0, // 优先使用设备ID，其次使用itemId
+        EquipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
+        DeviceCode: item.deviceCode || item.DeviceCode || '', // 设备编号
+        SnCode: item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || '', // SN码
+        Brand: item.brand || item.Brand || '',
+        Model: item.model || item.Model || '',
+        Quantity: item.quantity || item.Quantity || 0,
+        Unit: item.unit || item.Unit || '',
+        Accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || '',
+        // 优先使用用户最新修改的状态（status 或 Status）
+        Status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
+        ItemType: item.itemType || item.ItemType || (item.isConsumable ? 3 : 1)
+      })) : (record.items ? record.items.map(item => ({
+        id: item.id || item.Id || 0,
+        projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
+        EquipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0, // 优先使用设备ID，其次使用itemId
+        EquipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
+        DeviceCode: item.deviceCode || item.DeviceCode || '', // 设备编号
+        SnCode: item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || '', // SN码
+        Brand: item.brand || item.Brand || '',
+        Model: item.model || item.Model || '',
+        Quantity: item.quantity || item.Quantity || 0,
+        Unit: item.unit || item.Unit || '',
+        Accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || '',
+        // 优先使用用户最新修改的状态（status 或 Status）
+        Status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
+        ItemType: item.itemType || item.ItemType || (item.isConsumable ? 3 : 1)
+      })) : [])
+      
+      console.log('准备的入库数据:', itemsData)
       
       const inboundData = {
         id: record.id || record.Id || 0,
@@ -496,98 +554,13 @@ function ProjectInbound() {
         remark: record.remark || record.Remark || '',
         status: '部分入库',
         isCompleted: false,
-        items: itemsData
+        Items: itemsData
       }
       
       // 标记为部分入库
+      console.log('发送部分入库请求:', inboundData)
       const response = await projectInboundApi.updateProjectInbound(record.id, inboundData)
-      
-      // 释放设备使用状态
-      if (record.items && record.items.length > 0) {
-        for (const item of record.items) {
-          const itemType = item.itemType || item.ItemType
-          const equipmentId = item.equipmentId || item.EquipmentId
-          
-          if (equipmentId && itemType !== 3) {
-            // 根据设备类型调用不同的API
-            try {
-              if (itemType === 1) {
-                    // 专用设备
-                    try {
-                      const equipment = await deviceApi.getSpecialEquipment(equipmentId)
-                      if (equipment) {
-                        // 构建符合后端DTO格式的对象
-                        const updateData = {
-                          Id: equipment.id || equipment.Id,
-                          Name: equipment.name || equipment.Name,
-                          DeviceCode: equipment.deviceCode || equipment.DeviceCode,
-                          SerialNumber: equipment.serialNumber || equipment.SerialNumber,
-                          Brand: equipment.brand || equipment.Brand,
-                          Model: equipment.model || equipment.Model,
-                          Quantity: equipment.quantity || equipment.Quantity,
-                          Unit: equipment.unit || equipment.Unit,
-                          Accessories: equipment.accessories || equipment.Accessories,
-                          ImageUrl: equipment.imageUrl || equipment.ImageUrl,
-                          Warehouse: equipment.warehouse || equipment.Warehouse,
-                          Company: equipment.company || equipment.Company,
-                          Status: equipment.status || equipment.Status,
-                          UseStatus: "未使用",
-                          ProjectName: equipment.projectName || equipment.ProjectName,
-                          ProjectTime: equipment.projectTime || equipment.ProjectTime,
-                          Location: equipment.location || equipment.Location,
-                          Description: equipment.description || equipment.Description,
-                          PurchaseDate: equipment.purchaseDate || equipment.PurchaseDate,
-                          PurchasePrice: equipment.purchasePrice || equipment.PurchasePrice
-                        }
-                        await deviceApi.updateSpecialEquipment(equipmentId, updateData)
-                      } else {
-                        console.log(`专用设备不存在 (ID: ${equipmentId})，跳过状态更新`)
-                      }
-                    } catch (e) {
-                      console.log(`获取专用设备详情失败 (ID: ${equipmentId}):`, e)
-                    }
-                  } else if (itemType === 2) {
-                    // 通用设备
-                    try {
-                      const equipment = await deviceApi.getGeneralEquipment(equipmentId)
-                      if (equipment) {
-                        // 构建符合后端DTO格式的对象
-                        const updateData = {
-                          Id: equipment.id || equipment.Id,
-                          Name: equipment.name || equipment.Name,
-                          DeviceCode: equipment.deviceCode || equipment.DeviceCode,
-                          SerialNumber: equipment.serialNumber || equipment.SerialNumber,
-                          Brand: equipment.brand || equipment.Brand,
-                          Model: equipment.model || equipment.Model,
-                          Quantity: equipment.quantity || equipment.Quantity,
-                          Unit: equipment.unit || equipment.Unit,
-                          Accessories: equipment.accessories || equipment.Accessories,
-                          ImageUrl: equipment.imageUrl || equipment.ImageUrl,
-                          Warehouse: equipment.warehouse || equipment.Warehouse,
-                          Company: equipment.company || equipment.Company,
-                          Status: equipment.status || equipment.Status,
-                          UseStatus: "未使用",
-                          ProjectName: equipment.projectName || equipment.ProjectName,
-                          ProjectTime: equipment.projectTime || equipment.ProjectTime,
-                          Location: equipment.location || equipment.Location,
-                          Description: equipment.description || equipment.Description,
-                          PurchaseDate: equipment.purchaseDate || equipment.PurchaseDate,
-                          PurchasePrice: equipment.purchasePrice || equipment.PurchasePrice
-                        }
-                        await deviceApi.updateGeneralEquipment(equipmentId, updateData)
-                      } else {
-                        console.log(`通用设备不存在 (ID: ${equipmentId})，跳过状态更新`)
-                      }
-                    } catch (e) {
-                      console.log(`获取通用设备详情失败 (ID: ${equipmentId}):`, e)
-                    }
-                  }
-            } catch (e) {
-              console.log(`释放设备使用状态失败 (ID: ${equipmentId}, Type: ${itemType}):`, e)
-            }
-          }
-        }
-      }
+      console.log('部分入库响应:', response)
       
       // 清除缓存
       cacheManager.invalidate('project-inbounds')
@@ -609,19 +582,40 @@ function ProjectInbound() {
       content: '您确定所有设备都已归还吗？',
       onOk: async () => {
         try {
-          // 准备入库数据，确保 items 包含正确的 ItemType
-          const itemsData = record.items ? record.items.map(item => ({
+          // 准备入库数据，从 selectedItems 获取最新的设备状态
+          // 使用 selectedItems 而不是 record.items，以确保获取用户最新修改的设备状态
+          console.log('准备全部入库，selectedItems:', selectedItems)
+          const itemsData = selectedItems && selectedItems.length > 0 ? selectedItems.map(item => ({
             id: item.id || item.Id || 0,
             projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
-            equipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0,
-            equipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
-            brand: item.brand || item.Brand || '',
-            model: item.model || item.Model || '',
-            quantity: item.quantity || item.Quantity || 0,
-            unit: item.unit || item.Unit || '',
-            status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
-            itemType: item.itemType || item.ItemType || 1
-          })) : []
+            EquipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0, // 优先使用设备ID，其次使用itemId
+            EquipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
+            DeviceCode: item.deviceCode || item.DeviceCode || '', // 设备编号
+            Brand: item.brand || item.Brand || '',
+            Model: item.model || item.Model || '',
+            Quantity: item.quantity || item.Quantity || 0,
+            Unit: item.unit || item.Unit || '',
+            Accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || '',
+            // 优先使用用户最新修改的状态（status 或 Status）
+            Status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
+            ItemType: item.itemType || item.ItemType || (item.isConsumable ? 3 : 1)
+          })) : (record.items ? record.items.map(item => ({
+            id: item.id || item.Id || 0,
+            projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
+            EquipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0, // 优先使用设备ID，其次使用itemId
+            EquipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
+            DeviceCode: item.deviceCode || item.DeviceCode || '', // 设备编号
+            Brand: item.brand || item.Brand || '',
+            Model: item.model || item.Model || '',
+            Quantity: item.quantity || item.Quantity || 0,
+            Unit: item.unit || item.Unit || '',
+            Accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || '',
+            // 优先使用用户最新修改的状态（status 或 Status）
+            Status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '正常',
+            ItemType: item.itemType || item.ItemType || (item.isConsumable ? 3 : 1)
+          })) : [])
+          
+          console.log('准备的入库数据:', itemsData)
           
           const inboundData = {
             id: record.id || record.Id || 0,
@@ -639,137 +633,13 @@ function ProjectInbound() {
             remark: record.remark || record.Remark || '',
             status: '全部入库',
             isCompleted: true,
-            items: itemsData
+            Items: itemsData
           }
           
           // 标记为全部入库
+          console.log('发送全部入库请求:', inboundData)
           const response = await projectInboundApi.updateProjectInbound(record.id, inboundData)
-          
-          // 更新对应出库记录的入库状态
-          console.log('入库记录详情:', record)
-          console.log('入库记录的所有键:', Object.keys(record))
-          console.log('入库记录的 OutboundOrderId:', record.OutboundOrderId)
-          console.log('入库记录的 outboundOrderId:', record.outboundOrderId)
-          console.log('入库记录的 OutboundId:', record.OutboundId)
-          console.log('入库记录的 outboundId:', record.outboundId)
-          const outboundOrderId = record.outboundOrderId || record.OutboundOrderId || record.outboundId || record.OutboundId
-          console.log('获取到的出库单ID:', outboundOrderId)
-          if (outboundOrderId) {
-            try {
-              // 使用 projectOutboundApi 获取出库记录
-              console.log('尝试获取出库记录，ID:', outboundOrderId)
-              const outboundRecord = await projectOutboundApi.getProjectOutbound(outboundOrderId)
-              console.log('获取到的出库记录:', outboundRecord)
-              if (outboundRecord) {
-                // 更新出库记录的入库状态为已完成
-                const updateData = {
-                  ...outboundRecord,
-                  isCompleted: true,
-                  completedAt: new Date().toISOString(),
-                  inboundStatus: '已完成',
-                  id: outboundOrderId, // 确保包含 id 字段
-                  Id: outboundOrderId // 确保包含 Id 字段（兼容不同大小写）
-                }
-                console.log('准备更新的出库记录数据:', updateData)
-                await projectOutboundApi.updateProjectOutbound(outboundOrderId, updateData)
-                console.log(`出库记录 (ID: ${outboundOrderId}) 入库状态已更新为已完成`)
-              } else {
-                console.log(`未找到出库记录 (ID: ${outboundOrderId})`)
-              }
-            } catch (e) {
-              console.log(`更新出库记录入库状态失败 (ID: ${outboundOrderId}):`, e)
-              console.log('错误堆栈:', e.stack)
-            }
-          } else {
-            console.log('未找到出库单ID')
-          }
-          
-          // 释放设备使用状态
-          if (record.items && record.items.length > 0) {
-            for (const item of record.items) {
-              const itemType = item.itemType || item.ItemType
-              const equipmentId = item.equipmentId || item.EquipmentId
-              
-              if (equipmentId && itemType !== 3) {
-                // 根据设备类型调用不同的API
-                try {
-                  if (itemType === 1) {
-                    // 专用设备
-                    try {
-                      const equipment = await deviceApi.getSpecialEquipment(equipmentId)
-                      if (equipment) {
-                        // 构建符合后端DTO格式的对象
-                        const updateData = {
-                          Id: equipment.id || equipment.Id,
-                          Name: equipment.name || equipment.Name,
-                          DeviceCode: equipment.deviceCode || equipment.DeviceCode,
-                          SerialNumber: equipment.serialNumber || equipment.SerialNumber,
-                          Brand: equipment.brand || equipment.Brand,
-                          Model: equipment.model || equipment.Model,
-                          Quantity: equipment.quantity || equipment.Quantity,
-                          Unit: equipment.unit || equipment.Unit,
-                          Accessories: equipment.accessories || equipment.Accessories,
-                          ImageUrl: equipment.imageUrl || equipment.ImageUrl,
-                          Warehouse: equipment.warehouse || equipment.Warehouse,
-                          Company: equipment.company || equipment.Company,
-                          Status: equipment.status || equipment.Status,
-                          UseStatus: "未使用",
-                          ProjectName: equipment.projectName || equipment.ProjectName,
-                          ProjectTime: equipment.projectTime || equipment.ProjectTime,
-                          Location: equipment.location || equipment.Location,
-                          Description: equipment.description || equipment.Description,
-                          PurchaseDate: equipment.purchaseDate || equipment.PurchaseDate,
-                          PurchasePrice: equipment.purchasePrice || equipment.PurchasePrice
-                        }
-                        await deviceApi.updateSpecialEquipment(equipmentId, updateData)
-                      } else {
-                        console.log(`专用设备不存在 (ID: ${equipmentId})，跳过状态更新`)
-                      }
-                    } catch (e) {
-                      console.log(`获取专用设备详情失败 (ID: ${equipmentId}):`, e)
-                    }
-                  } else if (itemType === 2) {
-                    // 通用设备
-                    try {
-                      const equipment = await deviceApi.getGeneralEquipment(equipmentId)
-                      if (equipment) {
-                        // 构建符合后端DTO格式的对象
-                        const updateData = {
-                          Id: equipment.id || equipment.Id,
-                          Name: equipment.name || equipment.Name,
-                          DeviceCode: equipment.deviceCode || equipment.DeviceCode,
-                          SerialNumber: equipment.serialNumber || equipment.SerialNumber,
-                          Brand: equipment.brand || equipment.Brand,
-                          Model: equipment.model || equipment.Model,
-                          Quantity: equipment.quantity || equipment.Quantity,
-                          Unit: equipment.unit || equipment.Unit,
-                          Accessories: equipment.accessories || equipment.Accessories,
-                          ImageUrl: equipment.imageUrl || equipment.ImageUrl,
-                          Warehouse: equipment.warehouse || equipment.Warehouse,
-                          Company: equipment.company || equipment.Company,
-                          Status: equipment.status || equipment.Status,
-                          UseStatus: "未使用",
-                          ProjectName: equipment.projectName || equipment.ProjectName,
-                          ProjectTime: equipment.projectTime || equipment.ProjectTime,
-                          Location: equipment.location || equipment.Location,
-                          Description: equipment.description || equipment.Description,
-                          PurchaseDate: equipment.purchaseDate || equipment.PurchaseDate,
-                          PurchasePrice: equipment.purchasePrice || equipment.PurchasePrice
-                        }
-                        await deviceApi.updateGeneralEquipment(equipmentId, updateData)
-                      } else {
-                        console.log(`通用设备不存在 (ID: ${equipmentId})，跳过状态更新`)
-                      }
-                    } catch (e) {
-                      console.log(`获取通用设备详情失败 (ID: ${equipmentId}):`, e)
-                    }
-                  }
-                } catch (e) {
-                  console.log(`释放设备使用状态失败 (ID: ${equipmentId}, Type: ${itemType}):`, e)
-                }
-              }
-            }
-          }
+          console.log('全部入库响应:', response)
           
           // 清除缓存
           cacheManager.invalidate('project-inbounds')
@@ -839,16 +709,17 @@ function ProjectInbound() {
         .map(item => ({
           id: 0, // 使用0作为新项的ID，让后端自动生成
           projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
-          equipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0,
-          equipmentName: item.equipmentName || item.EquipmentName || item.ItemName || '',
-          brand: item.brand || item.Brand || '',
-          model: item.model || item.Model || '',
-          quantity: item.inboundQuantity || 0,
-          unit: item.unit || item.Unit || '',
-          status: item.status || item.DeviceStatus || '正常',
-          itemType: item.itemType || item.ItemType || 1, // 1=专用设备, 2=通用设备, 3=耗材
-          deviceCode: item.deviceCode || item.DeviceCode || '',
-          accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || ''
+          EquipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0,
+          EquipmentName: item.equipmentName || item.EquipmentName || item.ItemName || '',
+          SnCode: item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || '', // SN码
+          Brand: item.brand || item.Brand || '',
+          Model: item.model || item.Model || '',
+          Quantity: item.inboundQuantity || 0,
+          Unit: item.unit || item.Unit || '',
+          Status: item.status || item.Status || item.DeviceStatus || '正常',
+          ItemType: item.itemType || item.ItemType || (item.isConsumable ? 3 : 1), // 1=专用设备, 2=通用设备, 3=耗材
+          DeviceCode: item.deviceCode || item.DeviceCode || '',
+          Accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || ''
         }))
       
       // 确保selectedOutboundOrder存在
@@ -875,7 +746,7 @@ function ProjectInbound() {
         remark: values.remark || '',
         status: status,
         isCompleted: currentEditInbound ? (currentEditInbound.isCompleted || false) : false,
-        items: itemsData
+        Items: itemsData
       };
       
       // 确保所有必填字段都有值
@@ -1001,6 +872,7 @@ function ProjectInbound() {
         let deviceCode = item.DeviceCode || item.deviceCode
         let accessories = item.Accessories || item.accessories || item.accessory || item.Accessory || item.equipmentAccessories || item.EquipmentAccessories
         
+        // 优先使用设备ID，其次使用itemId
         const equipmentId = item.equipmentId || item.EquipmentId || item.itemId || item.ItemId
         const itemType = item.ItemType || item.itemType || (isConsumable ? 3 : 1)
         console.log('设备ID:', equipmentId, '设备类型:', itemType)
@@ -1074,6 +946,8 @@ function ProjectInbound() {
           accessories: accessories || '无',
           itemType: itemType,
           isConsumable: isConsumable,
+          equipmentId: equipmentId || 0,
+          EquipmentId: equipmentId || 0,
           equipmentName: equipmentName,
           ItemName: equipmentName,
           brand: brand,
@@ -1086,7 +960,7 @@ function ProjectInbound() {
           Quantity: quantity,
           // 使用已入库记录中的状态，如果存在
           status: existingItem ? (existingItem.status || existingItem.Status || existingItem.deviceStatus || existingItem.DeviceStatus) : (item.status || item.Status || item.deviceStatus || item.DeviceStatus),
-          DeviceStatus: existingItem ? (existingItem.status || existingItem.Status || existingItem.deviceStatus || existingItem.DeviceStatus) : (item.status || item.Status || item.deviceStatus || item.DeviceStatus)
+          Status: existingItem ? (existingItem.status || existingItem.Status || existingItem.deviceStatus || existingItem.DeviceStatus) : (item.status || item.Status || item.deviceStatus || item.DeviceStatus)
         }
       }))
       
@@ -1135,7 +1009,20 @@ function ProjectInbound() {
         console.log('设备编号:', text, record.deviceCode, record.DeviceCode, record.equipmentId, record.EquipmentId)
         return (
           <div style={{ fontSize: '13px', fontFamily: 'monospace' }}>
-            {text || record.deviceCode || record.DeviceCode || record.equipmentId || record.EquipmentId || ''}
+            {text || record.deviceCode || record.DeviceCode || ''}
+          </div>
+        )
+      }
+    },
+    {
+      title: <span style={{ fontWeight: 'bold', fontSize: '15px' }}>SN码</span>,
+      dataIndex: 'SnCode',
+      key: 'snCode',
+      width: 120,
+      render: (text, record) => {
+        return (
+          <div style={{ fontSize: '13px', fontFamily: 'monospace' }}>
+            {text || record.snCode || record.SnCode || record.serialNumber || record.SerialNumber || ''}
           </div>
         )
       }
@@ -1225,24 +1112,30 @@ function ProjectInbound() {
       key: 'status',
       width: 110,
       align: 'center',
-      render: (text, record) => (
-        <Select 
-          defaultValue={text || record.status || record.Status || record.DeviceStatus || ''}
-          style={{ width: 110, fontSize: '14px' }}
-          onChange={(value) => {
-            // 处理设备状态变更
-            setSelectedItems(prev => {
-              return prev.map(item => 
-                item.id === record.id ? { ...item, status: value, DeviceStatus: value } : item
-              )
-            })
-          }}
-        >
-          <Option value="正常">正常</Option>
-          <Option value="损坏">损坏</Option>
-          <Option value="丢失">丢失</Option>
-        </Select>
-      )
+      render: (text, record) => {
+        // 使用当前记录的最新状态值
+        const currentStatus = record.status || record.Status || record.DeviceStatus || text || '正常'
+        console.log('设备状态渲染:', record.equipmentName || record.EquipmentName, '当前状态:', currentStatus, 'record.status:', record.status, 'record.Status:', record.Status, 'record.DeviceStatus:', record.DeviceStatus)
+        return (
+          <Select 
+            value={currentStatus}
+            style={{ width: 110, fontSize: '14px' }}
+            onChange={(value) => {
+              console.log('设备状态变更:', record.equipmentName || record.EquipmentName, '从', currentStatus, '到', value)
+              // 处理设备状态变更
+              setSelectedItems(prev => {
+                return prev.map(item => 
+                  item.id === record.id ? { ...item, status: value || '正常', Status: value || '正常', DeviceStatus: value || '正常', deviceStatus: value || '正常' } : item
+                )
+              })
+            }}
+          >
+            <Option value="正常">正常</Option>
+            <Option value="损坏">损坏</Option>
+            <Option value="丢失">丢失</Option>
+          </Select>
+        )
+      }
     },
     {
       title: <span style={{ fontWeight: 'bold', fontSize: '15px' }}>备注</span>,
@@ -1373,15 +1266,16 @@ function ProjectInbound() {
   // 预览入库记录
   const previewInbound = async (record) => {
     console.log('预览入库记录:', record)
-    console.log('入库记录items:', record.items)
+    console.log('入库记录items:', record.items || record.Items)
     
     // 如果有items，打印第一个item的所有字段
-    if (record.items && record.items.length > 0) {
-      console.log('第一个item的所有字段:', JSON.stringify(record.items[0], null, 2))
+    const items = record.items || record.Items
+    if (items && items.length > 0) {
+      console.log('第一个item的所有字段:', JSON.stringify(items[0], null, 2))
     }
     
     // 构建预览数据
-    const inboundItems = record.items || []
+    const inboundItems = record.items || record.Items || []
     
     const previewDataObj = {
       inboundNumber: record.inboundNumber || '',
@@ -1397,11 +1291,22 @@ function ProjectInbound() {
       remark: record.remark || '',
       items: inboundItems.map((item, index) => {
         console.log(`处理item ${index}:`, item)
+        // 处理设备编号和SN码
+        const deviceId = item.deviceCode || item.DeviceCode || item.equipmentId || item.EquipmentId || ''
+        const snCode = item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || ''
+        console.log(`item ${index} deviceId:`, deviceId, 'snCode:', snCode)
+        console.log(`item ${index} equipmentId:`, item.equipmentId, 'EquipmentId:', item.EquipmentId)
+        console.log(`item ${index} deviceCode:`, item.deviceCode, 'DeviceCode:', item.DeviceCode)
+        console.log(`item ${index} snCode:`, item.snCode, 'SnCode:', item.SnCode)
         return {
           id: `${record.id}-${index}`, // 添加唯一ID
           type: item.itemType === 1 ? '专用设备' : item.itemType === 2 ? '通用设备' : '耗材',
           name: item.ItemName || item.EquipmentName || item.equipmentName || item.itemName || item.Name || item.name || '',
-          deviceId: item.deviceCode || item.DeviceCode || item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || item.deviceId || item.DeviceId || '',
+          deviceId: deviceId,
+          deviceCode: item.deviceCode || item.DeviceCode || '',
+          equipmentId: item.equipmentId || item.EquipmentId || 0, // 设备ID
+          snCode: snCode,
+          SnCode: item.SnCode || item.snCode || snCode,
           brand: item.brand || item.Brand || '',
           model: item.model || item.Model || '',
           quantity: item.quantity || item.Quantity || 0,
@@ -1441,7 +1346,9 @@ function ProjectInbound() {
           id: `${inboundNumber}-${index}`, // 添加唯一ID
           type: item.itemType === 1 ? '专用设备' : item.itemType === 2 ? '通用设备' : '耗材',
           name: item.ItemName || item.EquipmentName || item.equipmentName || '',
-          deviceId: item.deviceCode || item.DeviceCode || item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || '',
+          deviceId: item.deviceCode || item.DeviceCode || item.EquipmentId || item.equipmentId || '', // 优先使用设备编号，其次使用设备ID
+          equipmentId: item.equipmentId || item.EquipmentId || 0, // 设备ID
+          snCode: item.snCode || item.SnCode || item.SerialNumber || item.serialNumber || item.SN || item.sn || '', // SN码
           brand: item.Brand || item.brand || '',
           model: item.Model || item.model || '',
           quantity: item.isMarkedInbound ? (item.inboundQuantity || 0) : 0,
@@ -1819,27 +1726,52 @@ function ProjectInbound() {
                   dataIndex: 'deviceId',
                   key: 'deviceId',
                   width: '10%',
-                  render: (text) => (
-                    <div style={{ 
-                      whiteSpace: 'normal', 
-                      wordBreak: 'break-all',
-                      lineHeight: '1.4'
-                    }}>
-                      {text || '-'}
-                    </div>
-                  )
+                  render: (text, record) => {
+                    console.log('设备编号渲染:', text, 'record:', record)
+                    // 优先使用deviceCode字段，然后是deviceId，最后是equipmentId
+                    const value = record.deviceCode || record.DeviceCode || text || record.equipmentId || record.EquipmentId || '-'
+                    return (
+                      <div style={{ 
+                        whiteSpace: 'normal', 
+                        wordBreak: 'break-all',
+                        lineHeight: '1.4'
+                      }}>
+                        {value}
+                      </div>
+                    )
+                  }
+                },
+                {
+                  title: 'SN码',
+                  dataIndex: 'snCode',
+                  key: 'snCode',
+                  width: '10%',
+                  render: (text, record) => {
+                    console.log('SN码渲染:', text, 'record:', record)
+                    // 优先使用text，然后是SnCode，最后是snCode
+                    const value = text || record.SnCode || record.snCode || '-'
+                    return (
+                      <div style={{ 
+                        whiteSpace: 'normal', 
+                        wordBreak: 'break-all',
+                        lineHeight: '1.4'
+                      }}>
+                        {value}
+                      </div>
+                    )
+                  }
                 },
                 {
                   title: '品牌',
                   dataIndex: 'brand',
                   key: 'brand',
-                  width: '8%'
+                  width: '6%'
                 },
                 {
                   title: '型号',
                   dataIndex: 'model',
                   key: 'model',
-                  width: '10%',
+                  width: '8%',
                   render: (text) => (
                     <div style={{ 
                       whiteSpace: 'normal', 
@@ -1854,13 +1786,13 @@ function ProjectInbound() {
                   title: '数量',
                   dataIndex: 'quantity',
                   key: 'quantity',
-                  width: '5%'
+                  width: '4%'
                 },
                 {
                   title: '单位',
                   dataIndex: 'unit',
                   key: 'unit',
-                  width: '5%'
+                  width: '4%'
                 },
                 {
                   title: '配件',
@@ -1881,7 +1813,7 @@ function ProjectInbound() {
                   title: '设备状态',
                   dataIndex: 'status',
                   key: 'status',
-                  width: '8%'
+                  width: '6%'
                 },
                 {
                   title: '备注',

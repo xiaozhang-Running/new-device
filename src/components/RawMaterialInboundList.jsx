@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Table, Button, message, Space, Modal, Card, Tag, Spin, Row, Col, Input, DatePicker, Form, Select, InputNumber } from 'antd'
 import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import { get, post, del } from '../services/request'
+import { useReactToPrint } from 'react-to-print'
 
 const { Option } = Select
 const { TextArea } = Input
@@ -108,6 +109,154 @@ function RawMaterialInboundList() {
   const [materials, setMaterials] = useState([])
   const [materialsLoading, setMaterialsLoading] = useState(false)
   const [newMaterialName, setNewMaterialName] = useState('')
+  
+  // 打印ref
+  const printRef = useRef(null)
+
+  // 配置react-to-print
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `原材料入库单-${currentInboundDetail?.orderNumber || '预览'}`,
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 5mm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          font-size: 8px;
+          line-height: 0.9;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .preview-content {
+          max-height: none !important;
+          overflow: visible !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        table {
+          page-break-inside: auto;
+          line-height: 0.9;
+          margin: 2px 0 !important;
+          border-collapse: collapse !important;
+        }
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+          line-height: 0.9;
+        }
+        thead {
+          display: table-header-group;
+        }
+        tfoot {
+          display: table-footer-group;
+        }
+        table, th, td {
+          font-size: 9px;
+          line-height: 0.9;
+          padding: 1px !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          font-size: 11px;
+          line-height: 0.9;
+          margin: 0.1em 0 !important;
+          padding: 0 !important;
+        }
+        p {
+          font-size: 8px;
+          line-height: 0.9;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .preview-content h2 {
+          font-size: 14px !important;
+          line-height: 0.9;
+          margin: 0.15em 0 !important;
+        }
+        .preview-content h3 {
+          font-size: 10px !important;
+          line-height: 0.9;
+          margin: 0.1em 0 !important;
+        }
+        /* 入库单号样式 */
+        .preview-content > div:nth-child(2) p:first-child {
+          font-size: 10px !important;
+        }
+        /* 入库物品表格样式 */
+        .preview-content > div:nth-child(3) table {
+          font-size: 9px !important;
+        }
+        .preview-content > div:nth-child(3) table th,
+        .preview-content > div:nth-child(3) table td {
+          font-size: 9px !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+        }
+        /* 送货人、检验人、库管、入库日期样式 */
+        .preview-content > div:nth-child(4) p {
+          font-size: 10px !important;
+        }
+        /* 备注栏样式 */
+        .preview-content > div:nth-child(5) {
+          font-size: 9px !important;
+          font-style: italic !important;
+          font-weight: bold !important;
+          margin: 0.15em 0 !important;
+        }
+        .preview-content > div:nth-child(5) p {
+          font-size: 9px !important;
+          font-style: italic !important;
+          font-weight: bold !important;
+          line-height: 1.2;
+          margin: 0.05em 0 !important;
+          padding: 4px !important;
+          min-height: 30px !important;
+        }
+        /* 减小div之间的间距 */
+        .preview-content > div {
+          margin: 2px 0 !important;
+          padding: 8px !important;
+        }
+        /* 减小表格内边距 */
+        .preview-content table {
+          border-collapse: collapse !important;
+        }
+        /* 减小标题与内容之间的间距 */
+        .preview-content h3 {
+          margin-bottom: 8px !important;
+        }
+        /* 移除滚动条 */
+        ::-webkit-scrollbar {
+          display: none !important;
+        }
+        scrollbar {
+          display: none !important;
+        }
+      }
+    `,
+    onBeforePrint: () => {
+      return new Promise((resolve) => {
+        // 确保内容已渲染
+        setTimeout(resolve, 100)
+      })
+    },
+    onAfterPrint: () => {
+      message.success('打印完成')
+    },
+    onPrintError: (error) => {
+      message.error('打印失败: ' + error.message)
+    }
+  })
+
+  // 处理保存PDF - 使用相同的打印方式，用户可以在打印对话框中选择保存为PDF
+  const handleSavePDF = () => {
+    handlePrint()
+  }
 
   // 加载入库历史和原材料列表
   useEffect(() => {
@@ -741,19 +890,19 @@ function RawMaterialInboundList() {
             <Col xs={24} sm={12} md={6}>
               <Form.Item 
                 name="inspector" 
-                label="检验人员" 
-                rules={[{ required: true, message: '请输入检验人员' }]}
+                label="检验人" 
+                rules={[{ required: true, message: '请输入检验人' }]}
               >
-                <Input placeholder="请输入检验人员" />
+                <Input placeholder="请输入检验人" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item 
                 name="inboundPerson" 
-                label="入库人" 
-                rules={[{ required: true, message: '请输入入库人' }]}
+                label="库管" 
+                rules={[{ required: true, message: '请输入库管' }]}
               >
-                <Input placeholder="请输入入库人" />
+                <Input placeholder="请输入库管" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
@@ -806,30 +955,80 @@ function RawMaterialInboundList() {
         title="入库详情"
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
+        width="90%"
+        zIndex={9999}
+        mask={true}
+        styles={{
+          modal: { 
+            top: 50, 
+            maxWidth: 1400, 
+            zIndex: 9999, 
+            backgroundColor: '#fff',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            borderRadius: '8px'
+          },
+          body: { 
+            padding: 0,
+            backgroundColor: '#fff',
+            overflow: 'auto'
+          },
+          header: {
+            backgroundColor: '#fff',
+            borderBottom: '1px solid #e8e8e8'
+          },
+          footer: {
+            backgroundColor: '#fff',
+            borderTop: '1px solid #e8e8e8'
+          },
+          mask: {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }}
+        className="preview-modal"
         footer={[
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             关闭
+          </Button>,
+          <Button key="print" type="default" onClick={handlePrint} style={{ marginRight: 16 }}>
+            打印
+          </Button>,
+          <Button key="save" type="primary" onClick={handleSavePDF}>
+            保存PDF
           </Button>
         ]}
-        width={800}
       >
-        {currentInboundDetail && (
-          <div>
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <p><strong>入库单号:</strong> {currentInboundDetail.orderNumber}</p>
-                <p><strong>供应商:</strong> {currentInboundDetail.supplier}</p>
-                <p><strong>送货人:</strong> {currentInboundDetail.deliveryPerson}</p>
-                <p><strong>检验人员:</strong> {currentInboundDetail.inspector}</p>
-              </Col>
-              <Col span={12}>
-                <p><strong>入库人:</strong> {currentInboundDetail.inboundPerson}</p>
-                <p><strong>入库日期:</strong> {currentInboundDetail.inboundDate}</p>
-                <p><strong>操作人:</strong> {currentInboundDetail.operator}</p>
-                <p><strong>状态:</strong> {currentInboundDetail.status}</p>
+        <div ref={printRef} className="preview-content" style={{ padding: '20px', maxHeight: '75vh', overflow: 'auto', backgroundColor: '#fff' }}>
+          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <h2>原材料入库单</h2>
+          </div>
+          
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            {/* 入库单号 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col span={24}>
+                <p style={{ margin: 0, fontSize: '16px' }}><strong>入库单号:</strong> {currentInboundDetail?.orderNumber}</p>
               </Col>
             </Row>
-            <h4 className="mt-4">入库物品</h4>
+            {/* 供应商 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col span={24}>
+                <p style={{ margin: 0 }}><strong>供应商:</strong> {currentInboundDetail?.supplier}</p>
+              </Col>
+            </Row>
+            {/* 操作人、状态 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
+              <Col xs={24} sm={12} md={12}>
+                <p style={{ margin: 0 }}><strong>操作人:</strong> {currentInboundDetail?.operator}</p>
+              </Col>
+              <Col xs={24} sm={12} md={12}>
+                <p style={{ margin: 0 }}><strong>状态:</strong> {currentInboundDetail?.status}</p>
+              </Col>
+            </Row>
+          </div>
+          
+          {/* 入库物品 */}
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>入库物品</h3>
             <Table 
               columns={[
                 { title: '原材料名称', dataIndex: 'name', key: 'name' },
@@ -838,12 +1037,39 @@ function RawMaterialInboundList() {
                 { title: '单位', dataIndex: 'unit', key: 'unit' },
                 { title: '备注', dataIndex: 'remark', key: 'remark' }
               ]} 
-              dataSource={currentInboundDetail.items} 
+              dataSource={currentInboundDetail?.items || []} 
               rowKey={(record, index) => index}
               pagination={false}
+              size="small"
+              bordered
+              style={{ width: '100%' }}
             />
           </div>
-        )}
+          
+          {/* 送货人、检验人、库管、入库日期 */}
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>送货人:</strong> {currentInboundDetail?.deliveryPerson}</p>
+              </Col>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>检验人:</strong> {currentInboundDetail?.inspector}</p>
+              </Col>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>库管:</strong> {currentInboundDetail?.inboundPerson}</p>
+              </Col>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>入库日期:</strong> {currentInboundDetail?.inboundDate}</p>
+              </Col>
+            </Row>
+          </div>
+          
+          {/* 备注 */}
+          <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>备注</h3>
+            <p style={{ margin: 0 }}>{currentInboundDetail?.remark || '无'}</p>
+          </div>
+        </div>
       </Modal>
     </div>
   )

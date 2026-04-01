@@ -10,11 +10,18 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
-    port: 5176,
+    port: 5179,
     strictPort: true,
     hmr: {
       host: 'localhost',
-      port: 5176
+      port: 5179
+    },
+    proxy: {
+      '/api': {
+        target: 'http://192.168.10.72:5059',
+        changeOrigin: true,
+        rewrite: (path) => path
+      }
     }
   }
 })

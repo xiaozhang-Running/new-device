@@ -69,6 +69,7 @@ public class ProjectOutboundController : ControllerBase
                     itemId = item.ItemId,
                     itemName = item.ItemName,
                     deviceCode = item.DeviceCode,
+                    serialNumber = item.SerialNumber,
                     brand = item.Brand,
                     model = item.Model,
                     quantity = item.Quantity,
@@ -143,6 +144,7 @@ public class ProjectOutboundController : ControllerBase
                     item.ItemId,
                     item.ItemName,
                     item.DeviceCode,
+                    item.SerialNumber,
                     item.Brand,
                     item.Model,
                     item.Quantity,
@@ -262,6 +264,7 @@ public class ProjectOutboundController : ControllerBase
                         ItemId = itemData.GetProperty("ItemId").GetInt32(),
                         ItemName = itemData.GetProperty("ItemName").GetString() ?? "",
                         DeviceCode = itemData.TryGetProperty("DeviceCode", out var deviceCodeElement) ? deviceCodeElement.GetString() : null,
+                        SerialNumber = itemData.TryGetProperty("SerialNumber", out var serialNumberElement) ? serialNumberElement.GetString() : null,
                         Brand = itemData.TryGetProperty("Brand", out var brandElement) ? brandElement.GetString() : null,
                         Model = itemData.TryGetProperty("Model", out var modelElement) ? modelElement.GetString() : null,
                         Quantity = quantity,
@@ -324,31 +327,45 @@ public class ProjectOutboundController : ControllerBase
         {
             if (item.ItemType == 1) // 专用设备
             {
+                Console.WriteLine($"处理专用设备: ItemId={item.ItemId}, ItemName={item.ItemName}");
                 if (_context.SpecialEquipments != null)
                 {
                     var specialEquipment = await _context.SpecialEquipments.FindAsync(item.ItemId);
                     if (specialEquipment != null)
                     {
+                        Console.WriteLine($"找到专用设备: Id={specialEquipment.Id}, Name={specialEquipment.DeviceName}, 当前使用状态={specialEquipment.UseStatus}");
                         specialEquipment.UseStatus = 1; // 1表示使用中
                         specialEquipment.ProjectName = projectOutbound.ProjectName;
                         specialEquipment.ProjectTime = projectOutbound.ProjectTime;
                         specialEquipment.UpdatedAt = DateTime.Now;
                         _context.Entry(specialEquipment).State = EntityState.Modified;
+                        Console.WriteLine($"更新后使用状态={specialEquipment.UseStatus}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"未找到专用设备: ItemId={item.ItemId}");
                     }
                 }
             }
             else if (item.ItemType == 2) // 通用设备
             {
+                Console.WriteLine($"处理通用设备: ItemId={item.ItemId}, ItemName={item.ItemName}");
                 if (_context.GeneralEquipments != null)
                 {
                     var generalEquipment = await _context.GeneralEquipments.FindAsync(item.ItemId);
                     if (generalEquipment != null)
                     {
+                        Console.WriteLine($"找到通用设备: Id={generalEquipment.Id}, Name={generalEquipment.DeviceName}, 当前使用状态={generalEquipment.UseStatus}");
                         generalEquipment.UseStatus = 1; // 1表示使用中
                         generalEquipment.ProjectName = projectOutbound.ProjectName;
                         generalEquipment.ProjectTime = projectOutbound.ProjectTime;
                         generalEquipment.UpdatedAt = DateTime.Now;
                         _context.Entry(generalEquipment).State = EntityState.Modified;
+                        Console.WriteLine($"更新后使用状态={generalEquipment.UseStatus}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"未找到通用设备: ItemId={item.ItemId}");
                     }
                 }
             }
@@ -559,6 +576,7 @@ public class ProjectOutboundController : ControllerBase
                         ItemId = itemData.GetProperty("ItemId").GetInt32(),
                         ItemName = itemData.GetProperty("ItemName").GetString() ?? "",
                         DeviceCode = itemData.TryGetProperty("DeviceCode", out var deviceCodeElement) ? deviceCodeElement.GetString() : null,
+                        SerialNumber = itemData.TryGetProperty("SerialNumber", out var serialNumberElement) ? serialNumberElement.GetString() : null,
                         Brand = itemData.TryGetProperty("Brand", out var brandElement) ? brandElement.GetString() : null,
                         Model = itemData.TryGetProperty("Model", out var modelElement) ? modelElement.GetString() : null,
                         Quantity = quantity,
