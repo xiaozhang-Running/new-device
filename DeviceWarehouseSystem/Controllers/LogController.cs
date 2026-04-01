@@ -1,3 +1,4 @@
+using System;
 using Microsoft.AspNetCore.Mvc;
 using DeviceWarehouseSystem.Services;
 using DeviceWarehouseSystem.Models;
@@ -17,9 +18,24 @@ namespace DeviceWarehouseSystem.Controllers
             _logService = logService;
         }
 
+        private object ConvertToLogDto(UserActivityLog log)
+        {
+            return new
+            {
+                log.Id,
+                log.UserId,
+                Username = log.User?.Username,
+                log.ActivityType,
+                log.ActivityDescription,
+                log.IpAddress,
+                log.UserAgent,
+                log.CreatedAt
+            };
+        }
+
         // GET: api/Log
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserActivityLog>>> GetLogs(
+        public async Task<ActionResult> GetLogs(
             [FromQuery] string? search,
             [FromQuery] string? user,
             [FromQuery] string? type,
@@ -30,8 +46,13 @@ namespace DeviceWarehouseSystem.Controllers
         {
             try
             {
-                var logs = await _logService.GetLogsAsync(search, user, type, startDate, endDate, page, pageSize);
-                return Ok(logs);
+                var (logs, total) = await _logService.GetLogsAsync(search, user, type, startDate, endDate, page, pageSize);
+                
+                // 转换为DTO，避免JSON序列化循环引用问题
+                var logDtos = logs.Select(ConvertToLogDto).ToList();
+                
+                // 转换为前端期望的格式 [logs, total]
+                return Ok(new object[] { logDtos, total });
             }
             catch (Exception ex)
             {
@@ -41,7 +62,7 @@ namespace DeviceWarehouseSystem.Controllers
 
         // GET: api/Log/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<UserActivityLog>> GetLog(int id)
+        public async Task<ActionResult> GetLog(int id)
         {
             try
             {
@@ -50,7 +71,11 @@ namespace DeviceWarehouseSystem.Controllers
                 {
                     return NotFound();
                 }
-                return Ok(log);
+                
+                // 转换为DTO，避免JSON序列化循环引用问题
+                var logDto = ConvertToLogDto(log);
+                
+                return Ok(logDto);
             }
             catch (Exception ex)
             {
@@ -60,12 +85,16 @@ namespace DeviceWarehouseSystem.Controllers
 
         // POST: api/Log
         [HttpPost]
-        public async Task<ActionResult<UserActivityLog>> CreateLog([FromBody] UserActivityLog log)
+        public async Task<ActionResult> CreateLog([FromBody] UserActivityLog log)
         {
             try
             {
                 var createdLog = await _logService.CreateLogAsync(log);
-                return CreatedAtAction(nameof(GetLog), new { id = createdLog.Id }, createdLog);
+                
+                // 转换为DTO，避免JSON序列化循环引用问题
+                var logDto = ConvertToLogDto(createdLog);
+                
+                return CreatedAtAction(nameof(GetLog), new { id = createdLog.Id }, logDto);
             }
             catch (Exception ex)
             {

@@ -57,7 +57,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Companies");
+                    b.ToTable("Companies", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.Consumable", b =>
@@ -133,7 +133,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasIndex(new[] { "UsedQuantity" }, "IX_Consumables_UsedQuantity");
 
-                    b.ToTable("Consumables");
+                    b.ToTable("Consumables", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.EquipmentImage", b =>
@@ -174,7 +174,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("EquipmentImages");
+                    b.ToTable("EquipmentImages", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.EquipmentInbound", b =>
@@ -488,7 +488,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasIndex(new[] { "SpecialEquipmentId" }, "IX_Images_SpecialEquipmentId");
 
-                    b.ToTable("Images");
+                    b.ToTable("Images", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.InOutboundImage", b =>
@@ -527,7 +527,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("InOutboundImages");
+                    b.ToTable("InOutboundImages", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.InboundOrder", b =>
@@ -586,7 +586,7 @@ namespace DeviceWarehouseSystem.Migrations
                     b.HasIndex(new[] { "OrderCode" }, "IX_InboundOrders_OrderCode")
                         .IsUnique();
 
-                    b.ToTable("InboundOrders");
+                    b.ToTable("InboundOrders", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.InboundOrderItem", b =>
@@ -623,7 +623,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasIndex(new[] { "SpecialEquipmentId" }, "IX_InboundOrderItems_SpecialEquipmentId");
 
-                    b.ToTable("InboundOrderItems");
+                    b.ToTable("InboundOrderItems", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.Inventory", b =>
@@ -667,7 +667,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasIndex(new[] { "WarehouseId" }, "IX_Inventories_WarehouseId");
 
-                    b.ToTable("Inventories");
+                    b.ToTable("Inventories", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.InventoryTransaction", b =>
@@ -758,7 +758,7 @@ namespace DeviceWarehouseSystem.Migrations
                     b.HasIndex(new[] { "OrderCode" }, "IX_OutboundOrders_OrderCode")
                         .IsUnique();
 
-                    b.ToTable("OutboundOrders");
+                    b.ToTable("OutboundOrders", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.OutboundOrderItem", b =>
@@ -792,7 +792,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasIndex(new[] { "SpecialEquipmentId" }, "IX_OutboundOrderItems_SpecialEquipmentId");
 
-                    b.ToTable("OutboundOrderItems");
+                    b.ToTable("OutboundOrderItems", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.Permission", b =>
@@ -825,7 +825,7 @@ namespace DeviceWarehouseSystem.Migrations
                     b.HasIndex(new[] { "Code" }, "IX_Permissions_Code")
                         .IsUnique();
 
-                    b.ToTable("Permissions");
+                    b.ToTable("Permissions", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.ProjectInbound", b =>
@@ -1516,7 +1516,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RepairEquipments");
+                    b.ToTable("RepairEquipments", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.Role", b =>
@@ -1548,7 +1548,7 @@ namespace DeviceWarehouseSystem.Migrations
                     b.HasIndex(new[] { "Name" }, "IX_Roles_Name")
                         .IsUnique();
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.ScrapEquipment", b =>
@@ -1832,7 +1832,7 @@ namespace DeviceWarehouseSystem.Migrations
                     b.HasIndex(new[] { "Username" }, "IX_Users_Username")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.UserActivityLog", b =>
@@ -1871,7 +1871,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasIndex(new[] { "UserId" }, "IX_UserActivityLogs_UserId");
 
-                    b.ToTable("UserActivityLogs");
+                    b.ToTable("UserActivityLogs", (string)null);
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.Warehouse", b =>
@@ -1910,7 +1910,7 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Warehouses");
+                    b.ToTable("Warehouses", (string)null);
                 });
 
             modelBuilder.Entity("RolePermission", b =>

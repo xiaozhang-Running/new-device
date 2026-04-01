@@ -254,45 +254,85 @@ namespace DeviceWarehouseSystem.Services
                 .Include(i => i.ProjectInboundItems)
                 .Include(i => i.ProjectInboundOutbounds)
                 .ToListAsync();
-            return inbounds.Select(i => new ProjectInboundDTO
+
+            var result = new List<ProjectInboundDTO>();
+            foreach (var inbound in inbounds)
             {
-                Id = i.Id,
-                InboundNumber = i.InboundNumber ?? "",
-                OutboundOrderId = i.ProjectInboundOutbounds?.FirstOrDefault()?.ProjectOutboundId ?? 0,
-                ProjectName = i.ProjectName ?? "",
-                ProjectManager = i.ProjectManager ?? "",
-                ContactPhone = i.ContactPhone ?? "",
-                ProjectTime = i.ProjectTime ?? "",
-                UsageLocation = i.UsageLocation ?? "",
-                Handler = i.Handler ?? "",
-                Inspector = i.Inspector ?? "",
-                WarehouseKeeper = i.WarehouseKeeper ?? "",
-                InboundDate = i.InboundDate.ToString("yyyy-MM-dd"),
-                Remark = i.Remark ?? "",
-                Status = i.Status ?? "",
-                IsCompleted = i.IsCompleted,
-                Items = i.ProjectInboundItems?.Select(item => new ProjectInboundItemDTO
+                var inboundDTO = new ProjectInboundDTO
                 {
-                    Id = item.Id,
-                    ProjectInboundId = item.InboundId,
-                    EquipmentId = item.ItemId,
-                    EquipmentName = item.ItemName ?? "",
-                    DeviceCode = item.DeviceCode,
-                    Brand = item.Brand ?? "",
-                    Model = item.Model ?? "",
-                    Quantity = item.Quantity,
-                    Unit = item.Unit ?? "",
-                    Accessories = item.Accessories,
-                    Status = item.DeviceStatus ?? "",
-                    ItemType = item.ItemType
-                }).ToList() ?? []
-            }).ToList();
+                    Id = inbound.Id,
+                    InboundNumber = inbound.InboundNumber ?? "",
+                    OutboundOrderId = inbound.ProjectInboundOutbounds?.FirstOrDefault()?.ProjectOutboundId ?? 0,
+                    ProjectName = inbound.ProjectName ?? "",
+                    ProjectManager = inbound.ProjectManager ?? "",
+                    ContactPhone = inbound.ContactPhone ?? "",
+                    ProjectTime = inbound.ProjectTime ?? "",
+                    UsageLocation = inbound.UsageLocation ?? "",
+                    Handler = inbound.Handler ?? "",
+                    Inspector = inbound.Inspector ?? "",
+                    WarehouseKeeper = inbound.WarehouseKeeper ?? "",
+                    InboundDate = inbound.InboundDate.ToString("yyyy-MM-dd"),
+                    Remark = inbound.Remark ?? "",
+                    Status = inbound.Status ?? "",
+                    IsCompleted = inbound.IsCompleted,
+                    Items = new List<ProjectInboundItemDTO>()
+                };
+
+                if (inbound.ProjectInboundItems != null)
+                {
+                    foreach (var item in inbound.ProjectInboundItems)
+                    {
+                        var itemDTO = new ProjectInboundItemDTO
+                        {
+                            Id = item.Id,
+                            ProjectInboundId = item.InboundId,
+                            EquipmentId = item.ItemId,
+                            EquipmentName = item.ItemName ?? "",
+                            DeviceCode = item.DeviceCode,
+                            Brand = item.Brand ?? "",
+                            Model = item.Model ?? "",
+                            Quantity = item.Quantity,
+                            Unit = item.Unit ?? "",
+                            Accessories = item.Accessories,
+                            Status = item.DeviceStatus ?? "",
+                            ItemType = item.ItemType
+                        };
+
+                        // 从设备表获取最新的设备编号
+                        if (item.ItemId > 0 && item.ItemType != 3) // 非耗材
+                        {
+                            if (item.ItemType == 1 && _context.SpecialEquipments != null)
+                            {
+                                var specialEquipment = await _context.SpecialEquipments.FirstOrDefaultAsync(e => e.Id == item.ItemId);
+                                if (specialEquipment != null)
+                                {
+                                    itemDTO.DeviceCode = specialEquipment.DeviceCode;
+                                }
+                            }
+                            else if (item.ItemType == 2 && _context.GeneralEquipments != null)
+                            {
+                                var generalEquipment = await _context.GeneralEquipments.FirstOrDefaultAsync(e => e.Id == item.ItemId);
+                                if (generalEquipment != null)
+                                {
+                                    itemDTO.DeviceCode = generalEquipment.DeviceCode;
+                                }
+                            }
+                        }
+
+                        inboundDTO.Items.Add(itemDTO);
+                    }
+                }
+
+                result.Add(inboundDTO);
+            }
+
+            return result;
         }
 
         public async Task<ProjectInboundDTO> CreateProjectInboundAsync(ProjectInboundDTO dto)
         {
-            // 生成入库单号
-            var inboundNumber = GenerateInboundNumber();
+            // 使用前端传递的入库单号，如果没有则生成新的
+            var inboundNumber = dto.InboundNumber ?? GenerateInboundNumber();
 
             var inbound = new ProjectInbound
             {
@@ -372,7 +412,8 @@ namespace DeviceWarehouseSystem.Services
                 }
 
                 // 处理入库物品
-                if (dto.Items != null && dto.Items.Count > 0)
+                // 1. 处理耗材
+                if (dto.Items != null && dto.Items.Count > 0 && _context.Consumables != null)
                 {
                     foreach (var item in dto.Items)
                     {
@@ -382,40 +423,37 @@ namespace DeviceWarehouseSystem.Services
                             // 更新耗材库存信息
                             try
                             {
-                                if (_context.Consumables != null)
-                                {
-                                    // 查找耗材
-                                    var consumable = await _context.Consumables.FirstOrDefaultAsync(c =>
-                                        c.Name == item.EquipmentName &&
-                                        (c.Brand == item.Brand || (c.Brand == null && (item.Brand == null || item.Brand == ""))) &&
-                                        (c.ModelSpecification == item.Model || (c.ModelSpecification == null && (item.Model == null || item.Model == "")))
-                                    );
+                                // 查找耗材
+                                var consumable = await _context.Consumables.FirstOrDefaultAsync(c =>
+                                    c.Name == item.EquipmentName &&
+                                    (c.Brand == item.Brand || (c.Brand == null && (item.Brand == null || item.Brand == ""))) &&
+                                    (c.ModelSpecification == item.Model || (c.ModelSpecification == null && (item.Model == null || item.Model == "")))
+                                );
 
-                                    if (consumable != null)
+                                if (consumable != null)
+                                {
+                                    // 增加耗材库存（入库数量）
+                                    consumable.RemainingQuantity += item.Quantity;
+                                    consumable.TotalQuantity += item.Quantity;
+                                    consumable.UpdatedAt = DateTime.Now;
+                                }
+                                else
+                                {
+                                    // 如果耗材不存在，创建新的耗材记录
+                                    consumable = new Consumable
                                     {
-                                        // 增加耗材库存（入库数量）
-                                        consumable.RemainingQuantity += item.Quantity;
-                                        consumable.TotalQuantity += item.Quantity;
-                                        consumable.UpdatedAt = DateTime.Now;
-                                    }
-                                    else
-                                    {
-                                        // 如果耗材不存在，创建新的耗材记录
-                                        consumable = new Consumable
-                                        {
-                                            Name = item.EquipmentName,
-                                            Brand = string.IsNullOrEmpty(item.Brand) ? null : item.Brand,
-                                            ModelSpecification = string.IsNullOrEmpty(item.Model) ? null : item.Model,
-                                            Unit = item.Unit,
-                                            TotalQuantity = item.Quantity,
-                                            OriginalQuantity = item.Quantity,
-                                            UsedQuantity = 0,
-                                            RemainingQuantity = item.Quantity,
-                                            Status = "正常",
-                                            CreatedAt = DateTime.Now
-                                        };
-                                        _context.Consumables.Add(consumable);
-                                    }
+                                        Name = item.EquipmentName,
+                                        Brand = string.IsNullOrEmpty(item.Brand) ? null : item.Brand,
+                                        ModelSpecification = string.IsNullOrEmpty(item.Model) ? null : item.Model,
+                                        Unit = item.Unit,
+                                        TotalQuantity = item.Quantity,
+                                        OriginalQuantity = item.Quantity,
+                                        UsedQuantity = 0,
+                                        RemainingQuantity = item.Quantity,
+                                        Status = "正常",
+                                        CreatedAt = DateTime.Now
+                                    };
+                                    _context.Consumables.Add(consumable);
                                 }
                             }
                             catch (Exception ex)
@@ -424,129 +462,13 @@ namespace DeviceWarehouseSystem.Services
                                 Console.WriteLine($"更新耗材库存失败: {ex.Message}");
                             }
                         }
-                        // 检查是否为专用设备或通用设备（ItemType == 1 或 2）
-                        else if (item.ItemType == 1 || item.ItemType == 2)
-                        {
-                            // 更新设备状态
-                            if (item.EquipmentId > 0)
-                            {
-                                if (item.ItemType == 1 && _context.SpecialEquipments != null)
-                                {
-                                    // 专用设备
-                                    var specialEquipment = await _context.SpecialEquipments.FirstOrDefaultAsync(e => e.Id == item.EquipmentId);
-                                    if (specialEquipment != null)
-                                    {
-                                        // 无论设备状态如何，都更新使用状态为未使用
-                                        specialEquipment.UseStatus = (int)UseStatus.Unused; // 未使用
-                                        
-                                        if (item.Status == "损坏")
-                                        {
-                                            // 设备损坏，更新为维修中状态
-                                            specialEquipment.DeviceStatus = (int)DeviceStatus.PendingRepair; // 待维修
-                                            specialEquipment.RepairStatus = (int)RepairStatus.Pending; // 待维修
-                                            specialEquipment.FaultReason = "设备损坏需要维修";
-                                            specialEquipment.RepairDate = DateTime.Now;
-                                            specialEquipment.UpdatedAt = DateTime.Now;
-
-                                            // 添加到维修设备管理中
-                                            try
-                                            {
-                                                if (_context.RepairEquipments != null)
-                                                {
-                                                    var repairEquipment = new RepairEquipment
-                                                    {
-                                                        EquipmentId = specialEquipment.Id,
-                                                        EquipmentName = specialEquipment.DeviceName,
-                                                        EquipmentCode = specialEquipment.DeviceCode,
-                                                        FaultDescription = "设备损坏需要维修",
-                                                        RepairDate = DateTime.Now,
-                                                        RepairCost = 0,
-                                                        RepairPerson = "",
-                                                        RepairStatus = "维修中",
-                                                        Remark = "项目入库时发现设备损坏",
-                                                        CreatedAt = DateTime.Now,
-                                                        UpdatedAt = DateTime.Now
-                                                    };
-                                                    _context.RepairEquipments.Add(repairEquipment);
-                                                }
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                // 忽略维修设备表不存在的错误，继续执行
-                                                Console.WriteLine($"添加维修设备记录失败: {ex.Message}");
-                                            }
-                                        }
-                                        else if (item.Status == "正常")
-                                        {
-                                            // 设备正常，更新为正常状态
-                                            specialEquipment.DeviceStatus = (int)DeviceStatus.Normal; // 正常
-                                            specialEquipment.RepairStatus = (int)RepairStatus.NoNeed; // 不需要维修
-                                            specialEquipment.UpdatedAt = DateTime.Now;
-                                        }
-                                        // 其他状态暂时保持不变
-                                    }
-                                }
-                                else if (item.ItemType == 2 && _context.GeneralEquipments != null)
-                                {
-                                    // 通用设备
-                                    var generalEquipment = await _context.GeneralEquipments.FirstOrDefaultAsync(e => e.Id == item.EquipmentId);
-                                    if (generalEquipment != null)
-                                    {
-                                        // 无论设备状态如何，都更新使用状态为未使用
-                                        generalEquipment.UseStatus = (int)UseStatus.Unused; // 未使用
-                                        
-                                        if (item.Status == "损坏")
-                                        {
-                                            // 设备损坏，更新为维修中状态
-                                            generalEquipment.DeviceStatus = (int)DeviceStatus.PendingRepair; // 待维修
-                                            generalEquipment.RepairStatus = (int)RepairStatus.Pending; // 待维修
-                                            generalEquipment.FaultReason = "设备损坏需要维修";
-                                            generalEquipment.RepairDate = DateTime.Now;
-                                            generalEquipment.UpdatedAt = DateTime.Now;
-
-                                            // 添加到维修设备管理中
-                                            try
-                                            {
-                                                if (_context.RepairEquipments != null)
-                                                {
-                                                    var repairEquipment = new RepairEquipment
-                                                    {
-                                                        EquipmentId = generalEquipment.Id,
-                                                        EquipmentName = generalEquipment.DeviceName,
-                                                        EquipmentCode = generalEquipment.DeviceCode,
-                                                        FaultDescription = "设备损坏需要维修",
-                                                        RepairDate = DateTime.Now,
-                                                        RepairCost = 0,
-                                                        RepairPerson = "",
-                                                        RepairStatus = "维修中",
-                                                        Remark = "项目入库时发现设备损坏",
-                                                        CreatedAt = DateTime.Now,
-                                                        UpdatedAt = DateTime.Now
-                                                    };
-                                                    _context.RepairEquipments.Add(repairEquipment);
-                                                }
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                // 忽略维修设备表不存在的错误，继续执行
-                                                Console.WriteLine($"添加维修设备记录失败: {ex.Message}");
-                                            }
-                                        }
-                                        else if (item.Status == "正常")
-                                        {
-                                            // 设备正常，更新为正常状态
-                                            generalEquipment.DeviceStatus = (int)DeviceStatus.Normal; // 正常
-                                            generalEquipment.RepairStatus = (int)RepairStatus.NoNeed; // 不需要维修
-                                            generalEquipment.UpdatedAt = DateTime.Now;
-                                        }
-                                        // 其他状态暂时保持不变
-                                    }
-                                }
-                            }
-                        }
                     }
-                    await _context.SaveChangesAsync();
                 }
+                
+
+                
+                // 保存所有更改
+                await _context.SaveChangesAsync();
             }
 
             dto.Id = inbound.Id;
@@ -1066,7 +988,7 @@ namespace DeviceWarehouseSystem.Services
                     Quantity = item.Quantity,
                     Status = item.Status ?? "",
                     DeviceCode = item.DeviceCode ?? "",
-                    SnCode = item.SnCode ?? item.SerialNumber ?? "",
+                    SnCode = item.SerialNumber ?? "",
                     Accessories = item.Accessories ?? item.Remark ?? ""
                 }).ToList() ?? new List<GeneralEquipmentPurchaseInboundItemDTO>()
             }).ToList();
@@ -1114,7 +1036,7 @@ namespace DeviceWarehouseSystem.Services
                             Unit = item.Unit,
                             Quantity = item.Quantity,
                             Status = item.Status,
-                            SnCode = item.SnCode,
+                            SerialNumber = item.SnCode,
                             Accessories = item.Accessories,
                             EquipmentType = 2,
                             CreatedAt = DateTime.Now
@@ -1549,54 +1471,6 @@ namespace DeviceWarehouseSystem.Services
                 throw new Exception("入库记录不存在");
             }
 
-            // 更新入库记录基本信息
-            inbound.InboundNumber = dto.InboundNumber;
-            inbound.ProjectName = dto.ProjectName;
-            inbound.ProjectManager = dto.ProjectManager;
-            inbound.ContactPhone = dto.ContactPhone;
-            inbound.ProjectTime = dto.ProjectTime;
-            inbound.UsageLocation = dto.UsageLocation;
-            inbound.Handler = dto.Handler;
-            inbound.Inspector = dto.Inspector;
-            inbound.WarehouseKeeper = dto.WarehouseKeeper;
-            inbound.InboundDate = !string.IsNullOrEmpty(dto.InboundDate) ? DateTime.Parse(dto.InboundDate) : DateTime.Now;
-            inbound.Remark = dto.Remark;
-            inbound.Status = dto.Status;
-            inbound.IsCompleted = dto.Status == "全部入库";
-            inbound.UpdatedAt = DateTime.Now;
-
-            // 删除旧的入库明细
-            if (_context.ProjectInboundItems != null && inbound.ProjectInboundItems != null)
-            {
-                _context.ProjectInboundItems.RemoveRange(inbound.ProjectInboundItems);
-            }
-
-            // 添加新的入库明细
-            if (dto.Items != null && dto.Items.Count > 0 && _context.ProjectInboundItems != null)
-            {
-                foreach (var item in dto.Items)
-                {
-                    var inboundItem = new ProjectInboundItem
-                    {
-                        InboundId = inbound.Id,
-                        ItemType = item.ItemType > 0 ? item.ItemType : 1, // 使用传入的ItemType，默认为1
-                        ItemId = item.EquipmentId,
-                        ItemName = item.EquipmentName,
-                        DeviceCode = item.DeviceCode,
-                        Brand = item.Brand,
-                        Model = item.Model,
-                        Quantity = item.Quantity,
-                        Unit = item.Unit,
-                        Accessories = item.Accessories,
-                        DeviceStatus = item.Status,
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.ProjectInboundItems.Add(inboundItem);
-                }
-            }
-
-            await _context.SaveChangesAsync();
-
             // 获取关联的出库单ID
             int outboundOrderId = dto.OutboundOrderId;
             if (outboundOrderId == 0 && _context.ProjectInboundOutbounds != null)
@@ -1608,182 +1482,157 @@ namespace DeviceWarehouseSystem.Services
                 }
             }
 
-            // 更新对应出库记录的状态
-            if (outboundOrderId > 0 && _context.ProjectOutbounds != null)
+            // 开始事务
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                var outbound = await _context.ProjectOutbounds.FirstOrDefaultAsync(o => o.Id == outboundOrderId);
-                if (outbound != null)
+                // 更新入库记录基本信息
+                inbound.InboundNumber = dto.InboundNumber;
+                inbound.ProjectName = dto.ProjectName;
+                inbound.ProjectManager = dto.ProjectManager;
+                inbound.ContactPhone = dto.ContactPhone;
+                inbound.ProjectTime = dto.ProjectTime;
+                inbound.UsageLocation = dto.UsageLocation;
+                inbound.Handler = dto.Handler;
+                inbound.Inspector = dto.Inspector;
+                inbound.WarehouseKeeper = dto.WarehouseKeeper;
+                inbound.InboundDate = !string.IsNullOrEmpty(dto.InboundDate) ? DateTime.Parse(dto.InboundDate) : DateTime.Now;
+                inbound.Remark = dto.Remark;
+                inbound.Status = dto.Status;
+                inbound.IsCompleted = dto.Status == "全部入库";
+                inbound.UpdatedAt = DateTime.Now;
+
+                // 删除旧的入库明细
+                if (_context.ProjectInboundItems != null && inbound.ProjectInboundItems != null)
                 {
-                    // 根据入库状态更新出库记录状态
-                    if (dto.Status == "全部入库")
-                    {
-                        outbound.IsCompleted = true;
-                        outbound.CompletedAt = DateTime.Now;
-                        outbound.InboundStatus = "已完成";
-                    } else if (dto.Status == "部分入库")
-                    {
-                        outbound.InboundStatus = "部分入库";
-                    }
-                    // 对于部分入库，不改变出库记录的状态，因为可能还有其他设备需要入库
-                    await _context.SaveChangesAsync();
+                    _context.ProjectInboundItems.RemoveRange(inbound.ProjectInboundItems);
                 }
+
+                // 添加新的入库明细
+                if (dto.Items != null && dto.Items.Count > 0 && _context.ProjectInboundItems != null)
+                {
+                    foreach (var item in dto.Items)
+                    {
+                        var inboundItem = new ProjectInboundItem
+                        {
+                            InboundId = inbound.Id,
+                            ItemType = item.ItemType > 0 ? item.ItemType : 1, // 使用传入的ItemType，默认为1
+                            ItemId = item.EquipmentId,
+                            ItemName = item.EquipmentName,
+                            DeviceCode = item.DeviceCode,
+                            Brand = item.Brand,
+                            Model = item.Model,
+                            Quantity = item.Quantity,
+                            Unit = item.Unit,
+                            Accessories = item.Accessories,
+                            DeviceStatus = item.Status,
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.ProjectInboundItems.Add(inboundItem);
+                    }
+                }
+
+                // 更新对应出库记录的状态
+                if (outboundOrderId > 0 && _context.ProjectOutbounds != null)
+                {
+                    var outbound = await _context.ProjectOutbounds.FirstOrDefaultAsync(o => o.Id == outboundOrderId);
+                    if (outbound != null)
+                    {
+                        // 根据入库状态更新出库记录状态
+                        if (dto.Status == "全部入库")
+                        {
+                            outbound.IsCompleted = true;
+                            outbound.CompletedAt = DateTime.Now;
+                            outbound.InboundStatus = "已完成";
+                        } else if (dto.Status == "部分入库")
+                        {
+                            outbound.InboundStatus = "部分入库";
+                        }
+                    }
+                }
+
+                // 更新设备使用状态和耗材库存信息
+                if (dto.Items != null && dto.Items.Count > 0)
+                {
+                    foreach (var item in dto.Items)
+                    {
+                        // 检查是否为专用设备（ItemType == 1）
+                        if (item.ItemType == 1 && _context.SpecialEquipments != null)
+                        {
+                            // 查找专用设备
+                            var specialEquipment = await _context.SpecialEquipments.FirstOrDefaultAsync(e => e.Id == item.EquipmentId);
+                            if (specialEquipment != null)
+                            {
+                                // 更新设备使用状态为未使用
+                                specialEquipment.UseStatus = (int)UseStatus.Unused;
+                                specialEquipment.UpdatedAt = DateTime.Now;
+                            }
+                        }
+                        // 检查是否为通用设备（ItemType == 2）
+                        else if (item.ItemType == 2 && _context.GeneralEquipments != null)
+                        {
+                            // 查找通用设备
+                            var generalEquipment = await _context.GeneralEquipments.FirstOrDefaultAsync(e => e.Id == item.EquipmentId);
+                            if (generalEquipment != null)
+                            {
+                                // 更新设备使用状态为未使用
+                                generalEquipment.UseStatus = (int)UseStatus.Unused;
+                                generalEquipment.UpdatedAt = DateTime.Now;
+                            }
+                        }
+                        // 检查是否为耗材类型（ItemType == 3）
+                        else if (item.ItemType == 3 && _context.Consumables != null)
+                        {
+                            // 查找耗材
+                            var consumable = await _context.Consumables.FirstOrDefaultAsync(c =>
+                                c.Name == item.EquipmentName &&
+                                (c.Brand == item.Brand || (c.Brand == null && (item.Brand == null || item.Brand == ""))) &&
+                                (c.ModelSpecification == item.Model || (c.ModelSpecification == null && (item.Model == null || item.Model == "")))
+                            );
+
+                            if (consumable != null)
+                            {
+                                // 增加耗材库存（入库数量）
+                                consumable.RemainingQuantity += item.Quantity;
+                                consumable.TotalQuantity += item.Quantity;
+                                consumable.UpdatedAt = DateTime.Now;
+                            }
+                            else
+                            {
+                                // 如果耗材不存在，创建新的耗材记录
+                                consumable = new Consumable
+                                {
+                                    Name = item.EquipmentName,
+                                    Brand = string.IsNullOrEmpty(item.Brand) ? null : item.Brand,
+                                    ModelSpecification = string.IsNullOrEmpty(item.Model) ? null : item.Model,
+                                    Unit = item.Unit,
+                                    TotalQuantity = item.Quantity,
+                                    OriginalQuantity = item.Quantity,
+                                    UsedQuantity = 0,
+                                    RemainingQuantity = item.Quantity,
+                                    Status = "正常",
+                                    CreatedAt = DateTime.Now
+                                };
+                                _context.Consumables.Add(consumable);
+                            }
+                        }
+                    }
+                }
+                
+
+
+                // 保存所有更改
+                Console.WriteLine($"开始保存所有更改...");
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                Console.WriteLine($"所有更改保存成功");
             }
-
-            // 更新耗材库存信息（如果是耗材类物品）
-            if (dto.Items != null && dto.Items.Count > 0 && _context.Consumables != null)
+            catch (Exception ex)
             {
-                foreach (var item in dto.Items)
-                {
-                    // 检查是否为耗材类型（ItemType == 3）
-                    if (item.ItemType == 3)
-                    {
-                        // 查找耗材
-                        var consumable = await _context.Consumables.FirstOrDefaultAsync(c =>
-                            c.Name == item.EquipmentName &&
-                            (c.Brand == item.Brand || (c.Brand == null && (item.Brand == null || item.Brand == ""))) &&
-                            (c.ModelSpecification == item.Model || (c.ModelSpecification == null && (item.Model == null || item.Model == "")))
-                        );
-
-                        if (consumable != null)
-                        {
-                            // 增加耗材库存（入库数量）
-                            consumable.RemainingQuantity += item.Quantity;
-                            consumable.TotalQuantity += item.Quantity;
-                            consumable.UpdatedAt = DateTime.Now;
-                        }
-                        else
-                        {
-                            // 如果耗材不存在，创建新的耗材记录
-                            consumable = new Consumable
-                            {
-                                Name = item.EquipmentName,
-                                Brand = string.IsNullOrEmpty(item.Brand) ? null : item.Brand,
-                                ModelSpecification = string.IsNullOrEmpty(item.Model) ? null : item.Model,
-                                Unit = item.Unit,
-                                TotalQuantity = item.Quantity,
-                                OriginalQuantity = item.Quantity,
-                                UsedQuantity = 0,
-                                RemainingQuantity = item.Quantity,
-                                Status = "正常",
-                                CreatedAt = DateTime.Now
-                            };
-                            _context.Consumables.Add(consumable);
-                        }
-                    }
-                    // 检查是否为专用设备或通用设备（ItemType == 1 或 2）
-                    else if (item.ItemType == 1 || item.ItemType == 2)
-                    {
-                        // 更新设备状态
-                        if (item.EquipmentId > 0)
-                        {
-                            if (item.ItemType == 1 && _context.SpecialEquipments != null)
-                            {
-                                // 专用设备
-                                var specialEquipment = await _context.SpecialEquipments.FirstOrDefaultAsync(e => e.Id == item.EquipmentId);
-                                if (specialEquipment != null)
-                                {
-                                    // 无论设备状态如何，都更新使用状态为未使用
-                                    specialEquipment.UseStatus = (int)UseStatus.Unused; // 未使用
-                                    
-                                    if (item.Status == "损坏")
-                                    {
-                                        // 设备损坏，更新为维修中状态
-                                        specialEquipment.DeviceStatus = (int)DeviceStatus.PendingRepair; // 待维修
-                                        specialEquipment.RepairStatus = (int)RepairStatus.Pending; // 待维修
-                                        specialEquipment.FaultReason = "设备损坏需要维修";
-                                        specialEquipment.RepairDate = DateTime.Now;
-                                        specialEquipment.UpdatedAt = DateTime.Now;
-
-                                        // 添加到维修设备管理中
-                                        if (_context.RepairEquipments != null)
-                                        {
-                                            var repairEquipment = new RepairEquipment
-                                            {
-                                                EquipmentId = specialEquipment.Id,
-                                                EquipmentName = specialEquipment.DeviceName,
-                                                EquipmentCode = specialEquipment.DeviceCode,
-                                                FaultDescription = "设备损坏需要维修",
-                                                RepairDate = DateTime.Now,
-                                                RepairCost = 0,
-                                                RepairPerson = "",
-                                                RepairStatus = "维修中",
-                                                Remark = "项目入库时发现设备损坏",
-                                                CreatedAt = DateTime.Now,
-                                                UpdatedAt = DateTime.Now
-                                            };
-                                            _context.RepairEquipments.Add(repairEquipment);
-                                        }
-                                    }
-                                    else if (item.Status == "正常")
-                                    {
-                                        // 设备正常，更新为正常状态
-                                        specialEquipment.DeviceStatus = (int)DeviceStatus.Normal; // 正常
-                                        specialEquipment.RepairStatus = (int)RepairStatus.NoNeed; // 不需要维修
-                                        specialEquipment.UpdatedAt = DateTime.Now;
-                                    }
-                                    // 其他状态暂时保持不变
-                                }
-                            }
-                            else if (item.ItemType == 2 && _context.GeneralEquipments != null)
-                            {
-                                // 通用设备
-                                var generalEquipment = await _context.GeneralEquipments.FirstOrDefaultAsync(e => e.Id == item.EquipmentId);
-                                if (generalEquipment != null)
-                                {
-                                    // 无论设备状态如何，都更新使用状态为未使用
-                                    generalEquipment.UseStatus = (int)UseStatus.Unused; // 未使用
-                                    
-                                    if (item.Status == "损坏")
-                                    {
-                                        // 设备损坏，更新为维修中状态
-                                        generalEquipment.DeviceStatus = (int)DeviceStatus.PendingRepair; // 待维修
-                                        generalEquipment.RepairStatus = (int)RepairStatus.Pending; // 待维修
-                                        generalEquipment.FaultReason = "设备损坏需要维修";
-                                        generalEquipment.RepairDate = DateTime.Now;
-                                        generalEquipment.UpdatedAt = DateTime.Now;
-
-                                        // 添加到维修设备管理中
-                                        if (_context.RepairEquipments != null)
-                                        {
-                                            var repairEquipment = new RepairEquipment
-                                            {
-                                                EquipmentId = generalEquipment.Id,
-                                                EquipmentName = generalEquipment.DeviceName,
-                                                EquipmentCode = generalEquipment.DeviceCode,
-                                                FaultDescription = "设备损坏需要维修",
-                                                RepairDate = DateTime.Now,
-                                                RepairCost = 0,
-                                                RepairPerson = "",
-                                                RepairStatus = "维修中",
-                                                Remark = "项目入库时发现设备损坏",
-                                                CreatedAt = DateTime.Now,
-                                                UpdatedAt = DateTime.Now
-                                            };
-                                            _context.RepairEquipments.Add(repairEquipment);
-                                        }
-                                    }
-                                    else if (item.Status == "正常")
-                                    {
-                                        // 设备正常，更新为正常状态
-                                        generalEquipment.DeviceStatus = (int)DeviceStatus.Normal; // 正常
-                                        generalEquipment.RepairStatus = (int)RepairStatus.NoNeed; // 不需要维修
-                                        generalEquipment.UpdatedAt = DateTime.Now;
-                                    }
-                                    // 其他状态暂时保持不变
-                                }
-                            }
-                        }
-                    }
-                }
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (Exception ex)
-                {
-                    // 忽略表不存在的错误，继续执行
-                    Console.WriteLine($"保存更改失败: {ex.Message}");
-                }
+                // 回滚事务
+                await transaction.RollbackAsync();
+                Console.WriteLine($"保存更改时发生异常: {ex.Message}");
+                throw;
             }
 
             // 返回更新后的入库记录

@@ -61,6 +61,8 @@ public partial class DeviceWarehouseContext : DbContext
 
     public virtual DbSet<Role>? Roles { get; set; }
 
+    public virtual DbSet<RolePermission>? RolePermissions { get; set; }
+
     public virtual DbSet<ScrapEquipment>? ScrapEquipments { get; set; }
 
     public virtual DbSet<SpecialEquipment>? SpecialEquipments { get; set; }
@@ -257,15 +259,15 @@ public partial class DeviceWarehouseContext : DbContext
             entity.HasIndex(e => e.Code, "IX_Permissions_Code").IsUnique();
 
             entity.HasMany(d => d.Roles).WithMany(p => p.Permissions)
-                .UsingEntity<Dictionary<string, object>>(
-                    "RolePermission",
-                    r => r.HasOne<Role>().WithMany().HasForeignKey("RolesId"),
-                    l => l.HasOne<Permission>().WithMany().HasForeignKey("PermissionsId"),
+                .UsingEntity<RolePermission>(
+                    r => r.HasOne<Role>().WithMany().HasForeignKey(d => d.RoleId),
+                    l => l.HasOne<Permission>().WithMany().HasForeignKey(d => d.PermissionId),
                     j =>
                     {
-                        j.HasKey("PermissionsId", "RolesId");
+                        j.HasKey(d => d.Id);
                         j.ToTable("RolePermissions");
-                        j.HasIndex(new[] { "RolesId" }, "IX_RolePermissions_RolesId");
+                        j.HasIndex(new[] { "RoleId" }, "IX_RolePermissions_RoleId");
+                        j.HasIndex(new[] { "PermissionId" }, "IX_RolePermissions_PermissionId");
                     });
         });
 

@@ -86,6 +86,7 @@ namespace DeviceWarehouseSystem.DTOs
         public required string Unit { get; set; }
         public string? Accessories { get; set; }
         public required string Status { get; set; }
+        public string DeviceStatus { get => Status; set => Status = value; }
         public int ItemType { get; set; } // 1=专用设备, 2=通用设备, 3=耗材
     }
 

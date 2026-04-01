@@ -73,6 +73,103 @@ namespace DeviceWarehouseSystem.Controllers
             repairEquipment.UpdatedAt = System.DateTime.Now;
             _context.Entry(repairEquipment).State = EntityState.Modified;
 
+            // 查找对应的设备并更新状态
+            // 先尝试查找专用设备
+            if (_context.SpecialEquipments != null)
+            {
+                var specialEquipment = await _context.SpecialEquipments.FindAsync(repairEquipment.EquipmentId);
+                if (specialEquipment != null)
+                {
+                    // 根据维修状态更新设备状态
+                    if (repairEquipment.RepairStatus == "待维修")
+                    {
+                        specialEquipment.DeviceStatus = 2; // 维修中
+                        specialEquipment.RepairStatus = 1; // 待维修
+                    }
+                    else if (repairEquipment.RepairStatus == "维修中")
+                    {
+                        specialEquipment.DeviceStatus = 2; // 维修中
+                        specialEquipment.RepairStatus = 2; // 维修中
+                    }
+                    else if (repairEquipment.RepairStatus == "已完成")
+                    {
+                        specialEquipment.DeviceStatus = 1; // 正常
+                        specialEquipment.RepairStatus = 3; // 已完成
+                    }
+                    else if (repairEquipment.RepairStatus == "无法维修")
+                    {
+                        specialEquipment.DeviceStatus = 3; // 报废
+                        specialEquipment.RepairStatus = 4; // 无法维修
+                        
+                        // 检查是否存在报废设备管理表，如果存在则添加记录
+                        if (_context.ScrapEquipments != null)
+                        {
+                            var scrapEquipment = new ScrapEquipment
+                            {
+                                SpecialEquipmentId = specialEquipment.Id,
+                                DeviceName = specialEquipment.DeviceName,
+                                DeviceCode = specialEquipment.DeviceCode,
+                                ScrapReason = repairEquipment.FaultDescription,
+                                ScrapDate = System.DateTime.Now,
+                                Remark = repairEquipment.Remark,
+                                CreatedAt = System.DateTime.Now,
+                                UpdatedAt = System.DateTime.Now
+                            };
+                            _context.ScrapEquipments.Add(scrapEquipment);
+                        }
+                    }
+                    specialEquipment.UpdatedAt = System.DateTime.Now;
+                }
+            }
+
+            // 再尝试查找通用设备
+            if (_context.GeneralEquipments != null)
+            {
+                var generalEquipment = await _context.GeneralEquipments.FindAsync(repairEquipment.EquipmentId);
+                if (generalEquipment != null)
+                {
+                    // 根据维修状态更新设备状态
+                    if (repairEquipment.RepairStatus == "待维修")
+                    {
+                        generalEquipment.DeviceStatus = 2; // 维修中
+                        generalEquipment.RepairStatus = 1; // 待维修
+                    }
+                    else if (repairEquipment.RepairStatus == "维修中")
+                    {
+                        generalEquipment.DeviceStatus = 2; // 维修中
+                        generalEquipment.RepairStatus = 2; // 维修中
+                    }
+                    else if (repairEquipment.RepairStatus == "已完成")
+                    {
+                        generalEquipment.DeviceStatus = 1; // 正常
+                        generalEquipment.RepairStatus = 3; // 已完成
+                    }
+                    else if (repairEquipment.RepairStatus == "无法维修")
+                    {
+                        generalEquipment.DeviceStatus = 3; // 报废
+                        generalEquipment.RepairStatus = 4; // 无法维修
+                        
+                        // 检查是否存在报废设备管理表，如果存在则添加记录
+                        if (_context.ScrapEquipments != null)
+                        {
+                            var scrapEquipment = new ScrapEquipment
+                            {
+                                GeneralEquipmentId = generalEquipment.Id,
+                                DeviceName = generalEquipment.DeviceName,
+                                DeviceCode = generalEquipment.DeviceCode,
+                                ScrapReason = repairEquipment.FaultDescription,
+                                ScrapDate = System.DateTime.Now,
+                                Remark = repairEquipment.Remark,
+                                CreatedAt = System.DateTime.Now,
+                                UpdatedAt = System.DateTime.Now
+                            };
+                            _context.ScrapEquipments.Add(scrapEquipment);
+                        }
+                    }
+                    generalEquipment.UpdatedAt = System.DateTime.Now;
+                }
+            }
+
             try
             {
                 await _context.SaveChangesAsync();
