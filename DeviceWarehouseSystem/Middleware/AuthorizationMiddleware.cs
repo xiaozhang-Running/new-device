@@ -165,12 +165,13 @@ namespace DeviceWarehouseSystem.Middleware
             {
                 return true;
             }
-            // 仓库管理员：除仓库设置、用户管理外的所有权限，包括日志管理
+            // 仓库管理员：除仓库管理、用户管理、日志管理外的所有权限
             else if (userRole == "仓库管理员")
             {
-                // 检查是否访问仓库设置或用户管理
+                // 检查是否访问仓库管理、用户管理或日志管理
                 if (path.StartsWithSegments("/api/Warehouse") || 
-                    path.StartsWithSegments("/api/User"))
+                    path.StartsWithSegments("/api/User") ||
+                    path.StartsWithSegments("/api/Log"))
                 {
                     return false;
                 }
@@ -199,10 +200,19 @@ namespace DeviceWarehouseSystem.Middleware
                        path.StartsWithSegments("/api/RawMaterials") ||
                        path.StartsWithSegments("/api/Log");
             }
-            // 普通用户：看板查看 + 设备管理（库存管理）
+            // 普通用户：看板查看 + 库存管理 + 项目出入库管理 + 设备管理 + 耗材和原材料管理
             else if (userRole == "普通用户")
             {
-                return path.StartsWithSegments("/api/Device");
+                // 允许访问看板、设备库存汇总视图、项目出库、项目入库、设备列表、耗材和原材料
+                return path.StartsWithSegments("/api/Dashboard") ||
+                       path.StartsWithSegments("/api/Device/special-equipments") ||
+                       path.StartsWithSegments("/api/Device/general-equipments") ||
+                       path.StartsWithSegments("/api/Device/inventory") ||
+                       path.StartsWithSegments("/api/Consumable") ||
+                       path.StartsWithSegments("/api/RawMaterials") ||
+                       (path.StartsWithSegments("/api/Device") && path.ToString().Contains("summary")) ||
+                       path.StartsWithSegments("/api/ProjectOutbound") ||
+                       path.StartsWithSegments("/api/InOutbound/project-inbounds");
             }
             
             return false;

@@ -39,6 +39,8 @@ namespace DeviceWarehouseSystem.Services
                 Remark = o.Remark ?? "",
                 IsCompleted = o.IsCompleted,
                 CompletedAt = o.CompletedAt,
+                OutboundType = o.OutboundType ?? "",
+                LogisticsMethod = o.LogisticsMethod,
                 Items = o.ProjectOutboundItems?.Select(i => new ProjectOutboundItemDTO
                 {
                     Id = i.Id,
@@ -49,7 +51,8 @@ namespace DeviceWarehouseSystem.Services
                     Model = i.Model ?? "",
                     Quantity = i.Quantity,
                     Unit = i.Unit ?? "",
-                    Status = i.DeviceStatus ?? ""
+                    Status = i.DeviceStatus ?? "",
+                    SerialNumber = i.SerialNumber
                 }).ToList() ?? []
             }).ToList();
         }
@@ -74,6 +77,8 @@ namespace DeviceWarehouseSystem.Services
                 WarehouseKeeper = dto.WarehouseKeeper,
                 Remark = dto.Remark,
                 IsCompleted = false,
+                OutboundType = dto.OutboundType,
+                LogisticsMethod = dto.LogisticsMethod,
                 CreatedAt = DateTime.Now
             };
 
@@ -98,6 +103,7 @@ namespace DeviceWarehouseSystem.Services
                             Quantity = item.Quantity,
                             Unit = item.Unit,
                             DeviceStatus = item.Status,
+                            SerialNumber = item.SerialNumber,
                             CreatedAt = DateTime.Now
                         };
                         _context.ProjectOutboundItems.Add(outboundItem);
@@ -127,6 +133,7 @@ namespace DeviceWarehouseSystem.Services
             {
                 Id = outbound.Id,
                 OutboundNumber = outbound.OutboundNumber ?? "",
+                OutboundDate = outbound.OutboundDate,
                 ProjectName = outbound.ProjectName ?? "",
                 ProjectManager = outbound.ProjectManager ?? "",
                 ContactPhone = outbound.ContactPhone ?? "",
@@ -139,6 +146,8 @@ namespace DeviceWarehouseSystem.Services
                 Remark = outbound.Remark ?? "",
                 IsCompleted = outbound.IsCompleted,
                 CompletedAt = outbound.CompletedAt,
+                OutboundType = outbound.OutboundType ?? "",
+                LogisticsMethod = outbound.LogisticsMethod,
                 Items = outbound.ProjectOutboundItems?.Select(i => new ProjectOutboundItemDTO
                 {
                     Id = i.Id,
@@ -149,7 +158,8 @@ namespace DeviceWarehouseSystem.Services
                     Model = i.Model ?? "",
                     Quantity = i.Quantity,
                     Unit = i.Unit ?? "",
-                    Status = i.DeviceStatus ?? ""
+                    Status = i.DeviceStatus ?? "",
+                    SerialNumber = i.SerialNumber
                 }).ToList() ?? []
             };
         }
@@ -523,7 +533,7 @@ namespace DeviceWarehouseSystem.Services
             {
                 return new List<RawMaterialInboundDTO>();
             }
-            var inbounds = await _context.RawMaterialInbounds.Include(i => i.RawMaterialInboundItems).ToListAsync();
+            var inbounds = await _context.RawMaterialInbounds.Include(i => i.RawMaterialInboundItems).ThenInclude(item => item.RawMaterial).ToListAsync();
             return inbounds.Select(i => new RawMaterialInboundDTO
             {
                 Id = i.Id,
@@ -531,6 +541,8 @@ namespace DeviceWarehouseSystem.Services
                 Supplier = i.Supplier ?? "",
                 Handler = i.Operator ?? "",
                 WarehouseKeeper = i.Operator ?? "", // 临时使用Operator作为WarehouseKeeper
+                DeliveryPerson = i.DeliveryPerson ?? "",
+                InboundDate = i.InboundDate.ToString("yyyy-MM-dd"),
                 Remark = i.Remark ?? "",
                 Status = i.Status ?? "",
                 Items = i.RawMaterialInboundItems?.Select(item => new RawMaterialInboundItemDTO
@@ -538,7 +550,10 @@ namespace DeviceWarehouseSystem.Services
                     Id = item.Id,
                     RawMaterialId = item.RawMaterialId,
                     Quantity = item.Quantity,
-                    Remark = item.Remark ?? ""
+                    Remark = item.Remark ?? "",
+                    Name = item.RawMaterial?.ProductName ?? "",
+                    Specification = item.RawMaterial?.Specification ?? "",
+                    Unit = item.RawMaterial?.Unit ?? ""
                 }).ToList() ?? new List<RawMaterialInboundItemDTO>()
             }).ToList();
         }
@@ -554,6 +569,7 @@ namespace DeviceWarehouseSystem.Services
                 InboundDate = DateTime.Now,
                 Supplier = dto.Supplier,
                 Operator = dto.Handler,
+                DeliveryPerson = dto.DeliveryPerson,
                 Remark = dto.Remark,
                 Status = "待处理",
                 CreatedAt = DateTime.Now
@@ -657,7 +673,7 @@ namespace DeviceWarehouseSystem.Services
             {
                 throw new Exception("入库记录不存在");
             }
-            var inbound = await _context.RawMaterialInbounds.Include(i => i.RawMaterialInboundItems).FirstOrDefaultAsync(i => i.Id == id);
+            var inbound = await _context.RawMaterialInbounds.Include(i => i.RawMaterialInboundItems).ThenInclude(item => item.RawMaterial).FirstOrDefaultAsync(i => i.Id == id);
             if (inbound == null)
             {
                 throw new Exception("入库记录不存在");
@@ -691,6 +707,8 @@ namespace DeviceWarehouseSystem.Services
                 Supplier = inbound.Supplier,
                 Handler = inbound.Operator,
                 WarehouseKeeper = inbound.Operator,
+                DeliveryPerson = inbound.DeliveryPerson,
+                InboundDate = inbound.InboundDate.ToString("yyyy-MM-dd"),
                 Remark = inbound.Remark,
                 Status = inbound.Status,
                 Items = inbound.RawMaterialInboundItems?.Select(item => new RawMaterialInboundItemDTO
@@ -698,7 +716,10 @@ namespace DeviceWarehouseSystem.Services
                     Id = item.Id,
                     RawMaterialId = item.RawMaterialId,
                     Quantity = item.Quantity,
-                    Remark = item.Remark
+                    Remark = item.Remark,
+                    Name = item.RawMaterial?.ProductName ?? "",
+                    Specification = item.RawMaterial?.Specification ?? "",
+                    Unit = item.RawMaterial?.Unit ?? ""
                 }).ToList() ?? new List<RawMaterialInboundItemDTO>()
             };
         }
@@ -1658,6 +1679,9 @@ namespace DeviceWarehouseSystem.Services
                 // 更新设备使用状态和耗材库存信息
                 if (dto.Items != null && dto.Items.Count > 0)
                 {
+                    // 检查入库记录的原始状态
+                    var originalStatus = inbound.Status;
+                    
                     foreach (var item in dto.Items)
                     {
                         // 检查是否为专用设备（ItemType == 1）
@@ -1697,9 +1721,9 @@ namespace DeviceWarehouseSystem.Services
                         // 检查是否为耗材类型（ItemType == 3）
                         else if (item.ItemType == 3 && _context.Consumables != null)
                         {
-                            // 只有当入库记录状态不是从"部分入库"更新为"全部入库"时，才更新耗材库存
-                            // 因为耗材库存已经在创建"部分入库"记录时更新过了
-                            if (!(inbound.Status == "部分入库" && dto.Status == "全部入库"))
+                            // 只有当入库记录原始状态不是"部分入库"或"全部入库"时，才更新耗材库存
+                            // 因为耗材库存已经在第一次入库时更新过了
+                            if (originalStatus != "部分入库" && originalStatus != "全部入库")
                             {
                                 // 查找耗材
                                 var consumable = await _context.Consumables.FirstOrDefaultAsync(c =>

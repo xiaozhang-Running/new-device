@@ -988,6 +988,9 @@ namespace DeviceWarehouseSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("SerialNumber")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Unit")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -1824,7 +1827,6 @@ namespace DeviceWarehouseSystem.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("FailedLoginAttempts")
@@ -1866,7 +1868,8 @@ namespace DeviceWarehouseSystem.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex(new[] { "Email" }, "IX_Users_Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Email] IS NOT NULL");
 
                     b.HasIndex(new[] { "Username" }, "IX_Users_Username")
                         .IsUnique();

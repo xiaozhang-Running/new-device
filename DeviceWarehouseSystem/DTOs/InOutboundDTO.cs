@@ -17,6 +17,8 @@ namespace DeviceWarehouseSystem.DTOs
         public required string Remark { get; set; }
         public bool IsCompleted { get; set; }
         public DateTime? CompletedAt { get; set; }
+        public string OutboundType { get; set; } = "";
+        public int? LogisticsMethod { get; set; }
         public required List<ProjectOutboundItemDTO> Items { get; set; }
     }
 
@@ -31,6 +33,7 @@ namespace DeviceWarehouseSystem.DTOs
         public int Quantity { get; set; }
         public required string Unit { get; set; }
         public required string Status { get; set; }
+        public string? SerialNumber { get; set; }
     }
 
     public class RawMaterialOutboundDTO
@@ -100,6 +103,8 @@ namespace DeviceWarehouseSystem.DTOs
         public string? Supplier { get; set; }
         public string? Handler { get; set; }
         public string? WarehouseKeeper { get; set; }
+        public string? DeliveryPerson { get; set; }
+        public string? InboundDate { get; set; }
         public string? Remark { get; set; }
         public string? Status { get; set; }
         public List<RawMaterialInboundItemDTO>? Items { get; set; }
@@ -111,6 +116,9 @@ namespace DeviceWarehouseSystem.DTOs
         public int RawMaterialId { get; set; }
         public int Quantity { get; set; }
         public string? Remark { get; set; }
+        public string? Name { get; set; }
+        public string? Specification { get; set; }
+        public string? Unit { get; set; }
     }
 
     // 专用设备采购入库

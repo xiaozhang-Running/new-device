@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DeviceWarehouseSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class AddSerialNumberToProjectOutboundItem : Migration
+    public partial class AddDeliveryPersonToRawMaterialInbound : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,6 +18,10 @@ namespace DeviceWarehouseSystem.Migrations
             migrationBuilder.DropForeignKey(
                 name: "FK_RolePermissions_Roles_RolesId",
                 table: "RolePermissions");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Users_Email",
+                table: "Users");
 
             migrationBuilder.DropPrimaryKey(
                 name: "PK_RolePermissions",
@@ -37,6 +41,14 @@ namespace DeviceWarehouseSystem.Migrations
                 name: "IX_RolePermissions_RolesId",
                 table: "RolePermissions",
                 newName: "IX_RolePermissions_RoleId1");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "Email",
+                table: "Users",
+                type: "nvarchar(450)",
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "nvarchar(450)");
 
             migrationBuilder.AddColumn<int>(
                 name: "Id",
@@ -73,10 +85,23 @@ namespace DeviceWarehouseSystem.Migrations
                 type: "nvarchar(max)",
                 nullable: true);
 
+            migrationBuilder.AddColumn<string>(
+                name: "SerialNumber",
+                table: "ProjectInboundItem",
+                type: "nvarchar(max)",
+                nullable: true);
+
             migrationBuilder.AddPrimaryKey(
                 name: "PK_RolePermissions",
                 table: "RolePermissions",
                 column: "Id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Email",
+                table: "Users",
+                column: "Email",
+                unique: true,
+                filter: "[Email] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RolePermissions_PermissionId",
@@ -145,6 +170,10 @@ namespace DeviceWarehouseSystem.Migrations
                 name: "FK_RolePermissions_Roles_RoleId1",
                 table: "RolePermissions");
 
+            migrationBuilder.DropIndex(
+                name: "IX_Users_Email",
+                table: "Users");
+
             migrationBuilder.DropPrimaryKey(
                 name: "PK_RolePermissions",
                 table: "RolePermissions");
@@ -181,6 +210,10 @@ namespace DeviceWarehouseSystem.Migrations
                 name: "SerialNumber",
                 table: "ProjectOutboundItem");
 
+            migrationBuilder.DropColumn(
+                name: "SerialNumber",
+                table: "ProjectInboundItem");
+
             migrationBuilder.RenameColumn(
                 name: "RoleId1",
                 table: "RolePermissions",
@@ -196,10 +229,26 @@ namespace DeviceWarehouseSystem.Migrations
                 table: "RolePermissions",
                 newName: "IX_RolePermissions_RolesId");
 
+            migrationBuilder.AlterColumn<string>(
+                name: "Email",
+                table: "Users",
+                type: "nvarchar(450)",
+                nullable: false,
+                defaultValue: "",
+                oldClrType: typeof(string),
+                oldType: "nvarchar(450)",
+                oldNullable: true);
+
             migrationBuilder.AddPrimaryKey(
                 name: "PK_RolePermissions",
                 table: "RolePermissions",
                 columns: new[] { "PermissionsId", "RolesId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Email",
+                table: "Users",
+                column: "Email",
+                unique: true);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_RolePermissions_Permissions_PermissionsId",

@@ -499,7 +499,7 @@ public partial class DeviceWarehouseContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasIndex(e => e.Email, "IX_Users_Email").IsUnique();
+            entity.HasIndex(e => e.Email, "IX_Users_Email").IsUnique().HasFilter("[Email] IS NOT NULL");
 
             entity.HasIndex(e => e.Username, "IX_Users_Username").IsUnique();
         });

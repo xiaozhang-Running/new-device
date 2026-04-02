@@ -1,8 +1,13 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 using DeviceWarehouseSystem.Models;
 using DeviceWarehouseSystem.DTOs;
 
@@ -86,7 +91,7 @@ namespace DeviceWarehouseSystem.Services
                 PasswordHash = registerDTO.Password, // 实际项目中应该加密密码
                 Role = registerDTO.Role,
                 Email = registerDTO.Email,
-                FullName = registerDTO.Username, // 临时使用用户名作为全名
+                FullName = registerDTO.FullName ?? registerDTO.Username, // 使用传入的FullName，如果为空则使用Username
                 IsActive = true,
                 CreatedAt = DateTime.Now
             };
@@ -111,7 +116,8 @@ namespace DeviceWarehouseSystem.Services
                 Id = user.Id,
                 Username = user.Username,
                 Role = user.Role,
-                Email = user.Email
+                Email = user.Email,
+                FullName = user.FullName
             };
         }
 
@@ -151,6 +157,161 @@ namespace DeviceWarehouseSystem.Services
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        public async Task<IEnumerable<UserDTO>> GetUsersAsync()
+        {
+            if (_context.Users == null)
+            {
+                throw new Exception("用户不存在");
+            }
+            var users = await _context.Users.ToListAsync();
+            return users.Select(user => new UserDTO
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Role = user.Role ?? "User",
+                Email = user.Email ?? "",
+                FullName = user.FullName
+            });
+        }
+
+        public async Task<UserDTO> GetUserAsync(int id)
+        {
+            if (_context.Users == null)
+            {
+                throw new Exception("用户不存在");
+            }
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+            {
+                return null;
+            }
+            return new UserDTO
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Role = user.Role ?? "User",
+                Email = user.Email ?? "",
+                FullName = user.FullName
+            };
+        }
+
+        public async Task<UserDTO> UpdateUserAsync(int id, UpdateUserDTO updateUserDTO)
+        {
+            if (_context.Users == null)
+            {
+                throw new Exception("用户不存在");
+            }
+            var user = _context.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(updateUserDTO.Username))
+            {
+                user.Username = updateUserDTO.Username;
+            }
+            if (!string.IsNullOrEmpty(updateUserDTO.Password))
+            {
+                user.PasswordHash = updateUserDTO.Password; // 实际项目中应该加密密码
+            }
+            if (!string.IsNullOrEmpty(updateUserDTO.Role))
+            {
+                user.Role = updateUserDTO.Role;
+            }
+            if (!string.IsNullOrEmpty(updateUserDTO.Email))
+            {
+                user.Email = updateUserDTO.Email;
+            }
+            if (!string.IsNullOrEmpty(updateUserDTO.FullName))
+            {
+                user.FullName = updateUserDTO.FullName;
+            }
+
+            user.UpdatedAt = DateTime.Now;
+            _context.Entry(user).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return new UserDTO
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Role = user.Role ?? "User",
+                Email = user.Email ?? "",
+                FullName = user.FullName
+            };
+        }
+
+        public async Task DeleteUserAsync(int id)
+        {
+            if (_context.Users == null)
+            {
+                throw new Exception("用户不存在");
+            }
+            var user = _context.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                throw new Exception("用户不存在");
+            }
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<UserDTO> UpdateUserStatusAsync(int id, bool isActive)
+        {
+            if (_context.Users == null)
+            {
+                throw new Exception("用户不存在");
+            }
+            var user = _context.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                return null;
+            }
+
+            user.IsActive = isActive;
+            user.UpdatedAt = DateTime.Now;
+            _context.Entry(user).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return new UserDTO
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Role = user.Role ?? "User",
+                Email = user.Email ?? "",
+                FullName = user.FullName
+            };
+        }
+
+        public async Task<UserDTO> UpdateUserLockStatusAsync(int id, bool isLockedOut)
+        {
+            if (_context.Users == null)
+            {
+                throw new Exception("用户不存在");
+            }
+            var user = _context.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                return null;
+            }
+
+            user.IsLockedOut = isLockedOut;
+            user.UpdatedAt = DateTime.Now;
+            _context.Entry(user).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return new UserDTO
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Role = user.Role ?? "User",
+                Email = user.Email ?? "",
+                FullName = user.FullName
+            };
         }
     }
 }

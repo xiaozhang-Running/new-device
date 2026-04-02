@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeviceWarehouseSystem.Migrations
 {
     [DbContext(typeof(DeviceWarehouseContext))]
-    [Migration("20260401112700_AddSerialNumberToProjectOutboundItem")]
-    partial class AddSerialNumberToProjectOutboundItem
+    [Migration("20260402084240_AddDeliveryPersonToRawMaterialInbound")]
+    partial class AddDeliveryPersonToRawMaterialInbound
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -991,6 +991,9 @@ namespace DeviceWarehouseSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("SerialNumber")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Unit")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -1827,7 +1830,6 @@ namespace DeviceWarehouseSystem.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("FailedLoginAttempts")
@@ -1869,7 +1871,8 @@ namespace DeviceWarehouseSystem.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex(new[] { "Email" }, "IX_Users_Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Email] IS NOT NULL");
 
                     b.HasIndex(new[] { "Username" }, "IX_Users_Username")
                         .IsUnique();
