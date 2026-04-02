@@ -11,25 +11,33 @@ const { TextArea } = Input
 const fetchInboundHistory = async () => {
   try {
     const data = await get('/InOutbound/raw-material-inbounds');
+    // 获取所有原材料数据，用于填充入库单中的原材料信息
+    const rawMaterials = await fetchRawMaterials();
+    const rawMaterialMap = new Map(rawMaterials.map(m => [m.id, m]));
+    
     return data.map(item => ({
       id: item.id,
       orderNumber: item.inboundNumber,
-      deliveryPerson: '', // 后端DTO中没有该字段
-      inspector: '', // 后端DTO中没有该字段
-      inboundPerson: item.handler || '未知入库人',
-      inboundDate: new Date().toISOString().split('T')[0], // 临时使用当前日期
-      operator: item.handler || '未知操作人',
-      status: item.status || '待处理',
-      supplier: item.supplier || '未知供应商',
-      remark: item.remark || '',
-      items: item.items.map(item => ({
-        type: '原材料',
-        name: '', // 需要根据rawMaterialId查询
-        specification: '', // 后端DTO中没有该字段
-        unit: '', // 后端DTO中没有该字段
-        inventory: 0, // 需要根据rawMaterialId查询
-        quantity: item.quantity
-      }))
+      deliveryPerson: item.deliveryPerson || item.DeliveryPerson || '', // 尝试不同的字段名
+      inspector: item.inspector || item.Inspector || item.warehouseKeeper || item.WarehouseKeeper || '', // 尝试不同的字段名
+      inboundPerson: item.handler || item.Handler || '未知入库人',
+      inboundDate: item.inboundDate || item.InboundDate || new Date().toISOString().split('T')[0], // 尝试从后端获取日期
+      operator: item.operator || item.Operator || item.handler || item.Handler || '未知操作人',
+      status: item.status || item.Status || '待处理',
+      supplier: item.supplier || item.Supplier || '未知供应商',
+      remark: item.remark || item.Remark || '',
+      items: item.items.map(item => {
+        // 尝试从原材料列表中获取详细信息
+        const rawMaterial = rawMaterialMap.get(item.rawMaterialId);
+        return {
+          type: '原材料',
+          name: item.name || item.Name || (rawMaterial ? rawMaterial.name : ''),
+          specification: item.specification || item.Specification || (rawMaterial ? rawMaterial.specification : ''),
+          unit: item.unit || item.Unit || (rawMaterial ? rawMaterial.unit : ''),
+          inventory: item.inventory || item.Inventory || (rawMaterial ? rawMaterial.quantity : 0),
+          quantity: item.quantity || item.Quantity || 0
+        };
+      })
     }));
   } catch (error) {
     console.error('获取入库历史失败:', error);
@@ -45,10 +53,15 @@ const createRawMaterialInbound = async (data, rawMaterials) => {
       supplier: data.supplier || '',
       handler: data.inboundPerson,
       warehouseKeeper: data.inspector,
+      DeliveryPerson: data.deliveryPerson, // 添加送货人
+      inboundDate: data.inboundDate, // 添加入库日期
       remark: data.remark || '',
       items: data.items.map(item => ({
         rawMaterialId: item.rawMaterialId,
         quantity: item.quantity,
+        name: item.name, // 添加原材料名称
+        specification: item.specification, // 添加规格
+        unit: item.unit, // 添加单位
         remark: item.rawMaterialId <= 0 ? `名称:${item.name};规格:${item.specification};单位:${item.unit}` : item.remark
       }))
     };
@@ -67,13 +80,14 @@ const createRawMaterialInbound = async (data, rawMaterials) => {
 const fetchRawMaterials = async () => {
   try {
     const data = await get('/RawMaterials');
+    console.log('获取到的原材料数据:', data);
     return data.map(item => ({
       id: item.id,
-      name: item.productName,
-      specification: item.specification || '',
+      name: item.productName || item.name || '',
+      specification: item.specification || item.modelSpecification || '',
       unit: item.unit || '',
       status: item.status || '',
-      quantity: item.remainingQuantity || 0
+      quantity: item.remainingQuantity || item.quantity || 0
     }));
   } catch (error) {
     console.error('获取原材料失败:', error);
@@ -463,14 +477,9 @@ function RawMaterialInboundList() {
     try {
       // 调用API确认入库
       await post('/InOutbound/raw-material-inbounds/confirm', record.id);
-      // 更新本地状态
-      const updatedHistory = inboundHistory.map(item => {
-        if (item.id === record.id) {
-          return { ...item, status: '已完成' };
-        }
-        return item;
-      });
-      setInboundHistory(updatedHistory);
+      // 重新加载入库历史，确保所有信息都正确显示
+      const history = await fetchInboundHistory();
+      setInboundHistory(history);
       message.success('确认入库成功');
     } catch (error) {
       console.error('确认入库失败:', error);

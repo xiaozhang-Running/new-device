@@ -15,6 +15,20 @@ import * as echarts from 'echarts'
 import { deviceApi, projectOutboundApi, projectInboundApi } from '../services/api'
 
 const Dashboard = () => {
+  // 获取当前用户角色
+  const getCurrentUser = () => {
+    const userStr = localStorage.getItem('user')
+    return userStr ? JSON.parse(userStr) : null
+  }
+  
+  const currentUser = getCurrentUser()
+  const userRole = currentUser?.role || ''
+  
+  // 检查用户是否有权限访问特定API
+  const hasPermission = (requiredRoles) => {
+    return requiredRoles.includes(userRole)
+  }
+  
   // 看板数据状态
   const [dashboardData, setDashboardData] = useState({
     totalDevices: 0,
@@ -83,32 +97,38 @@ const Dashboard = () => {
         errorCount++
       }
       
-      try {
-        consumables = await deviceApi.getConsumables(false)
-      } catch (error) {
-        console.error('获取耗材数据失败:', error)
-        errorCount++
+      // 只有非普通用户角色才获取耗材、原材料和出入库数据
+      if (hasPermission(['系统管理员', '仓库管理员', '项目负责人', '财务人员'])) {
+        try {
+          consumables = await deviceApi.getConsumables(false)
+        } catch (error) {
+          console.error('获取耗材数据失败:', error)
+          errorCount++
+        }
+        
+        try {
+          rawMaterials = await deviceApi.getRawMaterials(false)
+        } catch (error) {
+          console.error('获取原材料数据失败:', error)
+          errorCount++
+        }
       }
       
-      try {
-        rawMaterials = await deviceApi.getRawMaterials(false)
-      } catch (error) {
-        console.error('获取原材料数据失败:', error)
-        errorCount++
-      }
-      
-      try {
-        outboundData = await projectOutboundApi.getProjectOutbounds(false)
-      } catch (error) {
-        console.error('获取出库数据失败:', error)
-        errorCount++
-      }
-      
-      try {
-        inboundData = await projectInboundApi.getProjectInbounds(false)
-      } catch (error) {
-        console.error('获取入库数据失败:', error)
-        errorCount++
+      // 只有特定角色才获取出入库数据
+      if (hasPermission(['系统管理员', '仓库管理员', '项目负责人'])) {
+        try {
+          outboundData = await projectOutboundApi.getProjectOutbounds(false)
+        } catch (error) {
+          console.error('获取出库数据失败:', error)
+          errorCount++
+        }
+        
+        try {
+          inboundData = await projectInboundApi.getProjectInbounds(false)
+        } catch (error) {
+          console.error('获取入库数据失败:', error)
+          errorCount++
+        }
       }
       
       // 计算设备总数
@@ -661,8 +681,8 @@ const Dashboard = () => {
             <ToolOutlined style={{ fontSize: 24, color: '#52c41a' }} />
           </div>
           <div className="card-content">
-            <h3>设备总数</h3>
-            <p>{dashboardData.totalDevices}</p>
+            <h3>专用设备管理</h3>
+            <p>{dashboardData.specialDevicesCount}</p>
           </div>
         </div>
         <div className="card">
@@ -670,8 +690,44 @@ const Dashboard = () => {
             <BuildOutlined style={{ fontSize: 24, color: '#faad14' }} />
           </div>
           <div className="card-content">
-            <h3>待维修设备</h3>
-            <p>{dashboardData.repairDevices}</p>
+            <h3>通用设备管理</h3>
+            <p>{dashboardData.generalDevicesCount}</p>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-icon">
+            <MedicineBoxOutlined style={{ fontSize: 24, color: '#eb2f96' }} />
+          </div>
+          <div className="card-content">
+            <h3>耗材管理</h3>
+            <p>{dashboardData.consumablesCount}</p>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-icon">
+            <ExperimentOutlined style={{ fontSize: 24, color: '#13c2c2' }} />
+          </div>
+          <div className="card-content">
+            <h3>原材料管理</h3>
+            <p>{dashboardData.rawMaterialsCount}</p>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-icon">
+            <ToolOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+          </div>
+          <div className="card-content">
+            <h3>设备总数</h3>
+            <p>{dashboardData.totalDevices}</p>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-icon">
+            <ShopOutlined style={{ fontSize: 24, color: '#722ed1' }} />
+          </div>
+          <div className="card-content">
+            <h3>借出设备</h3>
+            <p>{dashboardData.lentDevices}</p>
           </div>
         </div>
         <div className="card">
@@ -685,47 +741,11 @@ const Dashboard = () => {
         </div>
         <div className="card">
           <div className="card-icon">
-            <ShopOutlined style={{ fontSize: 24, color: '#1890ff' }} />
-          </div>
-          <div className="card-content">
-            <h3>借出设备</h3>
-            <p>{dashboardData.lentDevices}</p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-icon">
-            <ExportOutlined style={{ fontSize: 24, color: '#722ed1' }} />
+            <ExportOutlined style={{ fontSize: 24, color: '#fa8c16' }} />
           </div>
           <div className="card-content">
             <h3>本月出库</h3>
             <p>{dashboardData.monthlyOutbound}</p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-icon">
-            <ImportOutlined style={{ fontSize: 24, color: '#fa8c16' }} />
-          </div>
-          <div className="card-content">
-            <h3>本月入库</h3>
-            <p>{dashboardData.monthlyInbound}</p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-icon">
-            <MedicineBoxOutlined style={{ fontSize: 24, color: '#eb2f96' }} />
-          </div>
-          <div className="card-content">
-            <h3>耗材种类</h3>
-            <p>{dashboardData.consumablesCount}</p>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-icon">
-            <ExperimentOutlined style={{ fontSize: 24, color: '#13c2c2' }} />
-          </div>
-          <div className="card-content">
-            <h3>原材料种类</h3>
-            <p>{dashboardData.rawMaterialsCount}</p>
           </div>
         </div>
       </div>

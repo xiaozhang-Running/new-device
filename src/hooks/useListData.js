@@ -109,10 +109,10 @@ export const useListData = (options) => {
    */
   const updateItem = useCallback((id, updates) => {
     setData(prev => prev.map(item => 
-      item.id === id ? { ...item, ...updates } : item
+      String(item.id) === String(id) ? { ...item, ...updates } : item
     ))
     setFilteredData(prev => prev.map(item => 
-      item.id === id ? { ...item, ...updates } : item
+      String(item.id) === String(id) ? { ...item, ...updates } : item
     ))
   }, [])
 
@@ -120,8 +120,8 @@ export const useListData = (options) => {
    * 删除单条数据
    */
   const deleteItem = useCallback((id) => {
-    setData(prev => prev.filter(item => item.id !== id))
-    setFilteredData(prev => prev.filter(item => item.id !== id))
+    setData(prev => prev.filter(item => String(item.id) !== String(id)))
+    setFilteredData(prev => prev.filter(item => String(item.id) !== String(id)))
   }, [])
 
   /**

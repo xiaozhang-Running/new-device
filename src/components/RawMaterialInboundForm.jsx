@@ -147,7 +147,7 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
         setMaterialForm(prev => ({
           ...prev,
           rawMaterialId: value,
-          specification: selectedMaterial.specification || '',
+          specification: selectedMaterial.modelSpecification || selectedMaterial.specification || '',
           unit: selectedMaterial.unit || ''
         }))
         // 设置库存数量（剩余数量）
@@ -179,10 +179,10 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
         id: Date.now(),
         rawMaterialId: materialForm.rawMaterialId,
         quantity: materialForm.quantity,
-        specification: materialForm.specification,
+        specification: materialForm.specification || selectedMaterial?.modelSpecification || selectedMaterial?.specification || '',
         remark: materialForm.remark,
         unit: materialForm.unit,
-        productName: selectedMaterial?.productName || ''
+        productName: selectedMaterial?.name || selectedMaterial?.productName || ''
       }
       setItems([...items, newItem])
     } else {
@@ -276,7 +276,7 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
           return record.productName || ''
         }
         const material = rawMaterials.find(m => m.id === value)
-        return material ? material.productName : ''
+        return material ? (material.name || material.productName) : ''
       }
     },
     {
@@ -287,7 +287,14 @@ const RawMaterialInboundForm = ({ onSave, onCancel, rawMaterials = [] }) => {
     {
       title: '规格',
       dataIndex: 'specification',
-      key: 'specification'
+      key: 'specification',
+      render: (value, record) => {
+        if (value) {
+          return value
+        }
+        const material = rawMaterials.find(m => m.id === record.rawMaterialId)
+        return material ? (material.modelSpecification || material.specification) : ''
+      }
     },
     {
       title: '备注',

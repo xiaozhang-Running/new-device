@@ -2,7 +2,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // 请求超时时间
-const TIMEOUT = 30000;
+const TIMEOUT = 60000;
 
 // 统一的请求函数
 const request = async (config) => {
@@ -91,11 +91,19 @@ const request = async (config) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
+  // 使用传入的signal或控制器的signal
+  const signal = mergedOptions.signal || controller.signal;
+  
+  // 清除mergedOptions中的signal，避免重复传递
+  if (mergedOptions.signal) {
+    delete mergedOptions.signal;
+  }
+
   try {
     // 发送请求
     const response = await fetch(`${API_BASE_URL}${url}`, {
       ...mergedOptions,
-      signal: controller.signal,
+      signal: signal,
     });
 
     // 清除超时

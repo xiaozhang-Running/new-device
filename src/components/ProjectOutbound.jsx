@@ -130,7 +130,7 @@ function ProjectOutbound() {
     项目负责人: '',
     联系电话: '',
     预计归还时间: '',
-    领用人: '',
+    经办人: '',
     库管: '',
     出库时间: '',
     remark: '',
@@ -402,25 +402,26 @@ function ProjectOutbound() {
           console.log('处理出库记录:', item.outboundNumber || item.OutboundNumber, 'items数量:', items.length)
           
           return {
-            id: item.id,
-            outboundId: item.outboundNumber || item.OutboundNumber,
-            projectName: item.projectName || item.ProjectName,
-            projectTime: item.projectTime || item.ProjectTime,
-            recipient: item.recipient || item.Recipient,
-            outboundDate: item.outboundDate ? new Date(item.outboundDate).toISOString().split('T')[0] : (item.OutboundDate ? new Date(item.OutboundDate).toISOString().split('T')[0] : ''),
-            status: item.isCompleted ? '已完成' : '待确认',
-            inboundStatus: item.inboundStatus || item.InboundStatus || '未入库',
-            outboundType: item.outboundType || item.OutboundType,
-            logisticsMethod: item.logisticsMethod || item.LogisticsMethod,
-            usageLocation: item.usageLocation || item.UsageLocation,
-            projectManager: item.projectManager || item.ProjectManager,
-            contactPhone: item.contactPhone || item.ContactPhone,
-            returnDate: item.returnDate || (item.ReturnDate ? new Date(item.ReturnDate).toISOString().split('T')[0] : ''),
-            warehouseKeeper: item.warehouseKeeper || item.WarehouseKeeper,
-            remark: item.remark || item.Remark,
-            items: items,
-            OutboundImages: item.outboundImages || item.OutboundImages || ''
-          }
+        id: item.id,
+        outboundId: item.outboundNumber || item.OutboundNumber || item.outboundId || item.OutboundId,
+        projectName: item.projectName || item.ProjectName || item.Project || item.project,
+        projectTime: item.projectTime || item.ProjectTime || item.ProjectDate || item.projectDate,
+        projectLeader: item.projectManager || item.ProjectManager || item.projectLeader || item.ProjectLeader || item.负责人 || item.项目负责人,
+        recipient: item.recipient || item.Recipient || item.operator || item.Operator || item.经办人,
+        expectedReturnTime: item.returnDate || (item.ReturnDate ? new Date(item.ReturnDate).toISOString().split('T')[0] : '') || item.expectedReturnTime || item.ExpectedReturnTime || (item.预计归还时间 ? new Date(item.预计归还时间).toISOString().split('T')[0] : ''),
+        usageType: item.outboundType || item.OutboundType || item.usageType || item.UsageType || item.领用类型 || item.出库类型,
+        logisticsMethod: item.logisticsMethod || item.LogisticsMethod || item.logistics || item.Logistics || item.物流方式,
+        outboundDate: item.outboundDate ? new Date(item.outboundDate).toISOString().split('T')[0] : (item.OutboundDate ? new Date(item.OutboundDate).toISOString().split('T')[0] : '') || (item.出库时间 ? new Date(item.出库时间).toISOString().split('T')[0] : ''),
+        status: item.isCompleted ? '已完成' : '待确认',
+        inboundStatus: item.inboundStatus || item.InboundStatus || '未入库',
+        outboundType: item.outboundType || item.OutboundType || item.usageType || item.UsageType,
+        usageLocation: item.usageLocation || item.UsageLocation || item.使用地 || item.使用地点,
+        contactPhone: item.contactPhone || item.ContactPhone || item.phone || item.Phone || item.联系电话,
+        warehouseKeeper: item.warehouseKeeper || item.WarehouseKeeper || item.库管 || item.仓库管理员,
+        remark: item.remark || item.Remark || item.备注,
+        items: items,
+        OutboundImages: item.outboundImages || item.OutboundImages || ''
+      }
         })
         console.log('格式化后的出库记录:', formattedHistory)
         setOutboundHistory(formattedHistory)
@@ -827,7 +828,7 @@ function ProjectOutbound() {
       项目负责人: projectManager,
       联系电话: contactPhone,
       预计归还时间: returnDate ? new Date(returnDate).toISOString().split('T')[0] : '',
-      领用人: recipient,
+      经办人: recipient,
       库管: warehouseKeeper,
       出库时间: outboundDate ? new Date(outboundDate).toISOString().split('T')[0] : '',
       remark: remark,
@@ -991,19 +992,57 @@ function ProjectOutbound() {
       key: 'projectName'
     },
     {
-      title: '出库日期',
-      dataIndex: 'outboundDate',
-      key: 'outboundDate'
-    },
-    {
       title: '项目时间',
       dataIndex: 'projectTime',
       key: 'projectTime'
     },
     {
-      title: '领用人',
+      title: '项目负责人',
+      dataIndex: 'projectLeader',
+      key: 'projectLeader'
+    },
+    {
+      title: '经办人',
       dataIndex: 'recipient',
       key: 'recipient'
+    },
+    {
+      title: '预计归还时间',
+      dataIndex: 'expectedReturnTime',
+      key: 'expectedReturnTime',
+      render: (text) => {
+        if (!text) return ''
+        // 确保只显示日期部分，不显示时间部分
+        if (text.includes('T')) {
+          return text.split('T')[0]
+        }
+        return text
+      }
+    },
+    {
+      title: '领用类型',
+      dataIndex: 'usageType',
+      key: 'usageType'
+    },
+    {
+      title: '物流方式',
+      dataIndex: 'logisticsMethod',
+      key: 'logisticsMethod',
+      render: (text) => {
+        const logisticsMethodMap = {
+          1: '随身携带',
+          2: '顺丰速运',
+          3: '跨越物流',
+          4: '德邦物流',
+          5: '其他方式'
+        };
+        return logisticsMethodMap[text] || '';
+      }
+    },
+    {
+      title: '出库日期',
+      dataIndex: 'outboundDate',
+      key: 'outboundDate'
     },
     {
       title: '出库状态',
@@ -1472,7 +1511,7 @@ function ProjectOutbound() {
             '项目负责人': fullRecord.projectManager || fullRecord.ProjectManager,
             '联系电话': fullRecord.contactPhone || fullRecord.ContactPhone,
             '预计归还时间': (fullRecord.returnDate || fullRecord.ReturnDate) ? moment((fullRecord.returnDate || fullRecord.ReturnDate)) : null,
-            '领用人': fullRecord.recipient || fullRecord.Recipient,
+            '经办人': fullRecord.recipient || fullRecord.Recipient,
             '库管': fullRecord.warehouseKeeper || fullRecord.WarehouseKeeper,
             '出库时间': (fullRecord.outboundDate || fullRecord.OutboundDate) ? moment((fullRecord.outboundDate || fullRecord.OutboundDate)) : null,
             'remark': fullRecord.remark || fullRecord.Remark
@@ -1633,7 +1672,7 @@ function ProjectOutbound() {
       项目负责人: values['项目负责人'] || '',
       联系电话: values['联系电话'] || '',
       预计归还时间: values['预计归还时间'] ? values['预计归还时间'].format('YYYY-MM-DD') : '',
-      领用人: values['领用人'] || '',
+      经办人: values['经办人'] || '',
       库管: values['库管'] || '',
       出库时间: values['出库时间'] ? values['出库时间'].format('YYYY-MM-DD') : '',
       remark: values.remark || '',
@@ -1688,7 +1727,7 @@ function ProjectOutbound() {
     const projectOutboundItems = [
       ...selectedSpecialDevices.map(item => ({
         ItemType: 1, // 1表示专用设备
-        ItemId: item.id || 0, // 确保ItemId是数字类型
+        ItemId: item.equipmentId || item.id || 0, // 使用equipmentId作为设备ID，确保ItemId是数字类型
         ItemName: item.name || '',
         DeviceCode: (item.deviceId || '').toString(), // 使用deviceId作为设备编号，确保是字符串类型
         SerialNumber: item.serialNumber || '', // 添加S/N码
@@ -1703,7 +1742,7 @@ function ProjectOutbound() {
       })),
       ...selectedGeneralDevices.map(item => ({
         ItemType: 2, // 2表示通用设备
-        ItemId: item.id || 0, // 确保ItemId是数字类型
+        ItemId: item.equipmentId || item.id || 0, // 使用equipmentId作为设备ID，确保ItemId是数字类型
         ItemName: item.name || '',
         DeviceCode: (item.deviceId || '').toString(), // 使用deviceId作为设备编号，确保是字符串类型
         SerialNumber: item.serialNumber || '', // 添加S/N码
@@ -1766,11 +1805,11 @@ function ProjectOutbound() {
         ProjectName: projectName,
         ProjectTime: values['项目时间'] || '',
         ProjectManager: values['项目负责人'] || '',
-        Recipient: values['领用人'] || '',
+        Recipient: values['经办人'] || '',
         OutboundType: values['领用方式'] || '', // 将领用方式映射到OutboundType字段
         ContactPhone: values['联系电话'] || '',
         UsageLocation: values['使用地'] || '',
-        ReturnDate: values['预计归还时间'] ? values['预计归还时间'].toISOString() : null,
+        ReturnDate: values['预计归还时间'] ? values['预计归还时间'].format('YYYY-MM-DD') : null,
         WarehouseKeeper: values['库管'] || '',
         LogisticsMethod: logisticsMethodNum, // 添加物流方式数字值
         Remark: values.remark || '',
@@ -1828,19 +1867,19 @@ function ProjectOutbound() {
         });
         console.log('准备上传的图片数量:', newFiles.length)
         
+        // 对于编辑模式，使用currentEditId；对于新建模式，使用response中的ID
+        const orderId = isEditMode ? currentEditId : (response?.Id || response?.id);
+        console.log('获取到的orderId:', orderId)
+        
+        if (!orderId) {
+          console.error('无法获取出库单ID，无法处理图片');
+          setLoading(false);
+          throw new Error('无法获取出库单ID');
+        }
+        
         if (newFiles.length > 0) {
           // 创建一个FormData，一次性上传所有图片
           const formData = new FormData()
-          // 添加出库单ID和类型
-          // 对于编辑模式，使用currentEditId；对于新建模式，使用response中的ID
-          const orderId = isEditMode ? currentEditId : (response?.Id || response?.id);
-          console.log('获取到的orderId:', orderId)
-          
-          if (!orderId) {
-            console.error('无法获取出库单ID，无法上传图片');
-            setLoading(false);
-            throw new Error('无法获取出库单ID');
-          }
           
           // 添加所有图片
           newFiles.forEach((image, index) => {
@@ -1855,33 +1894,28 @@ function ProjectOutbound() {
             const uploadResponse = await imageApi.uploadInOutboundImage(orderId, 'outbound', formData)
             const imagePaths = uploadResponse || []
             console.log('上传成功的图片路径:', imagePaths)
-            
-            // 重新获取所有图片，确保包含之前上传的图片
-            const allImages = await imageApi.getInOutboundImages(orderId, 'outbound')
-            console.log('重新获取的所有图片:', allImages)
-            
-            // 构建完整的图片URL列表
-            const completeImageUrls = allImages.map(img => img.ImagePath).join(',')
-            console.log('完整的图片URL列表:', completeImageUrls)
-            
-            // 更新出库单，添加完整的图片URL列表
-            if (completeImageUrls) {
-              // 同时更新OutboundImages和outboundImages字段，确保前后端命名一致
-              await projectOutboundApi.updateProjectOutbound(orderId, {
-                OutboundImages: completeImageUrls,
-                outboundImages: completeImageUrls
-              })
-            }
-            
-            setLoading(false)
           } catch (error) {
             console.error('上传图片失败:', error)
             setLoading(false)
+            throw error
           }
-        } else {
-          // 没有新图片需要上传
-          setLoading(false)
         }
+        
+        // 重新获取所有图片，确保包含最新的图片状态
+        const allImages = await imageApi.getInOutboundImages(orderId, 'outbound')
+        console.log('重新获取的所有图片:', allImages)
+        
+        // 构建完整的图片URL列表
+        const completeImageUrls = allImages.map(img => img.ImagePath).join(',')
+        console.log('完整的图片URL列表:', completeImageUrls)
+        
+        // 更新出库单，添加完整的图片URL列表
+        await projectOutboundApi.updateProjectOutbound(orderId, {
+          OutboundImages: completeImageUrls,
+          outboundImages: completeImageUrls
+        })
+        
+        setLoading(false)
       }
 
       // 重新获取出库记录，确保显示最新数据
@@ -2073,23 +2107,52 @@ function ProjectOutbound() {
               onBeforeUpload={() => false} // 完全阻止自动上传
               onChange={(info) => {
                 console.log('Upload onChange info:', info);
-                // 处理文件选择，保留之前的图片
-                const existingFiles = selectedImages.filter(file => file.url); // 保留从后端加载的图片（有url属性）
-                // 获取新选择的文件，并为本地文件创建URL
-                const newFiles = [];
+                // 处理文件选择，只保留当前选中的文件
+                const currentFiles = [];
                 info.fileList.forEach(item => {
                   if (item.originFileObj) {
+                    // 新选择的本地文件
                     const file = item.originFileObj;
-                    // 为本地文件创建URL并存储
                     file.url = URL.createObjectURL(file);
-                    newFiles.push(file);
+                    currentFiles.push(file);
+                  } else if (item.url) {
+                    // 从后端加载的图片（有url属性）
+                    // 查找selectedImages中对应的文件
+                    const existingFile = selectedImages.find(file => file.url === item.url);
+                    if (existingFile) {
+                      currentFiles.push(existingFile);
+                    }
                   }
                 });
-                console.log('新选择的文件数量:', newFiles.length);
-                // 合并所有文件
-                const allFiles = [...existingFiles, ...newFiles];
-                console.log('所有文件数量:', allFiles.length);
-                setSelectedImages(allFiles);
+                console.log('当前选中的文件数量:', currentFiles.length);
+                setSelectedImages(currentFiles);
+              }}
+              onRemove={(file) => {
+                console.log('Upload onRemove file:', file);
+                // 从selectedImages中移除被删除的文件
+                const updatedFiles = selectedImages.filter(item => {
+                  // 对于本地文件，比较name和url
+                  if (item.name && item.url) {
+                    return !(item.name === file.name && item.url === file.url);
+                  }
+                  // 对于从后端加载的图片，比较url
+                  return item.url !== file.url;
+                });
+                console.log('删除后剩余文件数量:', updatedFiles.length);
+                setSelectedImages(updatedFiles);
+                
+                // 如果是从后端加载的图片，调用API删除
+                if (file.url && file.url.includes('/api/Image/data/')) {
+                  // 从URL中提取图片ID
+                  const urlParts = file.url.split('/');
+                  const imageId = urlParts[urlParts.length - 1];
+                  if (imageId) {
+                    console.log('删除图片ID:', imageId);
+                    imageApi.deleteInOutboundImage(imageId).catch(error => {
+                      console.error('删除图片失败:', error);
+                    });
+                  }
+                }
               }}
               fileList={selectedImages.map((file, index) => ({
                 uid: file.url ? `url-${file.url}` : `file-${index}`,
@@ -2442,11 +2505,11 @@ function ProjectOutbound() {
           <Row gutter={[16, 16]} className="mt-4">
             <Col xs={24} sm={12} md={8} lg={8} xl={8}>
               <Form.Item 
-                name="领用人" 
-                label="领用人" 
-                rules={[{ required: true, message: '请输入领用人' }]}
+                name="经办人" 
+                label="经办人" 
+                rules={[{ required: true, message: '请输入经办人' }]}
               >
-                <Input placeholder="请输入领用人" />
+                <Input placeholder="请输入经办人" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={8} xl={8}>
@@ -2520,7 +2583,7 @@ function ProjectOutbound() {
                 <p><strong>项目负责人:</strong> {currentOutboundDetail['项目负责人']}</p>
                 <p><strong>联系电话:</strong> {currentOutboundDetail['联系电话']}</p>
                 <p><strong>预计归还时间:</strong> {currentOutboundDetail['预计归还时间']}</p>
-                <p><strong>领用人:</strong> {currentOutboundDetail['领用人']}</p>
+                <p><strong>经办人:</strong> {currentOutboundDetail['经办人']}</p>
                 <p><strong>库管:</strong> {currentOutboundDetail['库管']}</p>
                 <p><strong>出库时间:</strong> {currentOutboundDetail['出库时间']}</p>
                 <p><strong>状态:</strong> {currentOutboundDetail.status}</p>
@@ -2772,7 +2835,7 @@ function ProjectOutbound() {
             <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>签收信息</h3>
             <Row gutter={[16, 16]}>
               <Col xs={24} sm={8} md={8}>
-                <p style={{ margin: 0 }}><strong>领用人:</strong> {previewData.领用人}</p>
+                <p style={{ margin: 0 }}><strong>经办人:</strong> {previewData.经办人}</p>
               </Col>
               <Col xs={24} sm={8} md={8}>
                 <p style={{ margin: 0 }}><strong>库管:</strong> {previewData.库管}</p>

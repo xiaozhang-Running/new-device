@@ -3,98 +3,50 @@ import { Table, Button, Space, Modal, message, Popconfirm, Input, Select, DatePi
 import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 import UserForm from './UserForm'
 import dayjs from 'dayjs'
+import { userApi } from '../services/api'
 
 const { Search } = Input
 const { Option } = Select
 const { RangePicker } = DatePicker
 
-// 模拟用户数据
-const mockUsers = [
-  {
-    id: 1,
-    username: 'admin',
-    email: 'admin@example.com',
-    fullName: '系统管理员',
-    role: '系统管理员',
-    isActive: true,
-    createdAt: dayjs('2026-01-01'),
-    updatedAt: dayjs('2026-03-01'),
-    lastLoginAt: dayjs('2026-03-22'),
-    passwordExpiryAt: dayjs('2026-06-01'),
-    failedLoginAttempts: 0,
-    isLockedOut: false,
-    lockoutEnd: null
-  },
-  {
-    id: 2,
-    username: 'warehouse',
-    email: 'warehouse@example.com',
-    fullName: '仓库管理员',
-    role: '仓库管理员',
-    isActive: true,
-    createdAt: dayjs('2026-01-02'),
-    updatedAt: dayjs('2026-02-15'),
-    lastLoginAt: dayjs('2026-03-21'),
-    passwordExpiryAt: dayjs('2026-07-02'),
-    failedLoginAttempts: 1,
-    isLockedOut: false,
-    lockoutEnd: null
-  },
-  {
-    id: 3,
-    username: 'project',
-    email: 'project@example.com',
-    fullName: '项目负责人',
-    role: '项目负责人',
-    isActive: true,
-    createdAt: dayjs('2026-01-03'),
-    updatedAt: dayjs('2026-02-20'),
-    lastLoginAt: dayjs('2026-03-20'),
-    passwordExpiryAt: dayjs('2026-08-03'),
-    failedLoginAttempts: 0,
-    isLockedOut: false,
-    lockoutEnd: null
-  },
-  {
-    id: 4,
-    username: 'finance',
-    email: 'finance@example.com',
-    fullName: '财务人员',
-    role: '财务人员',
-    isActive: true,
-    createdAt: dayjs('2026-01-04'),
-    updatedAt: dayjs('2026-02-25'),
-    lastLoginAt: dayjs('2026-03-19'),
-    passwordExpiryAt: dayjs('2026-09-04'),
-    failedLoginAttempts: 0,
-    isLockedOut: false,
-    lockoutEnd: null
-  },
-  {
-    id: 5,
-    username: 'test',
-    email: 'test@example.com',
-    fullName: '测试用户',
-    role: '普通用户',
-    isActive: false,
-    createdAt: dayjs('2026-01-05'),
-    updatedAt: dayjs('2026-02-28'),
-    lastLoginAt: dayjs('2026-03-18'),
-    passwordExpiryAt: dayjs('2026-10-05'),
-    failedLoginAttempts: 3,
-    isLockedOut: true,
-    lockoutEnd: dayjs('2026-03-25')
-  }
-]
-
 const UserList = () => {
-  const [users, setUsers] = useState(mockUsers)
-  const [filteredUsers, setFilteredUsers] = useState(mockUsers)
+  const [users, setUsers] = useState([])
+  const [filteredUsers, setFilteredUsers] = useState([])
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [searchText, setSearchText] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  // 获取用户数据
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const fetchUsers = async () => {
+    setLoading(true)
+    try {
+      const response = await userApi.getUsers(false)
+      // 转换数据格式，确保所有字段都存在
+      const formattedUsers = response.map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName || user.username,
+        role: user.role || '普通用户',
+        isActive: true, // 后端暂时没有返回这个字段，默认设为true
+        isLockedOut: false, // 后端暂时没有返回这个字段，默认设为false
+        createdAt: dayjs(), // 后端暂时没有返回这个字段，默认设为当前时间
+        lastLoginAt: dayjs() // 后端暂时没有返回这个字段，默认设为当前时间
+      }))
+      setUsers(formattedUsers)
+    } catch (error) {
+      message.error('获取用户数据失败')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // 过滤用户
   useEffect(() => {
@@ -134,54 +86,72 @@ const UserList = () => {
   }
 
   // 处理删除用户
-  const handleDeleteUser = (userId) => {
-    setUsers(users.filter(user => user.id !== userId))
-    message.success('用户删除成功')
+  const handleDeleteUser = async (userId) => {
+    try {
+      await userApi.deleteUser(userId)
+      setUsers(users.filter(user => user.id !== userId))
+      message.success('用户删除成功')
+    } catch (error) {
+      message.error('删除用户失败')
+    }
   }
 
   // 处理用户状态切换
-  const handleToggleStatus = (user) => {
-    const updatedUsers = users.map(u => 
-      u.id === user.id ? { ...u, isActive: !u.isActive } : u
-    )
-    setUsers(updatedUsers)
-    message.success(`用户${user.isActive ? '禁用' : '启用'}成功`)
+  const handleToggleStatus = async (user) => {
+    try {
+      await userApi.updateUserStatus(user.id, !user.isActive)
+      const updatedUsers = users.map(u => 
+        u.id === user.id ? { ...u, isActive: !u.isActive } : u
+      )
+      setUsers(updatedUsers)
+      message.success(`用户${user.isActive ? '禁用' : '启用'}成功`)
+    } catch (error) {
+      message.error('更新用户状态失败')
+    }
   }
 
   // 处理用户锁定/解锁
-  const handleToggleLock = (user) => {
-    const updatedUsers = users.map(u => 
-      u.id === user.id ? { ...u, isLockedOut: !u.isLockedOut, lockoutEnd: !u.isLockedOut ? dayjs().add(1, 'hour') : null } : u
-    )
-    setUsers(updatedUsers)
-    message.success(`用户${user.isLockedOut ? '解锁' : '锁定'}成功`)
+  const handleToggleLock = async (user) => {
+    try {
+      await userApi.updateUserLockStatus(user.id, !user.isLockedOut)
+      const updatedUsers = users.map(u => 
+        u.id === user.id ? { ...u, isLockedOut: !u.isLockedOut } : u
+      )
+      setUsers(updatedUsers)
+      message.success(`用户${user.isLockedOut ? '解锁' : '锁定'}成功`)
+    } catch (error) {
+      message.error('更新用户锁定状态失败')
+    }
   }
 
   // 处理用户保存
-  const handleUserSave = (userData) => {
-    if (editingUser) {
-      // 编辑现有用户
-      const updatedUsers = users.map(u => 
-        u.id === editingUser.id ? { ...u, ...userData, updatedAt: dayjs() } : u
-      )
-      setUsers(updatedUsers)
-      message.success('用户更新成功')
-    } else {
-      // 添加新用户
-      const newUser = {
-        id: users.length + 1,
-        ...userData,
-        createdAt: dayjs(),
-        updatedAt: dayjs(),
-        lastLoginAt: null,
-        failedLoginAttempts: 0,
-        isLockedOut: false,
-        lockoutEnd: null
+  const handleUserSave = async (userData) => {
+    try {
+      if (editingUser) {
+        // 编辑现有用户
+        const updatedUser = await userApi.updateUser(editingUser.id, userData)
+        const updatedUsers = users.map(u => 
+          u.id === editingUser.id ? { ...u, ...updatedUser, updatedAt: dayjs() } : u
+        )
+        setUsers(updatedUsers)
+        message.success('用户更新成功')
+      } else {
+        // 添加新用户
+        const newUser = await userApi.createUser(userData)
+        setUsers([...users, { 
+          ...newUser, 
+          fullName: newUser.fullName || newUser.username,
+          isActive: true,
+          isLockedOut: false,
+          createdAt: dayjs(),
+          lastLoginAt: dayjs()
+        }])
+        message.success('用户添加成功')
       }
-      setUsers([...users, newUser])
-      message.success('用户添加成功')
+      setIsModalVisible(false)
+    } catch (error) {
+      message.error('保存用户失败')
     }
-    setIsModalVisible(false)
   }
 
   // 角色选项

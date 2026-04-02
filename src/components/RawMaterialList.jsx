@@ -16,8 +16,8 @@ const { Search } = Input
 // 数据处理函数
 const processRawMaterialData = (data) => {
   return data.map((item, index) => {
-    const totalQty = parseInt(item.totalQuantity) || 0
-    const usedQty = parseInt(item.usedQuantity) || 0
+    const totalQty = typeof item.totalQuantity === 'number' ? item.totalQuantity : parseInt(item.totalQuantity) || 0
+    const usedQty = typeof item.usedQuantity === 'number' ? item.usedQuantity : parseInt(item.usedQuantity) || 0
     const remainingQty = totalQty - usedQty
     
     return {
@@ -193,10 +193,19 @@ const RawMaterialList = () => {
   };
 
   const handleUpdateRawMaterial = async (rawMaterial) => {
-    const processedRawMaterial = {
-      ...rawMaterial,
+    // 构建发送给后端的原始材料数据，使用后端API期望的字段名称
+    const apiData = {
+      id: rawMaterial.id,
+      productName: rawMaterial.productName || '',
+      brand: rawMaterial.brand || '',
+      specification: rawMaterial.specification || '',
       totalQuantity: parseInt(rawMaterial.totalQuantity) || 0,
-      usedQuantity: parseInt(rawMaterial.usedQuantity) || 0
+      usedQuantity: parseInt(rawMaterial.usedQuantity) || 0,
+      unit: rawMaterial.unit || '',
+      supplier: rawMaterial.supplier || '',
+      location: rawMaterial.location || '',
+      company: rawMaterial.company || '',
+      remark: rawMaterial.remark || ''
     };
     
     // 获取当前原材料的所有图片
@@ -256,9 +265,14 @@ const RawMaterialList = () => {
       url: `${cleanBaseUrl}/api/Image/data/${img.Id || img.id}`
     }));
     
-    const result = await put(`/RawMaterials/${processedRawMaterial.id}`, {
-      ...processedRawMaterial,
-      image: imageUrl
+    // 获取当前用户
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    // 发送更新请求
+    const result = await put(`/RawMaterials/${rawMaterial.id}`, {
+      ...apiData,
+      image: imageUrl,
+      updatedBy: currentUser.username || 'unknown'
     });
     
     const processedResult = {
@@ -278,14 +292,29 @@ const RawMaterialList = () => {
   };
 
   const handleCreateRawMaterial = async (rawMaterial) => {
-    const processedRawMaterial = {
-      ...rawMaterial,
+    // 构建发送给后端的原始材料数据，使用后端API期望的字段名称
+    const apiData = {
+      productName: rawMaterial.productName,
+      brand: rawMaterial.brand,
+      specification: rawMaterial.specification,
       totalQuantity: parseInt(rawMaterial.totalQuantity) || 0,
       usedQuantity: parseInt(rawMaterial.usedQuantity) || 0,
+      unit: rawMaterial.unit,
+      supplier: rawMaterial.supplier,
+      location: rawMaterial.location,
+      company: rawMaterial.company,
+      remark: rawMaterial.remark,
       image: ''
     };
 
-    const result = await post('/RawMaterials', processedRawMaterial);
+    // 获取当前用户
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    const result = await post('/RawMaterials', {
+      ...apiData,
+      createdBy: currentUser.username || 'unknown',
+      updatedBy: currentUser.username || 'unknown'
+    });
     
     // 如果有临时图片，上传它们
     if (rawMaterial.images && rawMaterial.images.length > 0) {
@@ -433,11 +462,29 @@ const RawMaterialList = () => {
               }
             }}
           >
-            <img 
-              src={displayImage} 
-              alt="原材料图片" 
-              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4 }}
-            />
+            {displayImage ? (
+              <img 
+                src={displayImage} 
+                alt="原材料图片" 
+                style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4 }}
+              />
+            ) : (
+              <div 
+                style={{ 
+                  width: 60, 
+                  height: 60, 
+                  backgroundColor: '#f0f0f0', 
+                  borderRadius: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                  fontSize: '12px'
+                }}
+              >
+                无图片
+              </div>
+            )}
             {hasImages && rawMaterialImages.images.length > 1 && (
               <div style={{ 
                 position: 'absolute', bottom: 0, right: 0, 

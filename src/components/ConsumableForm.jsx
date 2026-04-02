@@ -45,22 +45,33 @@ const ConsumableForm = ({ consumable, onSave, onCancel }) => {
   }, [consumable, form])
 
   const handleSubmit = (values) => {
-    // 计算总数量，设置默认值
-    const usedQuantity = values.usedQuantity || 0
-    const remainingQuantity = values.remainingQuantity || 0
-    const totalQuantity = remainingQuantity + usedQuantity
-    const originalQuantity = values.originalQuantity || totalQuantity
+    // 计算数量相关字段
+    let usedQuantity, remainingQuantity, totalQuantity, originalQuantity, status;
+    
+    if (consumable && consumable.id) {
+      // 编辑模式：使用原始值作为默认值
+      usedQuantity = values.usedQuantity !== undefined ? values.usedQuantity : consumable.usedQuantity || 0
+      remainingQuantity = values.remainingQuantity !== undefined ? values.remainingQuantity : consumable.remainingQuantity || 0
+      originalQuantity = values.originalQuantity !== undefined ? values.originalQuantity : consumable.originalQuantity || 0
+      totalQuantity = values.totalQuantity !== undefined ? values.totalQuantity : (remainingQuantity + usedQuantity)
+    } else {
+      // 新增模式：使用表单值或默认值
+      usedQuantity = values.usedQuantity || 0
+      remainingQuantity = values.remainingQuantity || 0
+      totalQuantity = remainingQuantity + usedQuantity
+      originalQuantity = values.originalQuantity || totalQuantity
+    }
     
     // 根据剩余数量设置状态
-    let status = '正常'
+    status = '正常'
     if (remainingQuantity <= 0) {
       status = '无货'
     } else if (remainingQuantity < 10) {
       status = '短缺'
     }
 
+    // 构建要提交的数据对象
     const consumableData = {
-      ...values,
       totalQuantity,
       usedQuantity,
       originalQuantity,
@@ -68,6 +79,18 @@ const ConsumableForm = ({ consumable, onSave, onCancel }) => {
       status,
       images: images, // 添加图片数组
       updatedAt: new Date().toISOString().split('T')[0]
+    }
+
+    // 只添加用户修改过的字段
+    Object.keys(values).forEach(key => {
+      if (values[key] !== undefined && values[key] !== null) {
+        consumableData[key] = values[key]
+      }
+    })
+
+    // 如果是编辑模式，添加id属性
+    if (consumable && consumable.id) {
+      consumableData.id = consumable.id
     }
 
     onSave(consumableData)

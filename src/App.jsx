@@ -179,8 +179,8 @@ function App() {
         justifyContent: 'space-between' 
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <ShopOutlined style={{ fontSize: 24, marginRight: 16 }} />
-          <h1 style={{ color: 'white', margin: 0, fontSize: 20 }}>设备仓库管理系统</h1>
+          <img src="/new-logo.png" alt="系统Logo" style={{ width: '40px', height: '40px', marginRight: 16 }} />
+          <h1 style={{ color: 'white', margin: 0, fontSize: 20 }}>仓库管理系统</h1>
         </div>
         <Space style={{ color: 'white' }}>
           <span>欢迎，{user?.username} ({user?.role})</span>

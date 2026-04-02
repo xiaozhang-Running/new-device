@@ -21,6 +21,10 @@ const UserForm = ({ user, onSave, onCancel }) => {
     } else {
       setIsEditing(false)
       form.resetFields()
+      // 设置默认角色为普通用户
+      form.setFieldsValue({
+        role: '普通用户'
+      })
     }
   }, [user, form])
 
@@ -41,7 +45,7 @@ const UserForm = ({ user, onSave, onCancel }) => {
       { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线' }
     ],
     email: [
-      { required: true, message: '请输入邮箱' },
+      { required: false, message: '请输入邮箱' },
       { type: 'email', message: '请输入有效的邮箱地址' }
     ],
     fullName: [
@@ -62,16 +66,15 @@ const UserForm = ({ user, onSave, onCancel }) => {
     try {
       // 构建用户数据
       const userData = {
-        username: values.username,
-        email: values.email,
-        fullName: values.fullName,
-        role: values.role,
-        isActive: values.isActive
+        Username: values.username,
+        Email: values.email,
+        FullName: values.fullName,
+        Role: values.role
       }
 
       // 只有在添加新用户或修改密码时才包含密码
       if (!isEditing || values.password) {
-        userData.password = values.password
+        userData.Password = values.password
       }
 
       onSave(userData)
@@ -85,13 +88,18 @@ const UserForm = ({ user, onSave, onCancel }) => {
       form={form}
       layout="vertical"
       onFinish={handleSubmit}
+      autoComplete="off"
     >
+      {/* 隐藏字段用于欺骗浏览器自动填充 */}
+      <input type="text" style={{ display: 'none' }} autoComplete="username" />
+      <input type="password" style={{ display: 'none' }} autoComplete="password" />
+
       <Form.Item
         name="username"
         label="用户名"
         rules={rules.username}
       >
-        <Input placeholder="请输入用户名" disabled={isEditing} />
+        <Input placeholder="请输入用户名" disabled={isEditing} autoComplete="off" />
       </Form.Item>
 
       <Form.Item
@@ -132,6 +140,13 @@ const UserForm = ({ user, onSave, onCancel }) => {
         <Input.Password
           placeholder={isEditing ? '留空表示不修改密码' : '请输入密码'}
           iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+          autoComplete="new-password"
+          onFocus={(e) => {
+            // 清除可能由浏览器自动填充的值
+            if (isEditing && e.target.value) {
+              form.setFieldsValue({ password: '' })
+            }
+          }}
         />
       </Form.Item>
 

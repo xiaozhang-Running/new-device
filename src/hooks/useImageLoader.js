@@ -30,7 +30,7 @@ export const useImageLoader = (options) => {
   // 更新optionsRef，但不触发重新渲染
   useEffect(() => {
     optionsRef.current = options
-  })
+  }, [options])
 
   const { equipmentType = 1 } = options || {}
 
@@ -38,6 +38,7 @@ export const useImageLoader = (options) => {
   const loadedSetRef = useRef(getGlobalLoadedSet(equipmentType))
   const loadingSetRef = useRef(new Set())
   const lastLoadTimeRef = useRef(new Map()) // 记录每个设备的最后加载时间，用于防抖
+  const abortControllersRef = useRef(new Map()) // 用于存储每个设备的AbortController，用于取消请求
 
   const [imagesMap, setImagesMap] = useState(() => {
     // 从API缓存中恢复图片数据
@@ -75,15 +76,26 @@ export const useImageLoader = (options) => {
    * 获取图片URL（处理双斜杠问题）
    */
   const getImageUrl = useCallback((imageUrl) => {
-    const defaultImg = optionsRef.current.defaultImage || ''
-    if (!imageUrl) return defaultImg || null
-    return imageUrl.replace(/\/api\/api\//g, '/api/') || defaultImg || null
+    const defaultImg = optionsRef.current.defaultImage || null
+    if (!imageUrl) return defaultImg
+    return imageUrl.replace(/\/api\/api\//g, '/api/') || defaultImg
   }, [])
 
   // 当imagesMap变化时，更新ref
   useEffect(() => {
     imagesMapRef.current = imagesMap
   }, [imagesMap])
+
+  // 组件卸载时清理资源
+  useEffect(() => {
+    return () => {
+      // 取消所有正在进行的请求
+      for (const [equipmentId, abortController] of abortControllersRef.current.entries()) {
+        abortController.abort()
+      }
+      abortControllersRef.current.clear()
+    }
+  }, [])
 
   /**
    * 构建图片完整URL（静态版本）
@@ -106,8 +118,8 @@ export const useImageLoader = (options) => {
    */
   const loadImages = useCallback(async (equipmentId) => {
     // 避免重复加载或并发请求
-    if (loadedSetRef.current.has(equipmentId) || loadingSetRef.current.has(equipmentId)) {
-      return null
+    if (loadedSetRef.current.has(equipmentId) || loadingSetRef.current.has(equipmentId) || imagesMapRef.current.has(equipmentId)) {
+      return imagesMapRef.current.get(equipmentId) || null
     }
 
     // 防抖：避免短时间内重复请求
@@ -118,14 +130,18 @@ export const useImageLoader = (options) => {
       return null
     }
 
+    // 创建AbortController用于取消请求
+    const abortController = new AbortController()
+    abortControllersRef.current.set(equipmentId, abortController)
+
     // 标记为加载中
     setLoadingSet(prev => new Set(prev).add(equipmentId))
     loadingSetRef.current.add(equipmentId)
     lastLoadTimeRef.current.set(equipmentId, now)
 
     try {
-      const { equipmentType = 1, defaultImage = '' } = optionsRef.current
-      const equipmentImages = await imageApi.getEquipmentImages(equipmentId, equipmentType)
+      const { equipmentType = 1, defaultImage = null } = optionsRef.current
+      const equipmentImages = await imageApi.getEquipmentImages(equipmentId, equipmentType, abortController.signal)
 
       if (equipmentImages && equipmentImages.length > 0) {
         const images = equipmentImages.map(img => ({
@@ -143,7 +159,7 @@ export const useImageLoader = (options) => {
         // 即使没有图片，也要设置空数组，避免重复请求
         setImagesMap(prev => new Map(prev).set(equipmentId, {
           images: [],
-          mainImage: defaultImage
+          mainImage: defaultImage || null
         }))
       }
 
@@ -152,9 +168,12 @@ export const useImageLoader = (options) => {
 
       return imagesMapRef.current.get(equipmentId)
     } catch (error) {
-      // 即使出错，也要标记为已加载，避免重复请求
-      loadedSetRef.current.add(equipmentId)
-      // 静默处理图片加载失败，避免控制台被错误信息填满
+      // 检查是否是取消请求的错误
+      if (error.name !== 'AbortError') {
+        // 即使出错，也要标记为已加载，避免重复请求
+        loadedSetRef.current.add(equipmentId)
+        // 静默处理图片加载失败，避免控制台被错误信息填满
+      }
     } finally {
       // 移除加载中状态
       setLoadingSet(prev => {
@@ -163,6 +182,8 @@ export const useImageLoader = (options) => {
         return newSet
       })
       loadingSetRef.current.delete(equipmentId)
+      // 清理AbortController
+      abortControllersRef.current.delete(equipmentId)
     }
 
     return null
@@ -181,37 +202,42 @@ export const useImageLoader = (options) => {
       return
     }
 
-    const { lazyLoad = true, loadDelay = 100 } = optionsRef.current
+    const { lazyLoad = true, loadDelay = 200 } = optionsRef.current
 
-    if (!lazyLoad) {
-      // 立即加载所有，但添加小延迟避免并发过多
-      unloadedIds.forEach((id, index) => {
-        setTimeout(() => {
-          loadImages(id)
-        }, index * 50) // 50ms延迟
-      })
-      return
+    // 限制并发请求数量
+    const MAX_CONCURRENT = 3
+    let activeRequests = 0
+    let index = 0
+
+    const loadNext = () => {
+      if (index >= unloadedIds.length || activeRequests >= MAX_CONCURRENT) {
+        return
+      }
+
+      const id = unloadedIds[index]
+      index++
+
+      if (!loadedSetRef.current.has(id) && !loadingSetRef.current.has(id)) {
+        activeRequests++
+        loadImages(id).finally(() => {
+          activeRequests--
+          // 延迟一下再加载下一个，避免请求过于密集
+          setTimeout(loadNext, 100)
+        })
+      }
     }
 
-    // 使用 requestIdleCallback 或 setTimeout 进行延迟加载
-    const scheduleLoad = window.requestIdleCallback || ((cb) => setTimeout(cb, 1))
-
-    scheduleLoad(() => {
-      unloadedIds.forEach((id, index) => {
-        setTimeout(() => {
-          if (!loadedSetRef.current.has(id) && !loadingSetRef.current.has(id)) {
-            loadImages(id)
-          }
-        }, index * loadDelay)
-      })
-    })
+    // 启动初始并发请求
+    for (let i = 0; i < MAX_CONCURRENT && i < unloadedIds.length; i++) {
+      setTimeout(loadNext, i * loadDelay)
+    }
   }, [loadImages])
 
   /**
    * 获取设备的图片信息
    */
   const getEquipmentImages = useCallback((equipmentId) => {
-    const defaultImage = optionsRef.current.defaultImage || ''
+    const defaultImage = optionsRef.current.defaultImage || null
     return imagesMapRef.current.get(equipmentId) || {
       images: [],
       mainImage: defaultImage

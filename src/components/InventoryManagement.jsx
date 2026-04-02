@@ -10,6 +10,22 @@ const { RangePicker } = DatePicker
 const { Search } = Input
 
 const InventoryManagement = () => {
+  // 获取当前用户角色
+  const getCurrentUser = () => {
+    const userStr = localStorage.getItem('user')
+    return userStr ? JSON.parse(userStr) : null
+  }
+  
+  const currentUser = getCurrentUser()
+  const userRole = currentUser?.role || ''
+  
+  // 检查用户是否有权限访问特定功能
+  const hasPermission = (requiredRoles) => {
+    return requiredRoles.includes(userRole)
+  }
+  
+  // 普通用户只允许查看，其他角色允许所有操作
+  const canPerformActions = hasPermission(['系统管理员', '仓库管理员', '项目负责人', '财务人员'])
   const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(false)
   const [searchText, setSearchText] = useState('')
@@ -513,13 +529,15 @@ const InventoryManagement = () => {
       fixed: 'right',
       render: (_, record) => (
         <Space size="middle">
-          <Button 
-            type="primary" 
-            icon={<EditOutlined />} 
-            onClick={() => handleAdjustInventory(record)}
-          >
-            调整库存
-          </Button>
+          {canPerformActions && (
+            <Button 
+              type="primary" 
+              icon={<EditOutlined />} 
+              onClick={() => handleAdjustInventory(record)}
+            >
+              调整库存
+            </Button>
+          )}
         </Space>
       )
     }
@@ -746,6 +764,44 @@ const InventoryManagement = () => {
     }
   }
 
+  // 导出库存报表数据为Excel
+  const handleExportReport = () => {
+    try {
+      // 准备导出数据
+      const reportData = generateReport(reportType)
+      
+      // 创建工作簿和工作表
+      const ws = XLSX.utils.json_to_sheet(reportData)
+      const wb = XLSX.utils.book_new()
+      
+      // 根据报表类型设置工作表名称
+      let sheetName = '库存报表'
+      switch (reportType) {
+        case 'turnover':
+          sheetName = '库存周转率'
+          break
+        case 'value':
+          sheetName = '库存价值'
+          break
+        case 'abc':
+          sheetName = 'ABC分析'
+          break
+      }
+      
+      XLSX.utils.book_append_sheet(wb, ws, sheetName)
+
+      // 生成文件名
+      const fileName = `${sheetName}_${new Date().toISOString().split('T')[0]}.xlsx`
+
+      // 导出文件
+      XLSX.writeFile(wb, fileName)
+      message.success('库存报表导出成功')
+    } catch (error) {
+      console.error('导出失败:', error)
+      message.error('导出失败，请重试')
+    }
+  }
+
   return (
     <div className="inventory-management">
       <div className="page-header">
@@ -859,21 +915,25 @@ const InventoryManagement = () => {
           }}>
             刷新
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={handleExport}>
-            导出
-          </Button>
-          <Button type="primary" onClick={checkInventoryAlerts}>
-            库存预警
-          </Button>
-          <Button type="primary" onClick={() => setReportModalVisible(true)}>
-            库存报表
-          </Button>
+          {canPerformActions && (
+            <>
+              <Button icon={<DownloadOutlined />} onClick={handleExport}>
+                导出
+              </Button>
+              <Button type="primary" onClick={checkInventoryAlerts}>
+                库存预警
+              </Button>
+              <Button type="primary" onClick={() => setReportModalVisible(true)}>
+                库存报表
+              </Button>
+            </>
+          )}
         </Space>
       </div>
       
       {/* 库存统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
+      <Row gutter={16} style={{ marginBottom: 16, flexWrap: 'nowrap', overflowX: 'auto' }}>
+        <Col span={4}>
           <Card>
             <div className="stat-card">
               <h3>库存项目数</h3>
@@ -881,7 +941,7 @@ const InventoryManagement = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card>
             <div className="stat-card" style={{ color: '#1890ff' }}>
               <h3>总数量</h3>
@@ -889,7 +949,7 @@ const InventoryManagement = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card>
             <div className="stat-card" style={{ color: '#52c41a' }}>
               <h3>已使用</h3>
@@ -897,7 +957,7 @@ const InventoryManagement = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card>
             <div className="stat-card" style={{ color: '#faad14' }}>
               <h3>库存不足</h3>
@@ -905,7 +965,7 @@ const InventoryManagement = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card>
             <div className="stat-card" style={{ color: '#f5222d' }}>
               <h3>缺货项目</h3>
@@ -913,7 +973,7 @@ const InventoryManagement = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card>
             <div className="stat-card" style={{ color: '#722ed1' }}>
               <h3>剩余总量</h3>
@@ -1014,7 +1074,7 @@ const InventoryManagement = () => {
               />
             )
           },
-          {
+          ...(canPerformActions ? [{
             key: 'detail',
             label: '详细视图',
             children: (
@@ -1047,7 +1107,7 @@ const InventoryManagement = () => {
                 }}
               />
             )
-          }
+          }] : [])
         ]}
       />
 
@@ -1232,6 +1292,16 @@ const InventoryManagement = () => {
         onCancel={() => setReportModalVisible(false)}
         width={1000}
         footer={[
+          ...(canPerformActions ? [
+            <Button 
+              key="export" 
+              type="primary" 
+              icon={<DownloadOutlined />}
+              onClick={() => handleExportReport()}
+            >
+              导出
+            </Button>
+          ] : []),
           <Button key="close" onClick={() => setReportModalVisible(false)}>
             关闭
           </Button>

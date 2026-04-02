@@ -3,9 +3,9 @@ import { message } from 'antd';
 
 // 内存缓存配置
 const CACHE_CONFIG = {
-  DURATION: 30 * 1000, // 30秒缓存（减少多用户场景下的数据不一致）
-  MAX_SIZE: 100, // 最大缓存条目数
-  CLEANUP_INTERVAL: 1 * 60 * 1000 // 1分钟清理一次过期缓存
+  DURATION: 5 * 60 * 1000, // 5分钟缓存（减少多用户场景下的数据不一致）
+  MAX_SIZE: 200, // 最大缓存条目数
+  CLEANUP_INTERVAL: 5 * 60 * 1000 // 5分钟清理一次过期缓存
 };
 
 // 简单的内存缓存
@@ -76,7 +76,7 @@ const cacheManager = {
 
 // 带缓存和错误处理的API请求包装器
 const cachedRequest = async (key, requestFn, useCache = true, options = {}) => {
-  const { showError = true, retry = 0, retryDelay = 1000 } = options;
+  const { showError = true, retry = 0, retryDelay = 1000, signal } = options;
   
   if (useCache) {
     const cached = cacheManager.get(key);
@@ -94,13 +94,17 @@ const cachedRequest = async (key, requestFn, useCache = true, options = {}) => {
         await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
       }
       
-      const data = await requestFn();
+      const data = await requestFn(signal);
       if (useCache) {
         cacheManager.set(key, data);
       }
       console.log(`[API Success] ${key}`);
       return data;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log(`[API Aborted] ${key}`);
+        throw error;
+      }
       lastError = error;
       console.error(`[API Error] ${key} (attempt ${attempt}/${retry}):`, error);
       
@@ -302,6 +306,53 @@ export const userApi = {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   },
+  // 获取用户列表
+  getUsers: async (useCache = false) => {
+    return await cachedRequest('users', () => 
+      get('/User'), useCache, { retry: 1 });
+  },
+  // 获取单个用户
+  getUser: async (id) => {
+    return await cachedRequest(`user-${id}`, () => 
+      get(`/User/${id}`), true, { retry: 1, showError: false });
+  },
+  // 创建用户
+  createUser: async (user) => {
+    const result = await cachedRequest('create-user', () => 
+      post('/User', user), false, { retry: 1 });
+    cacheManager.invalidate('users');
+    return result;
+  },
+  // 更新用户
+  updateUser: async (id, user) => {
+    const result = await cachedRequest(`update-user-${id}`, () => 
+      put(`/User/${id}`, user), false, { retry: 1 });
+    cacheManager.invalidate('users');
+    cacheManager.invalidate(`user-${id}`);
+    return result;
+  },
+  // 删除用户
+  deleteUser: async (id) => {
+    const result = await cachedRequest(`delete-user-${id}`, () => 
+      del(`/User/${id}`), false, { retry: 1 });
+    cacheManager.invalidate('users');
+    cacheManager.invalidate(`user-${id}`);
+    return result;
+  },
+  // 更新用户状态
+  updateUserStatus: async (id, isActive) => {
+    const result = await cachedRequest(`update-user-status-${id}`, () => 
+      put(`/User/${id}/status`, { isActive }), false, { retry: 1 });
+    cacheManager.invalidate('users');
+    return result;
+  },
+  // 更新用户锁定状态
+  updateUserLockStatus: async (id, isLockedOut) => {
+    const result = await cachedRequest(`update-user-lock-${id}`, () => 
+      put(`/User/${id}/lock`, { isLockedOut }), false, { retry: 1 });
+    cacheManager.invalidate('users');
+    return result;
+  },
 };
 
 export const warehouseApi = {
@@ -397,9 +448,9 @@ export const imageApi = {
   },
 
   // 获取设备图片列表
-  getEquipmentImages: async (equipmentId, equipmentType) => {
-    return await cachedRequest(`equipment-images-${equipmentId}-${equipmentType}`, () => 
-      get(`/Image/equipment/${equipmentId}?equipmentType=${equipmentType}`), true, { retry: 0, showError: false });
+  getEquipmentImages: async (equipmentId, equipmentType, signal) => {
+    return await cachedRequest(`equipment-images-${equipmentId}-${equipmentType}`, (signal) => 
+      get(`/Image/equipment/${equipmentId}?equipmentType=${equipmentType}`, { signal }), true, { retry: 0, showError: false, signal });
   },
 
   // 删除设备图片

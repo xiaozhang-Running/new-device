@@ -97,17 +97,24 @@ const GeneralDeviceList = () => {
   const [useStatusFilter, setUseStatusFilter] = useState('')
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
 
-  // 延迟加载图片 - 只加载当前页面的设备图片
-  useEffect(() => {
+  // 缓存当前页面的设备ID列表，只有当设备ID或分页真正变化时才触发加载
+  const currentPageDeviceIds = useMemo(() => {
     if (filteredDevices.length > 0) {
       // 计算当前页面的设备范围
       const startIndex = (pagination.current - 1) * pagination.pageSize;
       const endIndex = startIndex + pagination.pageSize;
       const currentPageDevices = filteredDevices.slice(startIndex, endIndex);
-      const deviceIds = currentPageDevices.map(d => d.id);
-      loadImagesBatch(deviceIds);
+      return currentPageDevices.map(d => d.id);
     }
-  }, [filteredDevices, loadImagesBatch, pagination]);
+    return [];
+  }, [filteredDevices, pagination]);
+
+  // 延迟加载图片 - 只加载当前页面的设备图片
+  useEffect(() => {
+    if (currentPageDeviceIds.length > 0) {
+      loadImagesBatch(currentPageDeviceIds);
+    }
+  }, [currentPageDeviceIds, loadImagesBatch]);
 
   // 处理搜索
   const handleSearch = useCallback(() => {
@@ -500,7 +507,7 @@ const GeneralDeviceList = () => {
       render: (images, record) => {
         const deviceImages = getEquipmentImages(record.id);
         const hasImages = deviceImages.images && deviceImages.images.length > 0;
-        const displayImage = hasImages ? deviceImages.mainImage : record.image;
+        const displayImage = hasImages ? deviceImages.mainImage : (record.image || null);
         
         return (
           <div 
@@ -593,6 +600,10 @@ const GeneralDeviceList = () => {
     normal: devices.filter(device => device.status === '正常').length,
     repair: devices.filter(device => device.status === '待维修').length,
     scrap: devices.filter(device => device.status === '报废').length,
+    other: devices.filter(device => {
+      const status = device.status;
+      return status !== '正常' && status !== '待维修' && status !== '报废';
+    }).length,
     total: devices.length
   };
 
@@ -617,7 +628,7 @@ const GeneralDeviceList = () => {
       
       {/* 设备状态统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card">
               <h3>设备总数</h3>
@@ -625,7 +636,7 @@ const GeneralDeviceList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#52c41a' }}>
               <h3>正常设备</h3>
@@ -633,7 +644,7 @@ const GeneralDeviceList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#faad14' }}>
               <h3>待维修设备</h3>
@@ -641,7 +652,7 @@ const GeneralDeviceList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#f5222d' }}>
               <h3>报废设备</h3>
@@ -649,6 +660,16 @@ const GeneralDeviceList = () => {
             </div>
           </Card>
         </Col>
+        {statusStats.other > 0 && (
+          <Col span={3}>
+            <Card>
+              <div className="stat-card" style={{ color: '#1890ff' }}>
+                <h3>其他状态设备</h3>
+                <p className="stat-number">{statusStats.other}</p>
+              </div>
+            </Card>
+          </Col>
+        )}
       </Row>
       
       {/* 搜索和筛选区域 */}

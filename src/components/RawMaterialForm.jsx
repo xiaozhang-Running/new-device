@@ -35,7 +35,21 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
 
   useEffect(() => {
     if (rawMaterial) {
-      form.setFieldsValue(rawMaterial)
+      // 字段映射：前端字段 -> 表单字段（后端API字段）
+      const formValues = {
+        id: rawMaterial.id,
+        productName: rawMaterial.name || rawMaterial.productName,
+        brand: rawMaterial.brand,
+        specification: rawMaterial.modelSpecification || rawMaterial.specification,
+        totalQuantity: rawMaterial.totalQuantity,
+        usedQuantity: rawMaterial.usedQuantity,
+        unit: rawMaterial.unit,
+        supplier: rawMaterial.supplier,
+        location: rawMaterial.location,
+        company: rawMaterial.company,
+        remark: rawMaterial.remark
+      }
+      form.setFieldsValue(formValues)
       // 重置图片数组，确保ImageUpload组件重新加载原材料的图片
       setImages([])
     } else {
@@ -50,9 +64,20 @@ const RawMaterialForm = ({ rawMaterial, onSave, onCancel }) => {
     const usedQuantity = values.usedQuantity || 0
     const remainingQuantity = totalQuantity - usedQuantity
 
+    // 字段映射：表单字段（后端API字段） -> 前端字段
     const rawMaterialData = {
-      ...values,
-      remainingQuantity,
+      id: values.id || rawMaterial?.id,
+      productName: values.productName,
+      brand: values.brand,
+      specification: values.specification,
+      totalQuantity: totalQuantity,
+      usedQuantity: usedQuantity,
+      remainingQuantity: remainingQuantity,
+      unit: values.unit,
+      supplier: values.supplier,
+      location: values.location,
+      company: values.company,
+      remark: values.remark,
       images: images, // 添加图片数组
       updatedAt: new Date().toISOString().split('T')[0]
     }

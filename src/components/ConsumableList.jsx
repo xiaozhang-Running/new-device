@@ -304,19 +304,46 @@ const ConsumableList = () => {
   };
 
   const handleImport = async (data) => {
-    const importedConsumables = data.map(item => {
-      const name = item['耗材名称'] || item['名称'] || item['consumableName'] || item.name
-      const brand = item['品牌'] || item['brand'] || item.brand
-      const modelSpecification = item['型号规格'] || item['规格'] || item['model'] || item.modelSpecification || item.model
-      const unit = item['单位'] || item['unit'] || item.unit
-      const location = item['位置'] || item['location'] || item.location
-      const remark = item['备注'] || item['remark'] || item.remark || ''
+    console.log('导入数据原始内容:', data)
+    
+    const importedConsumables = data.map((item, index) => {
+      // 获取所有可能的字段名称
+      const name = item['耗材名称'] || item['名称'] || item['consumableName'] || item.name || item.Name || ''
+      const brand = item['品牌'] || item['brand'] || item.brand || item.Brand || ''
+      const modelSpecification = item['型号规格'] || item['规格'] || item['model'] || item.modelSpecification || item.model || item.ModelSpecification || item.Specification || ''
+      const unit = item['单位'] || item['unit'] || item.unit || item.Unit || ''
+      const location = item['位置'] || item['location'] || item.location || item.Location || ''
+      const remark = item['备注'] || item['remark'] || item.remark || item.Remark || ''
       
-      let usedQuantityValue = parseInt(item['已用数量'] || item['usedQuantity'] || item.usedQuantity || 0)
-      let remainingQuantityValue = parseInt(item['剩余数量'] || item['remainingQuantity'] || item.remainingQuantity || 0)
+      // 解析数量字段，支持多种可能的字段名
+      const getNumberValue = (value) => {
+        if (value === undefined || value === null || value === '') return 0
+        const num = parseInt(String(value).trim())
+        return isNaN(num) ? 0 : num
+      }
+      
+      let usedQuantityValue = getNumberValue(item['已用数量'] || item['usedQuantity'] || item.usedQuantity || item.UsedQuantity || 0)
+      let remainingQuantityValue = getNumberValue(item['剩余数量'] || item['remainingQuantity'] || item.remainingQuantity || item.RemainingQuantity || 0)
+      
+      // 如果剩余数量为0但模板中有总数量字段，尝试从总数量计算
+      if (remainingQuantityValue === 0) {
+        const totalQtyFromTemplate = getNumberValue(item['总数量'] || item['totalQuantity'] || item.totalQuantity || item.TotalQuantity || 0)
+        if (totalQtyFromTemplate > 0) {
+          remainingQuantityValue = totalQtyFromTemplate - usedQuantityValue
+        }
+      }
+      
       const totalQty = remainingQuantityValue + usedQuantityValue
       
       let itemStatus = remainingQuantityValue <= 0 ? '无货' : remainingQuantityValue < 10 ? '短缺' : '正常'
+      
+      console.log(`第${index + 1}行数据:`, {
+        name,
+        usedQuantityValue,
+        remainingQuantityValue,
+        totalQty,
+        itemStatus
+      })
       
       return {
         name,
@@ -419,7 +446,7 @@ const ConsumableList = () => {
       render: (images, record) => {
         const consumableImages = getEquipmentImages(record.id)
         const hasImages = consumableImages.images && consumableImages.images.length > 0
-        const displayImage = hasImages ? consumableImages.mainImage : record.image
+        const displayImage = hasImages ? consumableImages.mainImage : (record.image || null)
         
         return (
           <div 
@@ -436,11 +463,29 @@ const ConsumableList = () => {
               }
             }}
           >
-            <img 
-              src={displayImage} 
-              alt="耗材图片" 
-              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4 }}
-            />
+            {displayImage ? (
+              <img 
+                src={displayImage} 
+                alt="耗材图片" 
+                style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 4 }}
+              />
+            ) : (
+              <div 
+                style={{ 
+                  width: 60, 
+                  height: 60, 
+                  backgroundColor: '#f0f0f0', 
+                  borderRadius: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                  fontSize: '12px'
+                }}
+              >
+                无图片
+              </div>
+            )}
             {hasImages && consumableImages.images.length > 1 && (
               <div style={{ 
                 position: 'absolute', bottom: 0, right: 0, 
@@ -512,9 +557,9 @@ const ConsumableList = () => {
         </Space>
       </div>
       
-      {/* 耗材状态统计卡片 */}
+      {/* 耗材统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card">
               <h3>耗材总数</h3>
@@ -522,7 +567,7 @@ const ConsumableList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#52c41a' }}>
               <h3>正常耗材</h3>
@@ -530,7 +575,7 @@ const ConsumableList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#faad14' }}>
               <h3>短缺耗材</h3>
@@ -538,7 +583,7 @@ const ConsumableList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#f5222d' }}>
               <h3>无货耗材</h3>
@@ -546,11 +591,7 @@ const ConsumableList = () => {
             </div>
           </Card>
         </Col>
-      </Row>
-      
-      {/* 耗材数量统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
+        <Col span={3}>
           <Card>
             <div className="stat-card">
               <h3>总数量</h3>
@@ -558,7 +599,7 @@ const ConsumableList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#1890ff' }}>
               <h3>已用数量</h3>
@@ -566,7 +607,7 @@ const ConsumableList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#52c41a' }}>
               <h3>剩余数量</h3>

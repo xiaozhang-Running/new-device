@@ -103,13 +103,17 @@ const DeviceList = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [useStatusFilter, setUseStatusFilter] = useState('')
 
-  // 批量加载图片 - 只在filteredDevices变化时触发
+  // 缓存设备ID列表，只有当设备ID真正变化时才触发加载
+  const deviceIds = useMemo(() => {
+    return filteredDevices.map(device => device.id);
+  }, [filteredDevices]);
+
+  // 批量加载图片 - 只在设备ID列表真正变化时触发
   useEffect(() => {
-    if (filteredDevices.length > 0) {
-      const deviceIds = filteredDevices.map(device => device.id);
+    if (deviceIds.length > 0) {
       loadImagesBatchRef.current(deviceIds);
     }
-  }, [filteredDevices]);
+  }, [deviceIds]);
 
   // 搜索处理
   const handleSearch = useCallback(() => {
@@ -489,7 +493,7 @@ const DeviceList = () => {
       render: (images, record) => {
         const deviceImages = getEquipmentImages(record.id);
         const hasImages = deviceImages.images && deviceImages.images.length > 0;
-        const displayImage = hasImages ? deviceImages.mainImage : record.image;
+        const displayImage = hasImages ? deviceImages.mainImage : (record.image || null);
         
         return (
           <div 
@@ -611,6 +615,10 @@ const DeviceList = () => {
     normal: devices.filter(device => device.status === '正常').length,
     repair: devices.filter(device => device.status === '待维修').length,
     scrap: devices.filter(device => device.status === '报废').length,
+    other: devices.filter(device => {
+      const status = device.status;
+      return status !== '正常' && status !== '待维修' && status !== '报废';
+    }).length,
     total: devices.length
   };
 
@@ -636,7 +644,7 @@ const DeviceList = () => {
       
       {/* 设备状态统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card">
               <h3>设备总数</h3>
@@ -644,7 +652,7 @@ const DeviceList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#52c41a' }}>
               <h3>正常设备</h3>
@@ -652,7 +660,7 @@ const DeviceList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#faad14' }}>
               <h3>待维修设备</h3>
@@ -660,7 +668,7 @@ const DeviceList = () => {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={3}>
           <Card>
             <div className="stat-card" style={{ color: '#f5222d' }}>
               <h3>报废设备</h3>
@@ -668,6 +676,16 @@ const DeviceList = () => {
             </div>
           </Card>
         </Col>
+        {statusStats.other > 0 && (
+          <Col span={3}>
+            <Card>
+              <div className="stat-card" style={{ color: '#1890ff' }}>
+                <h3>其他状态设备</h3>
+                <p className="stat-number">{statusStats.other}</p>
+              </div>
+            </Card>
+          </Col>
+        )}
       </Row>
       
       {/* 搜索和筛选区域 */}
