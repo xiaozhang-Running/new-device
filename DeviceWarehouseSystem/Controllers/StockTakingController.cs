@@ -69,7 +69,7 @@ public class StockTakingController : ControllerBase
         try
         {
             var userId = User.FindFirst("userId")?.Value;
-            var username = User.Identity?.Name;
+            var username = User.FindFirst("username")?.Value;
             
             dto.CreatedBy = username;
             

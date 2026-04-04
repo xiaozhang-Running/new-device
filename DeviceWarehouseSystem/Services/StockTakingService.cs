@@ -115,7 +115,7 @@ public class StockTakingService
         if (item == null) return null;
 
         item.ActualQuantity = dto.ActualQuantity;
-        item.DifferenceQuantity = dto.ActualQuantity - item.SystemQuantity;
+        item.DifferenceQuantity = dto.ActualQuantity.HasValue ? dto.ActualQuantity.Value - item.SystemQuantity : null;
         item.DifferenceReason = dto.DifferenceReason;
         item.Status = "已盘点";
         item.CheckTime = DateTime.Now;

@@ -62,7 +62,7 @@ public class CreateStockTakingDTO
 public class UpdateStockTakingItemDTO
 {
     public int ItemId { get; set; }
-    public int ActualQuantity { get; set; }
+    public int? ActualQuantity { get; set; }
     public string? DifferenceReason { get; set; }
 }
 
