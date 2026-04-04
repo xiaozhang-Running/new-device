@@ -24,7 +24,7 @@ namespace DeviceWarehouseSystem.Controllers
             {
                 id = log.Id,
                 userId = log.UserId,
-                Username = log.User?.Username ?? "未知用户",
+                username = log.User?.Username ?? "未知用户",
                 activityType = log.ActivityType,
                 activityDescription = log.ActivityDescription,
                 ipAddress = log.IpAddress,
