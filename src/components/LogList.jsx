@@ -61,7 +61,7 @@ const LogList = () => {
       // 转换日期格式
       const formattedLogs = data[0].map(log => ({
         ...log,
-        username: log.Username || log.User?.Username || '未知用户',
+        username: log.Username || log.username || log.User?.Username || '未知用户',
         createdAt: dayjs(log.createdAt)
       }))
       

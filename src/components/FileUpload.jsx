@@ -285,7 +285,7 @@ const FileUpload = ({ onImport, module = 'device', onDownloadTemplate }) => {
             setValidationResult(null)
           }}
         >
-          <Button icon={<UploadOutlined />}>导入Excel文件</Button>
+          <Button icon={<FileExcelOutlined />}>导入Excel文件</Button>
         </Upload>
         
         <Button icon={<InfoCircleOutlined />} onClick={showTemplateHelp}>

@@ -22,14 +22,14 @@ namespace DeviceWarehouseSystem.Controllers
         {
             return new
             {
-                log.Id,
-                log.UserId,
-                Username = log.User?.Username,
-                log.ActivityType,
-                log.ActivityDescription,
-                log.IpAddress,
-                log.UserAgent,
-                log.CreatedAt
+                id = log.Id,
+                userId = log.UserId,
+                Username = log.User?.Username ?? "未知用户",
+                activityType = log.ActivityType,
+                activityDescription = log.ActivityDescription,
+                ipAddress = log.IpAddress,
+                userAgent = log.UserAgent,
+                createdAt = log.CreatedAt
             };
         }
 
