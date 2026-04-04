@@ -131,5 +131,20 @@ namespace DeviceWarehouseSystem.Controllers
         //         return BadRequest(new { message = ex.Message });
         //     }
         // }
+
+        // DELETE: api/Log/all
+        [HttpDelete("all")]
+        public async Task<ActionResult> ClearAllLogs()
+        {
+            try
+            {
+                await _logService.ClearAllLogsAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

@@ -217,13 +217,16 @@ const RawMaterialList = () => {
       .filter(img => img.id && typeof img.id === 'string' && !img.id.startsWith('temp_'))
       .map(img => img.id);
     
-    // 删除用户已移除的图片
-    for (const imageId of currentImageIds) {
-      if (!retainedImageIds.includes(imageId)) {
-        try {
-          await imageApi.deleteEquipmentImage(imageId);
-        } catch (error) {
-          console.error('删除图片失败:', error);
+    // 如果用户没有修改图片（images为空），保留所有现有图片
+    if (rawMaterial.images && rawMaterial.images.length > 0) {
+      // 删除用户已移除的图片
+      for (const imageId of currentImageIds) {
+        if (!retainedImageIds.includes(imageId)) {
+          try {
+            await imageApi.deleteEquipmentImage(imageId);
+          } catch (error) {
+            console.error('删除图片失败:', error);
+          }
         }
       }
     }
@@ -355,8 +358,8 @@ const RawMaterialList = () => {
       const location = item['位置'] || item.location
       const remark = item['备注'] || item.remark || ''
       
-      const totalQty = parseInt(item['总数量'] || item.totalQuantity || 0)
-      const usedQty = parseInt(item['已用数量'] || item.usedQuantity || 0)
+      const totalQty = parseInt(item['总数量'] || item.totalQuantity || 0) || 0
+      const usedQty = parseInt(item['已用数量'] || item.usedQuantity || 0) || 0
       
       return {
         productName,
@@ -376,10 +379,13 @@ const RawMaterialList = () => {
     let successCount = 0
     for (const rawMaterial of importedRawMaterials) {
       try {
+        console.log('导入原材料数据:', rawMaterial)
         await post('/RawMaterials', rawMaterial)
         successCount++
       } catch (error) {
         console.error('导入原材料失败:', error)
+        console.error('失败的数据:', rawMaterial)
+        message.error(`导入失败: ${error.message || '未知错误'}`)
       }
     }
     

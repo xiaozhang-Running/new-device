@@ -2,26 +2,67 @@ using DeviceWarehouseSystem.Models;
 using DeviceWarehouseSystem.DTOs;
 using DeviceWarehouseSystem.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace DeviceWarehouseSystem.Services
 {
     public class DeviceService
     {
         private readonly DeviceWarehouseContext _context;
+        private readonly ConcurrentDictionary<string, (object data, DateTime expiration)> _cache = new ConcurrentDictionary<string, (object data, DateTime expiration)>();
+        private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(5);
 
         public DeviceService(DeviceWarehouseContext context)
         {
             _context = context;
         }
 
+        // 缓存辅助方法
+        private T GetFromCache<T>(string key)
+        {
+            if (_cache.TryGetValue(key, out var cached))
+            {
+                if (cached.expiration > DateTime.Now)
+                {
+                    return (T)cached.data;
+                }
+                _cache.TryRemove(key, out _);
+            }
+            return default;
+        }
+
+        private void SetCache<T>(string key, T data)
+        {
+            _cache[key] = (data, DateTime.Now.Add(_cacheExpiration));
+        }
+
+        private void ClearCache(string pattern)
+        {
+            var keysToRemove = _cache.Keys.Where(k => k.Contains(pattern)).ToList();
+            foreach (var key in keysToRemove)
+            {
+                _cache.TryRemove(key, out _);
+            }
+        }
+
         // 专用设备管理
         public async Task<List<SpecialEquipmentDTO>> GetSpecialEquipmentsAsync()
         {
+            const string cacheKey = "special_equipments";
+            
+            // 尝试从缓存获取
+            var cached = GetFromCache<List<SpecialEquipmentDTO>>(cacheKey);
+            if (cached != null)
+            {
+                return cached;
+            }
+            
             if (_context.SpecialEquipments == null)
             {
                 return new List<SpecialEquipmentDTO>();
             }
-            return await _context.SpecialEquipments
+            var equipments = await _context.SpecialEquipments
                 .Select(e => new SpecialEquipmentDTO
                 {
                     Id = e.Id,
@@ -46,6 +87,10 @@ namespace DeviceWarehouseSystem.Services
                     PurchasePrice = e.PurchasePrice ?? 0
                 })
                 .ToListAsync();
+            
+            // 缓存结果
+            SetCache(cacheKey, equipments);
+            return equipments;
         }
 
         /// <summary>
@@ -352,6 +397,10 @@ namespace DeviceWarehouseSystem.Services
             dto.Warehouse = equipment.Warehouse ?? "主仓库";
             dto.ImageUrl = equipment.ImageUrl;
 
+            // 清除相关缓存
+            ClearCache("special_equipments");
+            ClearCache("inventory");
+
             return dto;
         }
 
@@ -389,13 +438,17 @@ namespace DeviceWarehouseSystem.Services
                     await _context.SaveChangesAsync();
 
                     await transaction.CommitAsync();
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    throw new Exception("删除设备失败: " + ex.Message, ex);
-                }
-            });
+                
+                // 清除相关缓存
+                ClearCache("general_equipments");
+                ClearCache("inventory");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                throw new Exception("删除设备失败: " + ex.Message, ex);
+            }
+        });
         }
 
         public async Task ClearAllSpecialEquipmentsAsync()
@@ -439,11 +492,20 @@ namespace DeviceWarehouseSystem.Services
         // 通用设备管理
         public async Task<List<GeneralEquipmentDTO>> GetGeneralEquipmentsAsync()
         {
+            const string cacheKey = "general_equipments";
+            
+            // 尝试从缓存获取
+            var cached = GetFromCache<List<GeneralEquipmentDTO>>(cacheKey);
+            if (cached != null)
+            {
+                return cached;
+            }
+            
             if (_context.GeneralEquipments == null)
             {
                 return new List<GeneralEquipmentDTO>();
             }
-            return await _context.GeneralEquipments
+            var equipments = await _context.GeneralEquipments
                 .Select(e => new GeneralEquipmentDTO
                 {
                     Id = e.Id,
@@ -468,6 +530,10 @@ namespace DeviceWarehouseSystem.Services
                     PurchasePrice = e.PurchasePrice ?? 0
                 })
                 .ToListAsync();
+            
+            // 缓存结果
+            SetCache(cacheKey, equipments);
+            return equipments;
         }
 
         /// <summary>
@@ -678,6 +744,11 @@ namespace DeviceWarehouseSystem.Services
                 dto.UseStatus = "未使用";
                 dto.PurchaseDate = equipment.PurchaseDate != null ? equipment.PurchaseDate.Value.ToString("yyyy-MM-dd") : equipment.CreatedAt.ToString("yyyy-MM-dd");
                 dto.PurchasePrice = equipment.PurchasePrice ?? 0;
+
+                // 清除相关缓存
+                ClearCache("general_equipments");
+                ClearCache("inventory");
+
                 return dto;
             }
             catch (Exception ex)
@@ -762,6 +833,10 @@ namespace DeviceWarehouseSystem.Services
 
             dto.Warehouse = equipment.Warehouse ?? "主仓库";
 
+            // 清除相关缓存
+            ClearCache("general_equipments");
+            ClearCache("inventory");
+
             return dto;
         }
 
@@ -797,6 +872,10 @@ namespace DeviceWarehouseSystem.Services
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
+                
+                // 清除相关缓存
+                ClearCache("general_equipments");
+                ClearCache("inventory");
             }
             catch (Exception ex)
             {

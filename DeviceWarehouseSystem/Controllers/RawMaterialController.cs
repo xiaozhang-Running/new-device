@@ -11,10 +11,22 @@ namespace DeviceWarehouseSystem.Controllers;
 public class RawMaterialsController : ControllerBase
 {
     private readonly IRawMaterialService _rawMaterialService;
+    private readonly LogService _logService;
 
-    public RawMaterialsController(IRawMaterialService rawMaterialService)
+    public RawMaterialsController(IRawMaterialService rawMaterialService, LogService logService)
     {
         _rawMaterialService = rawMaterialService;
+        _logService = logService;
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var userIdStr = HttpContext.Items["UserId"]?.ToString();
+        if (int.TryParse(userIdStr, out int userId))
+        {
+            return userId;
+        }
+        return null;
     }
 
     [HttpGet]
@@ -43,6 +55,15 @@ public class RawMaterialsController : ControllerBase
             return BadRequest("原材料名称是必填项");
         }
         var rawMaterial = await _rawMaterialService.CreateRawMaterial(rawMaterialCreateDTO);
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "原材料管理", 
+                $"添加原材料：{rawMaterialCreateDTO.productName}", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return CreatedAtAction(nameof(GetRawMaterial), new { id = rawMaterial.Id }, rawMaterial);
     }
 
@@ -58,17 +79,36 @@ public class RawMaterialsController : ControllerBase
         {
             return NotFound();
         }
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "原材料管理", 
+                $"编辑原材料：{rawMaterialUpdateDTO.productName}", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return Ok(rawMaterial);
     }
 
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteRawMaterial(int id)
     {
+        var rawMaterial = await _rawMaterialService.GetRawMaterialById(id);
         var result = await _rawMaterialService.DeleteRawMaterial(id);
         if (!result)
         {
             return NotFound();
         }
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue && rawMaterial != null)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "原材料管理", 
+                $"删除原材料：{rawMaterial.productName}", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return NoContent();
     }
 
@@ -76,6 +116,15 @@ public class RawMaterialsController : ControllerBase
     public async Task<ActionResult<int>> ImportRawMaterials(RawMaterialImportDTO importDTO)
     {
         var count = await _rawMaterialService.ImportRawMaterials(importDTO.RawMaterials);
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "原材料管理", 
+                $"导入原材料：共 {count} 条", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return Ok(count);
     }
 
@@ -90,6 +139,15 @@ public class RawMaterialsController : ControllerBase
     public async Task<ActionResult> DeleteAllRawMaterials()
     {
         await _rawMaterialService.DeleteAllRawMaterials();
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "原材料管理", 
+                "清空所有原材料", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return NoContent();
     }
 }

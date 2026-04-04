@@ -94,7 +94,7 @@ namespace DeviceWarehouseSystem.Services
                 Brand = dto.Brand ?? "",
                 ModelSpecification = dto.ModelSpecification ?? "",
                 TotalQuantity = dto.TotalQuantity,
-                OriginalQuantity = dto.OriginalQuantity,
+
                 UsedQuantity = dto.UsedQuantity,
                 RemainingQuantity = dto.RemainingQuantity,
                 Unit = dto.Unit ?? "",
@@ -129,7 +129,7 @@ namespace DeviceWarehouseSystem.Services
             entity.Brand = dto.Brand ?? entity.Brand;
             entity.ModelSpecification = dto.ModelSpecification ?? entity.ModelSpecification;
             entity.TotalQuantity = dto.TotalQuantity ?? entity.TotalQuantity;
-            entity.OriginalQuantity = dto.OriginalQuantity ?? entity.OriginalQuantity;
+
             entity.UsedQuantity = dto.UsedQuantity ?? entity.UsedQuantity;
             entity.RemainingQuantity = dto.RemainingQuantity ?? entity.RemainingQuantity;
             entity.Unit = dto.Unit ?? entity.Unit;
@@ -159,7 +159,7 @@ namespace DeviceWarehouseSystem.Services
                 Brand = entity.Brand ?? "",
                 ModelSpecification = entity.ModelSpecification ?? "",
                 TotalQuantity = entity.TotalQuantity,
-                OriginalQuantity = entity.OriginalQuantity,
+
                 UsedQuantity = entity.UsedQuantity,
                 RemainingQuantity = entity.RemainingQuantity,
                 Unit = entity.Unit ?? "",
@@ -182,7 +182,7 @@ namespace DeviceWarehouseSystem.Services
                 Brand = dto.Brand ?? "",
                 ModelSpecification = dto.ModelSpecification ?? "",
                 TotalQuantity = dto.TotalQuantity,
-                OriginalQuantity = dto.OriginalQuantity,
+
                 UsedQuantity = dto.UsedQuantity,
                 RemainingQuantity = dto.RemainingQuantity,
                 Unit = dto.Unit ?? "",
@@ -202,7 +202,7 @@ namespace DeviceWarehouseSystem.Services
             entity.Brand = dto.Brand ?? entity.Brand;
             entity.ModelSpecification = dto.ModelSpecification ?? entity.ModelSpecification;
             entity.TotalQuantity = dto.TotalQuantity ?? entity.TotalQuantity;
-            entity.OriginalQuantity = dto.OriginalQuantity ?? entity.OriginalQuantity;
+
             entity.UsedQuantity = dto.UsedQuantity ?? entity.UsedQuantity;
             entity.RemainingQuantity = dto.RemainingQuantity ?? entity.RemainingQuantity;
             entity.Unit = dto.Unit ?? entity.Unit;

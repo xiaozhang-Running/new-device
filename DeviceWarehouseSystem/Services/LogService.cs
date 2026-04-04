@@ -98,7 +98,7 @@ namespace DeviceWarehouseSystem.Services
         // 创建新日志
         public async Task<UserActivityLog> CreateLogAsync(UserActivityLog log)
         {
-            log.CreatedAt = DateTime.UtcNow;
+            log.CreatedAt = DateTime.Now;
             if (_context.UserActivityLogs != null)
             {
                 _context.UserActivityLogs.Add(log);
@@ -179,10 +179,21 @@ namespace DeviceWarehouseSystem.Services
                 ActivityDescription = activityDescription ?? "",
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             await CreateLogAsync(log);
+        }
+
+        // 清空所有日志
+        public async Task ClearAllLogsAsync()
+        {
+            if (_context.UserActivityLogs != null)
+            {
+                var logs = await _context.UserActivityLogs.ToListAsync();
+                _context.UserActivityLogs.RemoveRange(logs);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

@@ -190,7 +190,7 @@ function GeneralEquipmentPurchaseInbound() {
     pageStyle: `
       @page {
         size: A4;
-        margin: 5mm;
+        margin: 10mm;
       }
       @media print {
         body {
@@ -200,12 +200,17 @@ function GeneralEquipmentPurchaseInbound() {
           line-height: 0.9;
           margin: 0 !important;
           padding: 0 !important;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
         }
         .preview-content {
           max-height: none !important;
           overflow: visible !important;
-          margin: 0 !important;
+          margin: 0 auto !important;
           padding: 0 !important;
+          width: 100%;
+          max-width: 210mm;
         }
         table {
           page-break-inside: auto;
@@ -496,28 +501,54 @@ function GeneralEquipmentPurchaseInbound() {
     // 通用设备，数量是多少就添加多少条数据
     const newItems = [];
     
-    // 先获取基础设备编号
-    const baseDeviceId = await generateDeviceId(name, brand, model);
+    // 检查当前入库清单中是否已存在相同名称的设备
+    const existingItems = inboundItems.filter(item => item.name === name);
+    let startSequence = 1;
+    let baseDeviceId = '';
     
-    // 提取编号中的数字部分
-    const parts = baseDeviceId.split('-');
-    let sequence = 1;
-    if (parts.length >= 3) {
-      const sequencePart = parts[parts.length - 1];
-      if (!isNaN(parseInt(sequencePart))) {
-        sequence = parseInt(sequencePart);
+    if (existingItems.length > 0) {
+      // 如果已存在相同名称的设备，找到最大的序列号
+      const sequences = existingItems.map(item => {
+        const parts = item.deviceId.split('-');
+        if (parts.length >= 3) {
+          const seq = parseInt(parts[parts.length - 1]);
+          return isNaN(seq) ? 0 : seq;
+        }
+        return 0;
+      });
+      const maxSequence = Math.max(...sequences);
+      startSequence = maxSequence + 1;
+      
+      // 使用已存在的设备编号格式
+      const existingDeviceId = existingItems[0].deviceId;
+      const parts = existingDeviceId.split('-');
+      parts[parts.length - 1] = startSequence.toString().padStart(3, '0');
+      baseDeviceId = parts.join('-');
+      
+      console.log('已存在相同名称设备，继续编号:', startSequence, baseDeviceId);
+    } else {
+      // 如果不存在，调用后端生成新的设备编号
+      baseDeviceId = await generateDeviceId(name, brand, model);
+      
+      // 提取编号中的数字部分
+      const parts = baseDeviceId.split('-');
+      if (parts.length >= 3) {
+        const sequencePart = parts[parts.length - 1];
+        if (!isNaN(parseInt(sequencePart))) {
+          startSequence = parseInt(sequencePart);
+        }
       }
     }
     
     // 为每个数量生成递增的设备编号
     for (let i = 0; i < quantity; i++) {
       let deviceId;
-      if (i === 0) {
+      if (i === 0 && existingItems.length === 0) {
         deviceId = baseDeviceId;
       } else {
         // 生成递增的编号，每次创建新的parts数组以避免覆盖
-        const newParts = [...parts];
-        const newSequence = sequence + i;
+        const newParts = baseDeviceId.split('-');
+        const newSequence = startSequence + i;
         newParts[newParts.length - 1] = newSequence.toString().padStart(3, '0');
         deviceId = newParts.join('-');
       }

@@ -74,7 +74,7 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true)
     try {
-      // 获取设备数据
+      // 并行获取设备数据，提高加载速度
       let specialDevices = []
       let generalDevices = []
       let consumables = []
@@ -83,53 +83,63 @@ const Dashboard = () => {
       let inboundData = []
       let errorCount = 0
       
-      try {
-        specialDevices = await deviceApi.getSpecialEquipments(false)
-      } catch (error) {
-        console.error('获取专用设备数据失败:', error)
-        errorCount++
-      }
+      // 构建请求列表
+      const requests = []
       
-      try {
-        generalDevices = await deviceApi.getGeneralEquipments(false)
-      } catch (error) {
-        console.error('获取通用设备数据失败:', error)
-        errorCount++
-      }
+      // 设备数据请求
+      requests.push(
+        deviceApi.getSpecialEquipments(false)
+          .then(data => specialDevices = data)
+          .catch(error => {
+            console.error('获取专用设备数据失败:', error)
+            errorCount++
+          }),
+        deviceApi.getGeneralEquipments(false)
+          .then(data => generalDevices = data)
+          .catch(error => {
+            console.error('获取通用设备数据失败:', error)
+            errorCount++
+          })
+      )
       
       // 只有非普通用户角色才获取耗材、原材料和出入库数据
       if (hasPermission(['系统管理员', '仓库管理员', '项目负责人', '财务人员'])) {
-        try {
-          consumables = await deviceApi.getConsumables(false)
-        } catch (error) {
-          console.error('获取耗材数据失败:', error)
-          errorCount++
-        }
-        
-        try {
-          rawMaterials = await deviceApi.getRawMaterials(false)
-        } catch (error) {
-          console.error('获取原材料数据失败:', error)
-          errorCount++
-        }
+        requests.push(
+          deviceApi.getConsumables(false)
+            .then(data => consumables = data)
+            .catch(error => {
+              console.error('获取耗材数据失败:', error)
+              errorCount++
+            }),
+          deviceApi.getRawMaterials(false)
+            .then(data => rawMaterials = data)
+            .catch(error => {
+              console.error('获取原材料数据失败:', error)
+              errorCount++
+            })
+        )
       }
       
       // 只有特定角色才获取出入库数据
       if (hasPermission(['系统管理员', '仓库管理员', '项目负责人'])) {
-        try {
-          outboundData = await projectOutboundApi.getProjectOutbounds(false)
-        } catch (error) {
-          console.error('获取出库数据失败:', error)
-          errorCount++
-        }
-        
-        try {
-          inboundData = await projectInboundApi.getProjectInbounds(false)
-        } catch (error) {
-          console.error('获取入库数据失败:', error)
-          errorCount++
-        }
+        requests.push(
+          projectOutboundApi.getProjectOutbounds(false)
+            .then(data => outboundData = data)
+            .catch(error => {
+              console.error('获取出库数据失败:', error)
+              errorCount++
+            }),
+          projectInboundApi.getProjectInbounds(false)
+            .then(data => inboundData = data)
+            .catch(error => {
+              console.error('获取入库数据失败:', error)
+              errorCount++
+            })
+        )
       }
+      
+      // 并行执行所有请求
+      await Promise.all(requests)
       
       // 计算设备总数
       const totalDevices = specialDevices.length + generalDevices.length

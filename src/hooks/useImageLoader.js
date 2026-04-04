@@ -44,6 +44,8 @@ export const useImageLoader = (options) => {
     // 从API缓存中恢复图片数据
     const restoredMap = new Map()
     const cachePrefix = `equipment-images-`
+    const loadedSet = getGlobalLoadedSet(equipmentType)
+    
     for (const [key, value] of cacheManager.getAll?.() || []) {
       if (key.startsWith(cachePrefix)) {
         const match = key.match(/equipment-images-(\d+)-(\d+)/)
@@ -57,6 +59,8 @@ export const useImageLoader = (options) => {
               })),
               mainImage: buildImageUrlStatic(value[0].Id || value[0].id)
             })
+            // 同步更新全局已加载集合
+            loadedSet.add(id)
           }
         }
       }
@@ -118,7 +122,8 @@ export const useImageLoader = (options) => {
    */
   const loadImages = useCallback(async (equipmentId) => {
     // 避免重复加载或并发请求
-    if (loadedSetRef.current.has(equipmentId) || loadingSetRef.current.has(equipmentId) || imagesMapRef.current.has(equipmentId)) {
+    // 只使用 loadedSetRef 和 loadingSetRef 进行检查，避免 imagesMap 状态变化导致的重复请求
+    if (loadedSetRef.current.has(equipmentId) || loadingSetRef.current.has(equipmentId)) {
       return imagesMapRef.current.get(equipmentId) || null
     }
 
@@ -272,6 +277,12 @@ export const useImageLoader = (options) => {
    */
   const refreshImages = useCallback(async (equipmentId) => {
     loadedSetRef.current.delete(equipmentId)
+    // 同时清除 imagesMap 中的缓存，确保重新加载
+    setImagesMap(prev => {
+      const newMap = new Map(prev)
+      newMap.delete(equipmentId)
+      return newMap
+    })
     return loadImages(equipmentId)
   }, [loadImages])
 

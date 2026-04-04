@@ -18,7 +18,5 @@ public partial class EquipmentImage
 
     public DateTime CreatedAt { get; set; }
 
-    public byte[] ImageData { get; set; } = null!;
-
     public string ContentType { get; set; } = null!;
 }

@@ -218,13 +218,16 @@ const GeneralDeviceList = () => {
       .filter(img => img.id && typeof img.id === 'string' && !img.id.startsWith('temp_'))
       .map(img => img.id);
     
-    // 删除用户已移除的图片
-    for (const imageId of currentImageIds) {
-      if (!retainedImageIds.includes(imageId)) {
-        try {
-          await imageApi.deleteEquipmentImage(imageId);
-        } catch (error) {
-          console.error('删除图片失败:', error);
+    // 如果用户没有修改图片（images为空），保留所有现有图片
+    if (device.images && device.images.length > 0) {
+      // 删除用户已移除的图片
+      for (const imageId of currentImageIds) {
+        if (!retainedImageIds.includes(imageId)) {
+          try {
+            await imageApi.deleteEquipmentImage(imageId);
+          } catch (error) {
+            console.error('删除图片失败:', error);
+          }
         }
       }
     }
@@ -612,7 +615,7 @@ const GeneralDeviceList = () => {
       <div className="page-header">
         <h2>通用设备管理</h2>
         <Space>
-          <FileUpload onImport={handleImport} />
+          <FileUpload onImport={handleImport} module="generalDevice" />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加设备</Button>
           <Button icon={<ExportOutlined />} onClick={handleExport}>导出设备</Button>
           <Popconfirm

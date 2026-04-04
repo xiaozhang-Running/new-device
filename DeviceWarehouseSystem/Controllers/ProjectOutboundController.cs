@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DeviceWarehouseSystem.Models;
+using DeviceWarehouseSystem.Services;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json;
@@ -12,10 +13,22 @@ namespace DeviceWarehouseSystem.Controllers;
 public class ProjectOutboundController : ControllerBase
 {
     private readonly DeviceWarehouseContext _context;
+    private readonly LogService _logService;
 
-    public ProjectOutboundController(DeviceWarehouseContext context)
+    public ProjectOutboundController(DeviceWarehouseContext context, LogService logService)
     {
         _context = context;
+        _logService = logService;
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var userIdStr = HttpContext.Items["UserId"]?.ToString();
+        if (int.TryParse(userIdStr, out int userId))
+        {
+            return userId;
+        }
+        return null;
     }
 
     // GET: api/ProjectOutbound
@@ -285,6 +298,15 @@ public class ProjectOutboundController : ControllerBase
                 await _context.SaveChangesAsync();
             }
 
+            // 记录日志
+            var userId = GetCurrentUserId();
+            if (userId.HasValue)
+            {
+                await _logService.LogUserActivityAsync(userId.Value, "项目出库", 
+                    $"创建项目出库单：{outboundNumber}（项目：{projectName}）", 
+                    HttpContext.Connection.RemoteIpAddress?.ToString());
+            }
+
             // 清除导航属性以避免循环引用
             foreach (var item in newProjectOutbound.ProjectOutboundItems)
             {
@@ -419,6 +441,15 @@ public class ProjectOutboundController : ControllerBase
             {
                 throw;
             }
+        }
+
+        // 记录日志
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "项目出库", 
+                $"确认项目出库单：{projectOutbound.OutboundNumber}（项目：{projectOutbound.ProjectName}）", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
         }
 
         return NoContent();
@@ -722,6 +753,15 @@ public class ProjectOutboundController : ControllerBase
 
         _context.ProjectOutbounds.Remove(projectOutbound);
         await _context.SaveChangesAsync();
+
+        // 记录日志
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "项目出库", 
+                $"删除项目出库单：{projectOutbound.OutboundNumber}（项目：{projectOutbound.ProjectName}）", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
 
         return NoContent();
     }

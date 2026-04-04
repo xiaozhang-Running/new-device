@@ -195,13 +195,16 @@ const ConsumableList = () => {
       .filter(img => img.id && typeof img.id === 'string' && !img.id.startsWith('temp_'))
       .map(img => img.id);
     
-    // 删除用户已移除的图片
-    for (const imageId of currentImageIds) {
-      if (!retainedImageIds.includes(imageId)) {
-        try {
-          await imageApi.deleteEquipmentImage(imageId);
-        } catch (error) {
-          console.error('删除图片失败:', error);
+    // 如果用户没有修改图片（images为空），保留所有现有图片
+    if (consumable.images && consumable.images.length > 0) {
+      // 删除用户已移除的图片
+      for (const imageId of currentImageIds) {
+        if (!retainedImageIds.includes(imageId)) {
+          try {
+            await imageApi.deleteEquipmentImage(imageId);
+          } catch (error) {
+            console.error('删除图片失败:', error);
+          }
         }
       }
     }
@@ -350,7 +353,6 @@ const ConsumableList = () => {
         brand,
         modelSpecification,
         totalQuantity: totalQty,
-        originalQuantity: totalQty,
         usedQuantity: usedQuantityValue,
         remainingQuantity: remainingQuantityValue,
         unit,

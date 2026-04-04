@@ -11,13 +11,24 @@ namespace DeviceWarehouseSystem.Controllers;
 public class ConsumableController : ControllerBase
 {
     private readonly ConsumableService _consumableService;
+    private readonly LogService _logService;
 
-    public ConsumableController(ConsumableService consumableService)
+    public ConsumableController(ConsumableService consumableService, LogService logService)
     {
         _consumableService = consumableService;
+        _logService = logService;
     }
 
-    // GET: api/Consumable
+    private int? GetCurrentUserId()
+    {
+        var userIdStr = HttpContext.Items["UserId"]?.ToString();
+        if (int.TryParse(userIdStr, out int userId))
+        {
+            return userId;
+        }
+        return null;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ConsumableDTO>>> GetConsumables([FromQuery] string? search, [FromQuery] string? status, [FromQuery] string? location)
     {
@@ -43,7 +54,6 @@ public class ConsumableController : ControllerBase
         return Ok(consumables);
     }
 
-    // GET: api/Consumable/5
     [HttpGet("{id}")]
     public async Task<ActionResult<ConsumableDTO>> GetConsumable(int id)
     {
@@ -55,18 +65,15 @@ public class ConsumableController : ControllerBase
         return Ok(consumable);
     }
 
-    // POST: api/Consumable
     [HttpPost]
     public async Task<ActionResult<ConsumableDTO>> PostConsumable(ConsumableDTO consumableDTO)
     {
-        // 转换为ConsumableCreateDTO
         var createDTO = new ConsumableCreateDTO
         {
             Name = consumableDTO.Name,
             Brand = consumableDTO.Brand,
             ModelSpecification = consumableDTO.ModelSpecification,
             TotalQuantity = consumableDTO.TotalQuantity,
-            OriginalQuantity = consumableDTO.OriginalQuantity,
             UsedQuantity = consumableDTO.UsedQuantity,
             RemainingQuantity = consumableDTO.RemainingQuantity,
             Unit = consumableDTO.Unit,
@@ -78,56 +85,72 @@ public class ConsumableController : ControllerBase
         };
         
         var consumable = await _consumableService.CreateConsumableAsync(createDTO);
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "耗材管理", 
+                $"添加耗材：{consumableDTO.Name}", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return CreatedAtAction(nameof(GetConsumable), new { id = consumable.Id }, consumable);
     }
 
-    // PUT: api/Consumable/5
     [HttpPut("{id}")]
-    public async Task<ActionResult<ConsumableDTO>> PutConsumable(int id, ConsumableDTO consumableDTO)
+    public async Task<ActionResult<ConsumableDTO>> PutConsumable(int id, ConsumableUpdateDTO updateDTO)
     {
-        // 转换为ConsumableUpdateDTO
-        var updateDTO = new ConsumableUpdateDTO
-        {
-            Name = consumableDTO.Name,
-            Brand = consumableDTO.Brand,
-            ModelSpecification = consumableDTO.ModelSpecification,
-            TotalQuantity = consumableDTO.TotalQuantity,
-            OriginalQuantity = consumableDTO.OriginalQuantity,
-            UsedQuantity = consumableDTO.UsedQuantity,
-            RemainingQuantity = consumableDTO.RemainingQuantity,
-            Unit = consumableDTO.Unit,
-            Company = consumableDTO.Company,
-            Accessories = consumableDTO.Accessories,
-            Remark = consumableDTO.Remark,
-            Image = consumableDTO.Image,
-            Location = consumableDTO.Location
-        };
-        
         var consumable = await _consumableService.UpdateConsumableAsync(id, updateDTO);
         if (consumable == null)
         {
             return NotFound();
         }
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "耗材管理", 
+                $"编辑耗材：{consumable.Name}", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return Ok(consumable);
     }
 
-    // DELETE: api/Consumable/5
     [HttpDelete("{id}")]
     public async Task<ActionResult<bool>> DeleteConsumable(int id)
     {
+        var consumable = await _consumableService.GetConsumableByIdAsync(id);
         var result = await _consumableService.DeleteConsumableAsync(id);
         if (!result)
         {
             return NotFound();
         }
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue && consumable != null)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "耗材管理", 
+                $"删除耗材：{consumable.Name}", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return Ok(result);
     }
 
-    // DELETE: api/Consumable
     [HttpDelete]
     public async Task<ActionResult<bool>> DeleteAllConsumables()
     {
         var result = await _consumableService.DeleteAllConsumablesAsync();
+        
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+        {
+            await _logService.LogUserActivityAsync(userId.Value, "耗材管理", 
+                "清空所有耗材", 
+                HttpContext.Connection.RemoteIpAddress?.ToString());
+        }
+        
         return Ok(result);
     }
 }

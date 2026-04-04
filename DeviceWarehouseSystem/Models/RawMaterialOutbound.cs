@@ -11,13 +11,17 @@ public partial class RawMaterialOutbound
 
     public DateTime OutboundDate { get; set; }
 
-    public string? Recipient { get; set; }
+    public string? Department { get; set; }
+
+    public string? Applicant { get; set; }
+
+    public string? Handler { get; set; }
+
+    public string? WarehouseKeeper { get; set; }
 
     public string? Purpose { get; set; }
 
     public string? Remark { get; set; }
-
-    public string? Operator { get; set; }
 
     public string? Status { get; set; }
 

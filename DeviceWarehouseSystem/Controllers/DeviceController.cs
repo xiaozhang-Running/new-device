@@ -9,13 +9,24 @@ namespace DeviceWarehouseSystem.Controllers
     public class DeviceController : ControllerBase
     {
         private readonly DeviceService _deviceService;
+        private readonly LogService _logService;
 
-        public DeviceController(DeviceService deviceService)
+        public DeviceController(DeviceService deviceService, LogService logService)
         {
             _deviceService = deviceService;
+            _logService = logService;
         }
 
-        // 通用错误处理方法
+        private int? GetCurrentUserId()
+        {
+            var userIdStr = HttpContext.Items["UserId"]?.ToString();
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                return userId;
+            }
+            return null;
+        }
+
         private ActionResult HandleException(Exception ex)
         {
             var errorMessage = ex.Message;
@@ -31,7 +42,6 @@ namespace DeviceWarehouseSystem.Controllers
         }
 
         // 专用设备管理
-        // GET: api/Device/special-equipments
         [HttpGet("special-equipments")]
         public async Task<ActionResult<List<SpecialEquipmentDTO>>> GetSpecialEquipments()
         {
@@ -46,7 +56,6 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // GET: api/Device/special-equipments/paged
         [HttpGet("special-equipments/paged")]
         public async Task<ActionResult<PagedResult<SpecialEquipmentDTO>>> GetPagedSpecialEquipments([FromQuery] PaginationParams parameters)
         {
@@ -61,7 +70,6 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // GET: api/Device/special-equipments/{id}
         [HttpGet("special-equipments/{id}")]
         public async Task<ActionResult<SpecialEquipmentDTO>> GetSpecialEquipmentById(int id)
         {
@@ -80,13 +88,19 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // POST: api/Device/special-equipments
         [HttpPost("special-equipments")]
         public async Task<ActionResult<SpecialEquipmentDTO>> CreateSpecialEquipment([FromBody] SpecialEquipmentDTO dto)
         {
             try
             {
                 var equipment = await _deviceService.CreateSpecialEquipmentAsync(dto);
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备管理", 
+                        $"添加专用设备：{dto.Name}（编号：{dto.DeviceCode}）", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok(equipment);
             }
             catch (Exception ex)
@@ -95,13 +109,19 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // PUT: api/Device/special-equipments/{id}
         [HttpPut("special-equipments/{id}")]
         public async Task<ActionResult<SpecialEquipmentDTO>> UpdateSpecialEquipment(int id, [FromBody] SpecialEquipmentDTO dto)
         {
             try
             {
                 var equipment = await _deviceService.UpdateSpecialEquipmentAsync(id, dto);
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备管理", 
+                        $"编辑专用设备：{dto.Name}（编号：{dto.DeviceCode}）", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok(equipment);
             }
             catch (Exception ex)
@@ -110,13 +130,20 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // DELETE: api/Device/special-equipments/{id}
         [HttpDelete("special-equipments/{id}")]
         public async Task<ActionResult> DeleteSpecialEquipment(int id)
         {
             try
             {
+                var equipment = await _deviceService.GetSpecialEquipmentByIdAsync(id);
                 await _deviceService.DeleteSpecialEquipmentAsync(id);
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备管理", 
+                        $"删除专用设备：{equipment.Name}（编号：{equipment.DeviceCode}）", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok();
             }
             catch (Exception ex)
@@ -125,13 +152,19 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // DELETE: api/Device/special-equipments
         [HttpDelete("special-equipments")]
         public async Task<ActionResult> ClearAllSpecialEquipments()
         {
             try
             {
                 await _deviceService.ClearAllSpecialEquipmentsAsync();
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备管理", 
+                        "清空所有专用设备", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok();
             }
             catch (Exception ex)
@@ -141,7 +174,6 @@ namespace DeviceWarehouseSystem.Controllers
         }
 
         // 通用设备管理
-        // GET: api/Device/general-equipments
         [HttpGet("general-equipments")]
         public async Task<ActionResult<List<GeneralEquipmentDTO>>> GetGeneralEquipments()
         {
@@ -156,7 +188,6 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // GET: api/Device/general-equipments/paged
         [HttpGet("general-equipments/paged")]
         public async Task<ActionResult<PagedResult<GeneralEquipmentDTO>>> GetPagedGeneralEquipments([FromQuery] PaginationParams parameters)
         {
@@ -171,7 +202,6 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // GET: api/Device/general-equipments/{id}
         [HttpGet("general-equipments/{id}")]
         public async Task<ActionResult<GeneralEquipmentDTO>> GetGeneralEquipmentById(int id)
         {
@@ -190,13 +220,19 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // POST: api/Device/general-equipments
         [HttpPost("general-equipments")]
         public async Task<ActionResult<GeneralEquipmentDTO>> CreateGeneralEquipment([FromBody] GeneralEquipmentDTO dto)
         {
             try
             {
                 var equipment = await _deviceService.CreateGeneralEquipmentAsync(dto);
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备管理", 
+                        $"添加通用设备：{dto.Name}（编号：{dto.DeviceCode}）", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok(equipment);
             }
             catch (Exception ex)
@@ -205,13 +241,19 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // PUT: api/Device/general-equipments/{id}
         [HttpPut("general-equipments/{id}")]
         public async Task<ActionResult<GeneralEquipmentDTO>> UpdateGeneralEquipment(int id, [FromBody] GeneralEquipmentDTO dto)
         {
             try
             {
                 var equipment = await _deviceService.UpdateGeneralEquipmentAsync(id, dto);
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备管理", 
+                        $"编辑通用设备：{dto.Name}（编号：{dto.DeviceCode}）", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok(equipment);
             }
             catch (Exception ex)
@@ -220,13 +262,20 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // DELETE: api/Device/general-equipments/{id}
         [HttpDelete("general-equipments/{id}")]
         public async Task<ActionResult> DeleteGeneralEquipment(int id)
         {
             try
             {
+                var equipment = await _deviceService.GetGeneralEquipmentByIdAsync(id);
                 await _deviceService.DeleteGeneralEquipmentAsync(id);
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备管理", 
+                        $"删除通用设备：{equipment.Name}（编号：{equipment.DeviceCode}）", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok();
             }
             catch (Exception ex)
@@ -235,13 +284,19 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // DELETE: api/Device/general-equipments
         [HttpDelete("general-equipments")]
         public async Task<ActionResult> ClearAllGeneralEquipments()
         {
             try
             {
                 await _deviceService.ClearAllGeneralEquipmentsAsync();
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备管理", 
+                        "清空所有通用设备", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok();
             }
             catch (Exception ex)
@@ -251,7 +306,6 @@ namespace DeviceWarehouseSystem.Controllers
         }
 
         // 待维修设备管理
-        // GET: api/Device/repair-equipments
         [HttpGet("repair-equipments")]
         public async Task<ActionResult<List<RepairEquipmentDTO>>> GetRepairEquipments()
         {
@@ -267,7 +321,6 @@ namespace DeviceWarehouseSystem.Controllers
         }
 
         // 报废设备管理
-        // GET: api/Device/scrap-equipments
         [HttpGet("scrap-equipments")]
         public async Task<ActionResult<List<ScrapEquipmentDTO>>> GetScrapEquipments()
         {
@@ -282,13 +335,19 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // POST: api/Device/scrap-equipments
         [HttpPost("scrap-equipments")]
         public async Task<ActionResult<ScrapEquipmentDTO>> CreateScrapEquipment([FromBody] ScrapEquipmentDTO dto)
         {
             try
             {
                 var equipment = await _deviceService.CreateScrapEquipmentAsync(dto);
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备报废", 
+                        $"报废设备：{dto.EquipmentName}（编号：{dto.DeviceCode}）", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok(equipment);
             }
             catch (Exception ex)
@@ -297,7 +356,6 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // GET: api/Device/scrap-equipments/{id}
         [HttpGet("scrap-equipments/{id}")]
         public async Task<ActionResult<ScrapEquipmentDTO>> GetScrapEquipmentById(int id)
         {
@@ -312,13 +370,20 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // DELETE: api/Device/scrap-equipments/{id}
         [HttpDelete("scrap-equipments/{id}")]
         public async Task<ActionResult> DeleteScrapEquipment(int id)
         {
             try
             {
+                var equipment = await _deviceService.GetScrapEquipmentByIdAsync(id);
                 await _deviceService.DeleteScrapEquipmentAsync(id);
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "设备报废", 
+                        $"删除报废记录：{equipment.EquipmentName}（编号：{equipment.DeviceCode}）", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
                 return Ok();
             }
             catch (Exception ex)
@@ -327,8 +392,7 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // 库存设备查询 - 用于出库单选择
-        // GET: api/Device/inventory/special
+        // 库存设备查询
         [HttpGet("inventory/special")]
         public async Task<ActionResult<List<InventoryDeviceDTO>>> GetSpecialInventoryDevices()
         {
@@ -343,7 +407,6 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // GET: api/Device/inventory/general
         [HttpGet("inventory/general")]
         public async Task<ActionResult<List<InventoryDeviceDTO>>> GetGeneralInventoryDevices()
         {
@@ -358,8 +421,6 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // 获取专用设备详细清单
-        // GET: api/Device/special-equipment-details
         [HttpGet("special-equipment-details")]
         public async Task<ActionResult<List<SpecialEquipmentDTO>>> GetSpecialEquipmentDetails([FromQuery] string deviceName, [FromQuery] string? brand = null)
         {
@@ -374,8 +435,6 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
-        // 获取通用设备详细清单
-        // GET: api/Device/general-equipment-details
         [HttpGet("general-equipment-details")]
         public async Task<ActionResult<List<GeneralEquipmentDTO>>> GetGeneralEquipmentDetails([FromQuery] string deviceName, [FromQuery] string? brand = null)
         {

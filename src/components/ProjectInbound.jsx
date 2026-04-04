@@ -66,7 +66,7 @@ function ProjectInbound() {
     pageStyle: `
       @page {
         size: A4;
-        margin: 5mm;
+        margin: 10mm;
       }
       @media print {
         body {
@@ -76,12 +76,17 @@ function ProjectInbound() {
           line-height: 0.9;
           margin: 0 !important;
           padding: 0 !important;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
         }
         .preview-content {
           max-height: none !important;
           overflow: visible !important;
-          margin: 0 !important;
+          margin: 0 auto !important;
           padding: 0 !important;
+          width: 100%;
+          max-width: 210mm;
         }
         table {
           page-break-inside: auto;
@@ -175,6 +180,21 @@ function ProjectInbound() {
         /* 减小标题与内容之间的间距 */
         .preview-content h3 {
           margin-bottom: 8px !important;
+        }
+        /* 打印时项目信息按2行展示 */
+        .preview-content > div:nth-child(2) .ant-row {
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .preview-content > div:nth-child(2) .ant-col {
+          flex: 0 0 50%;
+          max-width: 50%;
+        }
+        /* 缩小入库状态列宽 */
+        .preview-content table th:nth-child(11),
+        .preview-content table td:nth-child(11) {
+          min-width: 30px;
+          width: 30px;
         }
         /* 移除滚动条 */
         ::-webkit-scrollbar {
@@ -853,16 +873,20 @@ function ProjectInbound() {
                           item.equipmentName?.includes('耗材') || item.EquipmentName?.includes('耗材') ||
                           item.itemName?.includes('耗材') || item.ItemName?.includes('耗材')
         
-        const existingItem = record.items.find(i => {
-          const iEquipId = i.equipmentId || i.EquipmentId
-          const iEquipName = i.equipmentName || i.EquipmentName || i.itemName || i.ItemName
-          
-          // 对于非耗材类型的设备，优先使用设备ID进行匹配
-          // 对于耗材类型的物品，使用物品名称进行匹配
-          if (!isConsumable && itemEquipId && iEquipId) {
-            return itemEquipId === iEquipId
+        // 尝试从不同字段名获取入库设备列表
+        const inboundItems = record.items || record.Items || []
+        // 对于非耗材类型的设备，使用EquipmentId进行精确匹配
+        // 对于耗材类型的物品，使用EquipmentName进行匹配
+        const existingItem = inboundItems.find(i => {
+          // 对于非耗材类型的设备，优先使用EquipmentId进行匹配
+          if (!isConsumable) {
+            const itemEquipId = item.equipmentId || item.EquipmentId || item.itemId || item.ItemId
+            const iEquipId = i.EquipmentId || i.equipmentId
+            return itemEquipId && iEquipId && itemEquipId === iEquipId
           } else {
-            // 对于耗材或无设备ID的物品，使用物品名称进行匹配
+            // 对于耗材类型的物品，使用物品名称进行匹配
+            const itemEquipName = item.EquipmentName || item.equipmentName || item.ItemName || item.itemName
+            const iEquipName = i.EquipmentName || i.equipmentName
             return itemEquipName && iEquipName && itemEquipName === iEquipName
           }
         })
@@ -1426,9 +1450,9 @@ function ProjectInbound() {
           setCurrentEditInbound(null)
         }}
         footer={null}
-        width={1200}
-        style={{ top: 20 }}
-        styles={{ body: { maxHeight: '80vh', overflow: 'auto' } }}
+        width={1800}
+        style={{ top: 5, height: '98vh' }}
+        styles={{ body: { height: 'calc(98vh - 100px)', overflow: 'auto' } }}
       >
         <Form 
           form={form} 
@@ -1669,29 +1693,22 @@ function ProjectInbound() {
               </Col>
             </Row>
             
-            {/* 第二行：项目名称、项目时间、使用地 */}
+            {/* 项目信息行：项目名称、项目时间、使用地、项目负责人、联系电话 */}
             <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
-              <Col xs={24} sm={8} md={8}>
+              <Col xs={24} sm={6} md={6}>
                 <p style={{ margin: 0 }}><strong>项目名称:</strong> {previewData.projectName}</p>
               </Col>
-              <Col xs={24} sm={8} md={8}>
+              <Col xs={24} sm={6} md={6}>
                 <p style={{ margin: 0 }}><strong>项目时间:</strong> {previewData.projectTime}</p>
               </Col>
-              <Col xs={24} sm={8} md={8}>
+              <Col xs={24} sm={4} md={4}>
                 <p style={{ margin: 0 }}><strong>使用地:</strong> {previewData.usageLocation}</p>
               </Col>
-            </Row>
-            
-            {/* 第三行：项目负责人、联系电话、入库时间 */}
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={8} md={8}>
+              <Col xs={24} sm={4} md={4}>
                 <p style={{ margin: 0 }}><strong>项目负责人:</strong> {previewData.projectManager}</p>
               </Col>
-              <Col xs={24} sm={8} md={8}>
+              <Col xs={24} sm={4} md={4}>
                 <p style={{ margin: 0 }}><strong>联系电话:</strong> {previewData.contactPhone}</p>
-              </Col>
-              <Col xs={24} sm={8} md={8}>
-                <p style={{ margin: 0 }}><strong>入库时间:</strong> {previewData.inboundDate}</p>
               </Col>
             </Row>
           </div>
@@ -1798,7 +1815,7 @@ function ProjectInbound() {
                   title: '配件',
                   dataIndex: 'accessories',
                   key: 'accessories',
-                  width: '25%',
+                  width: '20%',
                   render: (text) => (
                     <div style={{ 
                       whiteSpace: 'normal', 
@@ -1814,6 +1831,21 @@ function ProjectInbound() {
                   dataIndex: 'status',
                   key: 'status',
                   width: '6%'
+                },
+                {
+                  title: '入库状态',
+                  dataIndex: 'isInbound',
+                  key: 'isInbound',
+                  width: '4%',
+                  render: (text) => (
+                    <div style={{ textAlign: 'center' }}>
+                      {text ? (
+                        <CheckOutlined style={{ fontSize: '16px', color: '#52c41a' }} />
+                      ) : (
+                        <div style={{ width: '16px' }}></div>
+                      )}
+                    </div>
+                  )
                 },
                 {
                   title: '备注',
@@ -1837,6 +1869,7 @@ function ProjectInbound() {
               size="small"
               bordered
               style={{ width: '100%' }}
+              rowClassName={(record) => record.isInbound ? 'preview-marked-row' : ''}
             />
           </div>
           
@@ -1849,15 +1882,19 @@ function ProjectInbound() {
           
           <div style={{ marginBottom: '20px', border: '1px solid #e8e8e8', borderRadius: '4px', padding: '16px' }}>
             <h3 style={{ marginTop: 0, marginBottom: '16px', borderBottom: '2px solid #1890ff', paddingBottom: '8px' }}>签收信息</h3>
+            {/* 签收信息行：经办人、检测人、库管、入库时间 */}
             <Row gutter={[16, 16]}>
-              <Col xs={24} sm={8} md={8}>
+              <Col xs={24} sm={6} md={6}>
                 <p style={{ margin: 0 }}><strong>经办人:</strong> {previewData.handler}</p>
               </Col>
-              <Col xs={24} sm={8} md={8}>
+              <Col xs={24} sm={6} md={6}>
                 <p style={{ margin: 0 }}><strong>检测人:</strong> {previewData.inspector}</p>
               </Col>
-              <Col xs={24} sm={8} md={8}>
+              <Col xs={24} sm={6} md={6}>
                 <p style={{ margin: 0 }}><strong>库管:</strong> {previewData.warehouseKeeper}</p>
+              </Col>
+              <Col xs={24} sm={6} md={6}>
+                <p style={{ margin: 0 }}><strong>入库时间:</strong> {previewData.inboundDate}</p>
               </Col>
             </Row>
           </div>

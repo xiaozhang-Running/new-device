@@ -25,13 +25,17 @@ const RawMaterialOutboundForm = ({ outbound, onSave, onCancel, rawMaterials = []
         orderNumber: outbound.orderNumber,
         outboundDate: outbound.outboundDate ? moment(outbound.outboundDate) : null,
         department: outbound.department,
+        applicant: outbound.applicant,
         handler: outbound.handler,
-        recipient: outbound.recipient,
+        warehouseKeeper: outbound.warehouseKeeper,
         remark: outbound.remark
       })
       setSelectedRawMaterials(outbound.items || [])
     } else {
       form.resetFields()
+      // 为新建出库单设置默认出库单号
+      const defaultOrderNumber = `RM-OUT-${moment().format('YYYYMMDD')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+      form.setFieldsValue({ orderNumber: defaultOrderNumber })
       setSelectedRawMaterials([])
     }
   }, [outbound, form])
@@ -94,11 +98,12 @@ const RawMaterialOutboundForm = ({ outbound, onSave, onCancel, rawMaterials = []
 
       const outboundData = {
         id: outbound?.id,
-        orderNumber: values.orderNumber,
+        orderNumber: values.orderNumber, // 使用前端生成的出库单号
         outboundDate: values.outboundDate ? values.outboundDate.format('YYYY-MM-DD') : new Date().toISOString().split('T')[0],
         department: values.department,
+        applicant: values.applicant,
         handler: values.handler,
-        recipient: values.recipient,
+        warehouseKeeper: values.warehouseKeeper,
         remark: values.remark,
         items: selectedRawMaterials.map(item => ({
           rawMaterialId: item.rawMaterialId,
@@ -134,6 +139,12 @@ const RawMaterialOutboundForm = ({ outbound, onSave, onCancel, rawMaterials = []
       )
     },
     {
+      title: '型号规格',
+      dataIndex: 'specification',
+      key: 'specification',
+      render: (_, record) => record.rawMaterial?.specification || ''
+    },
+    {
       title: '出库数量',
       dataIndex: 'quantity',
       key: 'quantity',
@@ -152,6 +163,12 @@ const RawMaterialOutboundForm = ({ outbound, onSave, onCancel, rawMaterials = []
       dataIndex: 'unit',
       key: 'unit',
       render: (_, record) => record.rawMaterial?.unit || ''
+    },
+    {
+      title: '库存数量',
+      dataIndex: 'remainingQuantity',
+      key: 'remainingQuantity',
+      render: (_, record) => record.rawMaterial?.remainingQuantity || 0
     },
     {
       title: '操作',
@@ -180,64 +197,24 @@ const RawMaterialOutboundForm = ({ outbound, onSave, onCancel, rawMaterials = []
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
+        initialValues={{
+          orderNumber: outbound ? outbound.orderNumber : `RM-OUT-${moment().format('YYYYMMDD')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+        }}
       >
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={24}>
             <Form.Item
               name="orderNumber"
               label="出库单号"
               rules={[{ required: true, message: '请输入出库单号' }]}
             >
-              <Input placeholder="请输入出库单号" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="outboundDate"
-              label="出库日期"
-              rules={[{ required: true, message: '请选择出库日期' }]}
-            >
-              <DatePicker style={{ width: '100%' }} />
+              <Input 
+                placeholder="请输入出库单号" 
+                disabled={true} 
+              />
             </Form.Item>
           </Col>
         </Row>
-
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item
-              name="department"
-              label="出库部门"
-              rules={[{ required: true, message: '请输入出库部门' }]}
-            >
-              <Input placeholder="请输入出库部门" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
-              name="handler"
-              label="经手人"
-              rules={[{ required: true, message: '请输入经手人' }]}
-            >
-              <Input placeholder="请输入经手人" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
-              name="recipient"
-              label="接收人"
-              rules={[{ required: true, message: '请输入接收人' }]}
-            >
-              <Input placeholder="请输入接收人" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item
-          name="remark"
-          label="备注"
-        >
-          <TextArea rows={4} placeholder="请输入备注信息" />
-        </Form.Item>
 
         <div style={{ marginBottom: 16 }}>
           <h3>出库原材料</h3>
@@ -256,6 +233,64 @@ const RawMaterialOutboundForm = ({ outbound, onSave, onCancel, rawMaterials = []
             rowKey="key"
           />
         </div>
+
+        <Row gutter={16}>
+          <Col span={4}>
+            <Form.Item
+              name="applicant"
+              label="申请人"
+              rules={[{ required: true, message: '请输入申请人' }]}
+            >
+              <Input placeholder="请输入申请人" />
+            </Form.Item>
+          </Col>
+          <Col span={4}>
+            <Form.Item
+              name="department"
+              label="申请部门"
+              rules={[{ required: true, message: '请输入申请部门' }]}
+            >
+              <Input placeholder="请输入申请部门" />
+            </Form.Item>
+          </Col>
+          <Col span={4}>
+            <Form.Item
+              name="handler"
+              label="经办人"
+              rules={[{ required: true, message: '请输入经办人' }]}
+            >
+              <Input placeholder="请输入经办人" />
+            </Form.Item>
+          </Col>
+          <Col span={4}>
+            <Form.Item
+              name="warehouseKeeper"
+              label="库管"
+              rules={[{ required: true, message: '请输入库管' }]}
+            >
+              <Input placeholder="请输入库管" />
+            </Form.Item>
+          </Col>
+          <Col span={4}>
+            <Form.Item
+              name="outboundDate"
+              label="出库日期"
+              rules={[{ required: true, message: '请选择出库日期' }]}
+            >
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col span={4}>
+            {/* 留空，保持布局平衡 */}
+          </Col>
+        </Row>
+
+        <Form.Item
+          name="remark"
+          label="备注"
+        >
+          <TextArea rows={4} placeholder="请输入备注信息" />
+        </Form.Item>
 
         <Form.Item>
           <Space>

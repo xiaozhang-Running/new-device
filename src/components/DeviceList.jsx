@@ -103,15 +103,24 @@ const DeviceList = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [useStatusFilter, setUseStatusFilter] = useState('')
 
-  // 缓存设备ID列表，只有当设备ID真正变化时才触发加载
+  // 使用ref跟踪已经加载过的设备ID，避免重复加载
+  const loadedDeviceIdsRef = useRef(new Set());
+  
+  // 缓存设备ID列表，使用原始数据而不是过滤后的数据，避免频繁触发
   const deviceIds = useMemo(() => {
-    return filteredDevices.map(device => device.id);
-  }, [filteredDevices]);
+    return devices.map(device => device.id);
+  }, [devices]);
 
   // 批量加载图片 - 只在设备ID列表真正变化时触发
   useEffect(() => {
     if (deviceIds.length > 0) {
-      loadImagesBatchRef.current(deviceIds);
+      // 过滤掉已经加载过的设备ID
+      const unloadedIds = deviceIds.filter(id => !loadedDeviceIdsRef.current.has(id));
+      if (unloadedIds.length > 0) {
+        // 标记为已加载
+        unloadedIds.forEach(id => loadedDeviceIdsRef.current.add(id));
+        loadImagesBatchRef.current(unloadedIds);
+      }
     }
   }, [deviceIds]);
 
@@ -217,13 +226,16 @@ const DeviceList = () => {
       .filter(img => img.id && typeof img.id === 'string' && !img.id.startsWith('temp_'))
       .map(img => img.id);
     
-    // 删除用户已移除的图片
-    for (const imageId of currentImageIds) {
-      if (!retainedImageIds.includes(imageId)) {
-        try {
-          await imageApi.deleteEquipmentImage(imageId);
-        } catch (error) {
-          console.error('删除图片失败:', error);
+    // 如果用户没有修改图片（images为空），保留所有现有图片
+    if (device.images && device.images.length > 0) {
+      // 删除用户已移除的图片
+      for (const imageId of currentImageIds) {
+        if (!retainedImageIds.includes(imageId)) {
+          try {
+            await imageApi.deleteEquipmentImage(imageId);
+          } catch (error) {
+            console.error('删除图片失败:', error);
+          }
         }
       }
     }

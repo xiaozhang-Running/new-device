@@ -36,6 +36,13 @@ namespace DeviceWarehouseSystem.Middleware
                 return;
             }
 
+            // 跳过迁移接口
+            if (context.Request.Path.StartsWithSegments("/api/Migration"))
+            {
+                await _next(context);
+                return;
+            }
+
             // 获取Authorization头
             var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
             if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
@@ -121,10 +128,12 @@ namespace DeviceWarehouseSystem.Middleware
                 var claimsPrincipal = tokenHandler.ValidateToken(token, tokenValidationParameters, out _);
                 var jwtUserRole = claimsPrincipal.FindFirst(ClaimTypes.Role)?.Value;
                 var jwtUsername = claimsPrincipal.FindFirst(ClaimTypes.Name)?.Value;
+                var jwtUserId = claimsPrincipal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
                 // 将用户信息存储到上下文
                 context.Items["UserRole"] = jwtUserRole;
                 context.Items["Username"] = jwtUsername;
+                context.Items["UserId"] = jwtUserId;
 
                 // 权限验证
                 if (!HasPermission(context.Request.Path, jwtUserRole ?? ""))
@@ -177,6 +186,11 @@ namespace DeviceWarehouseSystem.Middleware
                 }
                 // 允许访问图片上传接口
                 if (path.StartsWithSegments("/api/Image"))
+                {
+                    return true;
+                }
+                // 允许访问维修管理接口
+                if (path.StartsWithSegments("/api/Repair"))
                 {
                     return true;
                 }

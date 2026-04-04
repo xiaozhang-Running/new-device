@@ -160,7 +160,7 @@ function ConsumablePurchaseInbound() {
     pageStyle: `
       @page {
         size: A4;
-        margin: 5mm;
+        margin: 10mm;
       }
       @media print {
         body {
@@ -170,12 +170,17 @@ function ConsumablePurchaseInbound() {
           line-height: 0.9;
           margin: 0 !important;
           padding: 0 !important;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
         }
         .preview-content {
           max-height: none !important;
           overflow: visible !important;
-          margin: 0 !important;
+          margin: 0 auto !important;
           padding: 0 !important;
+          width: 100%;
+          max-width: 210mm;
         }
         table {
           page-break-inside: auto;

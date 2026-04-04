@@ -32,7 +32,7 @@ public class ConsumableService
                     Brand = c.Brand ?? "",
                     ModelSpecification = c.ModelSpecification ?? "",
                     TotalQuantity = c.TotalQuantity,
-                    OriginalQuantity = c.OriginalQuantity,
+
                     UsedQuantity = c.UsedQuantity,
                     RemainingQuantity = c.RemainingQuantity,
                     Unit = c.Unit ?? "",
@@ -102,7 +102,6 @@ public class ConsumableService
                 Brand = dto.Brand ?? "",
                 ModelSpecification = dto.ModelSpecification ?? "",
                 TotalQuantity = totalQuantity,
-                OriginalQuantity = dto.OriginalQuantity,
                 UsedQuantity = usedQuantity,
                 RemainingQuantity = remainingQuantity,
                 Unit = dto.Unit ?? "",
@@ -153,9 +152,6 @@ public class ConsumableService
             if (dto.Name != null) consumable.Name = dto.Name;
             if (dto.Brand != null) consumable.Brand = dto.Brand;
             if (dto.ModelSpecification != null) consumable.ModelSpecification = dto.ModelSpecification;
-            if (dto.OriginalQuantity.HasValue) consumable.OriginalQuantity = dto.OriginalQuantity.Value;
-            if (dto.UsedQuantity.HasValue) consumable.UsedQuantity = dto.UsedQuantity.Value;
-            if (dto.RemainingQuantity.HasValue) consumable.RemainingQuantity = dto.RemainingQuantity.Value;
             if (dto.Unit != null) consumable.Unit = dto.Unit;
             if (dto.Company != null) consumable.Company = dto.Company;
             if (dto.Accessories != null) consumable.Accessories = dto.Accessories;
@@ -163,8 +159,38 @@ public class ConsumableService
             if (dto.Image != null) consumable.Image = dto.Image;
             if (dto.Location != null) consumable.Location = dto.Location;
 
-            // 重新计算总数量和状态
-            consumable.TotalQuantity = consumable.RemainingQuantity + consumable.UsedQuantity;
+            // 处理数量字段
+            if (dto.TotalQuantity.HasValue) {
+                // 如果用户提供了总数量
+                if (dto.UsedQuantity.HasValue) {
+                    // 如果同时提供了已用数量，计算剩余数量
+                    consumable.UsedQuantity = dto.UsedQuantity.Value;
+                    consumable.RemainingQuantity = dto.TotalQuantity.Value - dto.UsedQuantity.Value;
+                } else if (dto.RemainingQuantity.HasValue) {
+                    // 如果同时提供了剩余数量，计算已用数量
+                    consumable.RemainingQuantity = dto.RemainingQuantity.Value;
+                    consumable.UsedQuantity = dto.TotalQuantity.Value - dto.RemainingQuantity.Value;
+                } else {
+                    // 如果只提供了总数量，保持已用和剩余数量的比例
+                    if (consumable.TotalQuantity > 0) {
+                        double usedRatio = (double)consumable.UsedQuantity / consumable.TotalQuantity;
+                        consumable.UsedQuantity = (int)(dto.TotalQuantity.Value * usedRatio);
+                        consumable.RemainingQuantity = dto.TotalQuantity.Value - consumable.UsedQuantity;
+                    } else {
+                        // 如果原来总数量为0，默认已用数量为0
+                        consumable.UsedQuantity = 0;
+                        consumable.RemainingQuantity = dto.TotalQuantity.Value;
+                    }
+                }
+                consumable.TotalQuantity = dto.TotalQuantity.Value;
+            } else {
+                // 如果没有提供总数量，根据已用和剩余数量计算
+                if (dto.UsedQuantity.HasValue) consumable.UsedQuantity = dto.UsedQuantity.Value;
+                if (dto.RemainingQuantity.HasValue) consumable.RemainingQuantity = dto.RemainingQuantity.Value;
+                consumable.TotalQuantity = consumable.RemainingQuantity + consumable.UsedQuantity;
+            }
+
+            // 更新状态
             consumable.Status = GetStatusByQuantity(consumable.RemainingQuantity);
             consumable.UpdatedAt = DateTime.Now;
 
@@ -229,7 +255,7 @@ public class ConsumableService
                     Brand = c.Brand ?? "",
                     ModelSpecification = c.ModelSpecification ?? "",
                     TotalQuantity = c.TotalQuantity,
-                    OriginalQuantity = c.OriginalQuantity,
+
                     UsedQuantity = c.UsedQuantity,
                     RemainingQuantity = c.RemainingQuantity,
                     Unit = c.Unit ?? "",
@@ -268,7 +294,7 @@ public class ConsumableService
                     Brand = c.Brand ?? "",
                     ModelSpecification = c.ModelSpecification ?? "",
                     TotalQuantity = c.TotalQuantity,
-                    OriginalQuantity = c.OriginalQuantity,
+
                     UsedQuantity = c.UsedQuantity,
                     RemainingQuantity = c.RemainingQuantity,
                     Unit = c.Unit ?? "",
@@ -307,7 +333,7 @@ public class ConsumableService
                     Brand = c.Brand ?? "",
                     ModelSpecification = c.ModelSpecification ?? "",
                     TotalQuantity = c.TotalQuantity,
-                    OriginalQuantity = c.OriginalQuantity,
+
                     UsedQuantity = c.UsedQuantity,
                     RemainingQuantity = c.RemainingQuantity,
                     Unit = c.Unit ?? "",
@@ -377,7 +403,6 @@ public class ConsumableService
             Brand = consumable.Brand ?? "",
             ModelSpecification = consumable.ModelSpecification ?? "",
             TotalQuantity = consumable.TotalQuantity,
-            OriginalQuantity = consumable.OriginalQuantity,
             UsedQuantity = consumable.UsedQuantity,
             RemainingQuantity = consumable.RemainingQuantity,
             Unit = consumable.Unit ?? "",

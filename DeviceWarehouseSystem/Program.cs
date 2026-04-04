@@ -17,9 +17,17 @@ builder.Services.AddScoped<ConsumableService>();
 builder.Services.AddScoped<IRawMaterialService, RawMaterialService>();
 builder.Services.AddScoped<InOutboundService>();
 builder.Services.AddScoped<ImageService>();
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+builder.Services.AddScoped<StockTakingService>();
 
 // 注册控制器
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // 配置 JSON 序列化使用 camelCase 命名策略，与前端保持一致
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 
 // 配置CORS
 builder.Services.AddCors(options =>
@@ -37,7 +45,22 @@ var app = builder.Build();
 // 应用CORS策略
 app.UseCors("AllowAll");
 
+// 配置静态文件服务（用于访问上传的文件）
+var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "..", "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.GetFullPath(uploadsPath)),
+    RequestPath = "/uploads"
+});
+Console.WriteLine($"[Program] 静态文件服务已配置: {Path.GetFullPath(uploadsPath)}");
+
 // 应用中间件
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<AuthorizationMiddleware>();
 

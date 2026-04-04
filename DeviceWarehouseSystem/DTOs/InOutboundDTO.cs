@@ -39,13 +39,17 @@ namespace DeviceWarehouseSystem.DTOs
     public class RawMaterialOutboundDTO
     {
         public int Id { get; set; }
-        public required string OutboundNumber { get; set; }
-        public required string Recipient { get; set; }
-        public required string Operator { get; set; }
-        public required string Status { get; set; }
-        public required string Remark { get; set; }
+        public string OutboundNumber { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string Applicant { get; set; } = "";
+        public string Handler { get; set; } = "";
+        public string WarehouseKeeper { get; set; } = "";
+        public string Status { get; set; } = "已完成";
+        public string? Remark { get; set; }
         public DateTime OutboundDate { get; set; }
-        public required List<RawMaterialOutboundItemDTO> Items { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public List<RawMaterialOutboundItemDTO> Items { get; set; } = new List<RawMaterialOutboundItemDTO>();
     }
 
     public class RawMaterialOutboundItemDTO

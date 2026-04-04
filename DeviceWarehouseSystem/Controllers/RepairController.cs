@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using DeviceWarehouseSystem.Models;
 using DeviceWarehouseSystem.Enums;
 using DeviceWarehouseSystem.Models.Enums;
+using DeviceWarehouseSystem.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 
@@ -12,13 +13,24 @@ namespace DeviceWarehouseSystem.Controllers
     public class RepairController : ControllerBase
     {
         private readonly DeviceWarehouseContext _context;
+        private readonly LogService _logService;
 
-        public RepairController(DeviceWarehouseContext context)
+        public RepairController(DeviceWarehouseContext context, LogService logService)
         {
             _context = context;
+            _logService = logService;
         }
 
-        // GET: api/Repair
+        private int? GetCurrentUserId()
+        {
+            var userIdStr = HttpContext.Items["UserId"]?.ToString();
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                return userId;
+            }
+            return null;
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<RepairEquipment>>> GetRepairEquipments()
         {
@@ -29,7 +41,6 @@ namespace DeviceWarehouseSystem.Controllers
             return await _context.RepairEquipments.ToListAsync();
         }
 
-        // GET: api/Repair/5
         [HttpGet("{id}")]
         public async Task<ActionResult<RepairEquipment>> GetRepairEquipment(int id)
         {
@@ -47,7 +58,6 @@ namespace DeviceWarehouseSystem.Controllers
             return repairEquipment;
         }
 
-        // POST: api/Repair
         [HttpPost]
         public async Task<ActionResult<RepairEquipment>> PostRepairEquipment(RepairEquipment repairEquipment)
         {
@@ -60,10 +70,17 @@ namespace DeviceWarehouseSystem.Controllers
             _context.RepairEquipments.Add(repairEquipment);
             await _context.SaveChangesAsync();
 
+            var userId = GetCurrentUserId();
+            if (userId.HasValue)
+            {
+                await _logService.LogUserActivityAsync(userId.Value, "维修管理", 
+                    $"报修设备：{repairEquipment.EquipmentName}（编号：{repairEquipment.EquipmentCode}）", 
+                    HttpContext.Connection.RemoteIpAddress?.ToString());
+            }
+
             return CreatedAtAction(nameof(GetRepairEquipment), new { id = repairEquipment.Id }, repairEquipment);
         }
 
-        // PUT: api/Repair/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutRepairEquipment(int id, RepairEquipment repairEquipment)
         {
@@ -75,21 +92,15 @@ namespace DeviceWarehouseSystem.Controllers
             repairEquipment.UpdatedAt = System.DateTime.Now;
             _context.Entry(repairEquipment).State = EntityState.Modified;
 
-            // 查找对应的设备并更新状态
-            // 先尝试查找专用设备
             if (_context.SpecialEquipments != null)
             {
                 var specialEquipment = await _context.SpecialEquipments.FindAsync(repairEquipment.EquipmentId);
                 if (specialEquipment != null)
                 {
-                    // 使用映射配置更新设备状态
                     specialEquipment.DeviceStatus = RepairStatusMapping.ToDeviceStatusValue(repairEquipment.RepairStatus);
                     specialEquipment.RepairStatus = RepairStatusMapping.ToRepairStatusValue(repairEquipment.RepairStatus);
-                    
-                    // 同时更新Status字符串字段，确保前端显示正确
                     specialEquipment.Status = repairEquipment.RepairStatus == "已完成" ? "正常" : repairEquipment.RepairStatus == "无法维修" ? "报废" : repairEquipment.RepairStatus;
 
-                    // 如果无法维修，添加到报废设备表
                     if (repairEquipment.RepairStatus == "无法维修")
                     {
                         if (_context.ScrapEquipments != null)
@@ -106,7 +117,7 @@ namespace DeviceWarehouseSystem.Controllers
                                 Quantity = specialEquipment.Quantity,
                                 Unit = specialEquipment.Unit,
                                 ImageUrl = specialEquipment.ImageUrl,
-                                DeviceType = 1, // 1=专用设备
+                                DeviceType = 1,
                                 Location = specialEquipment.Location,
                                 Company = specialEquipment.Company,
                                 Accessories = specialEquipment.Accessories,
@@ -124,20 +135,15 @@ namespace DeviceWarehouseSystem.Controllers
                 }
             }
 
-            // 再尝试查找通用设备
             if (_context.GeneralEquipments != null)
             {
                 var generalEquipment = await _context.GeneralEquipments.FindAsync(repairEquipment.EquipmentId);
                 if (generalEquipment != null)
                 {
-                    // 使用映射配置更新设备状态
                     generalEquipment.DeviceStatus = RepairStatusMapping.ToDeviceStatusValue(repairEquipment.RepairStatus);
                     generalEquipment.RepairStatus = RepairStatusMapping.ToRepairStatusValue(repairEquipment.RepairStatus);
-                    
-                    // 同时更新Status字符串字段，确保前端显示正确
                     generalEquipment.Status = repairEquipment.RepairStatus == "已完成" ? "正常" : repairEquipment.RepairStatus == "无法维修" ? "报废" : repairEquipment.RepairStatus;
 
-                    // 如果无法维修，添加到报废设备表
                     if (repairEquipment.RepairStatus == "无法维修")
                     {
                         if (_context.ScrapEquipments != null)
@@ -154,7 +160,7 @@ namespace DeviceWarehouseSystem.Controllers
                                 Quantity = generalEquipment.Quantity,
                                 Unit = generalEquipment.Unit,
                                 ImageUrl = generalEquipment.ImageUrl,
-                                DeviceType = 2, // 2=通用设备
+                                DeviceType = 2,
                                 Location = generalEquipment.Location,
                                 Company = generalEquipment.Company,
                                 Accessories = generalEquipment.Accessories,
@@ -188,10 +194,19 @@ namespace DeviceWarehouseSystem.Controllers
                 }
             }
 
+            var userId = GetCurrentUserId();
+            if (userId.HasValue)
+            {
+                string action = repairEquipment.RepairStatus == "已完成" ? "完成维修" : 
+                               repairEquipment.RepairStatus == "无法维修" ? "报废设备" : "更新维修状态";
+                await _logService.LogUserActivityAsync(userId.Value, "维修管理", 
+                    $"{action}：{repairEquipment.EquipmentName}（编号：{repairEquipment.EquipmentCode}）", 
+                    HttpContext.Connection.RemoteIpAddress?.ToString());
+            }
+
             return NoContent();
         }
 
-        // DELETE: api/Repair/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRepairEquipment(int id)
         {
@@ -208,6 +223,14 @@ namespace DeviceWarehouseSystem.Controllers
             _context.RepairEquipments.Remove(repairEquipment);
             await _context.SaveChangesAsync();
 
+            var userId = GetCurrentUserId();
+            if (userId.HasValue)
+            {
+                await _logService.LogUserActivityAsync(userId.Value, "维修管理", 
+                    $"删除维修记录：{repairEquipment.EquipmentName}（编号：{repairEquipment.EquipmentCode}）", 
+                    HttpContext.Connection.RemoteIpAddress?.ToString());
+            }
+
             return NoContent();
         }
 
@@ -220,11 +243,9 @@ namespace DeviceWarehouseSystem.Controllers
             return _context.RepairEquipments.Any(e => e.Id == id);
         }
 
-        // POST: api/Repair/CreateFromDevice
         [HttpPost("CreateFromDevice")]
         public async Task<ActionResult<RepairEquipment>> CreateFromDevice([FromBody] DeviceRepairRequest request)
         {
-            // 根据设备类型和ID获取设备信息
             string equipmentName = string.Empty;
             string equipmentCode = string.Empty;
 
@@ -242,7 +263,6 @@ namespace DeviceWarehouseSystem.Controllers
                 equipmentName = specialEquipment.DeviceName;
                 equipmentCode = specialEquipment.DeviceCode;
 
-                // 更新设备状态为维修中
                 specialEquipment.DeviceStatus = (int)DeviceStatus.PendingRepair;
                 specialEquipment.RepairStatus = (int)RepairStatus.Pending;
                 specialEquipment.FaultReason = request.FaultDescription;
@@ -262,7 +282,6 @@ namespace DeviceWarehouseSystem.Controllers
                 equipmentName = generalEquipment.DeviceName;
                 equipmentCode = generalEquipment.DeviceCode;
 
-                // 更新设备状态为维修中
                 generalEquipment.DeviceStatus = (int)DeviceStatus.PendingRepair;
                 generalEquipment.RepairStatus = (int)RepairStatus.Pending;
                 generalEquipment.FaultReason = request.FaultDescription;
@@ -273,7 +292,6 @@ namespace DeviceWarehouseSystem.Controllers
                 return BadRequest("设备类型无效");
             }
 
-            // 创建维修记录
             var repairEquipment = new RepairEquipment
             {
                 EquipmentId = request.EquipmentId,
@@ -296,13 +314,21 @@ namespace DeviceWarehouseSystem.Controllers
             _context.RepairEquipments.Add(repairEquipment);
             await _context.SaveChangesAsync();
 
+            var userId = GetCurrentUserId();
+            if (userId.HasValue)
+            {
+                await _logService.LogUserActivityAsync(userId.Value, "维修管理", 
+                    $"报修设备：{equipmentName}（编号：{equipmentCode}）", 
+                    HttpContext.Connection.RemoteIpAddress?.ToString());
+            }
+
             return CreatedAtAction(nameof(GetRepairEquipment), new { id = repairEquipment.Id }, repairEquipment);
         }
     }
 
     public class DeviceRepairRequest
     {
-        public required string DeviceType { get; set; } // "special" 或 "general"
+        public required string DeviceType { get; set; }
         public int EquipmentId { get; set; }
         public required string FaultDescription { get; set; }
         public required string RepairPerson { get; set; }

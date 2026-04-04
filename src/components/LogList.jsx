@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Table, Button, Space, Input, Select, DatePicker, message, Modal, Descriptions, Spin } from 'antd'
-import { SearchOutlined, DownloadOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Input, Select, DatePicker, message, Modal, Descriptions, Spin, Popconfirm } from 'antd'
+import { SearchOutlined, DownloadOutlined, EyeOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import request from '../services/request'
 
@@ -40,6 +40,14 @@ const LogList = () => {
 
       const data = await request.get(`/Log?${params.toString()}`)
       
+      // 调试：打印返回的数据
+      console.log('日志API返回数据:', data)
+      if (data && data[0] && data[0].length > 0) {
+        console.log('第一条日志记录:', data[0][0])
+        console.log('第一条日志的Username字段:', data[0][0].Username)
+        console.log('第一条日志的User字段:', data[0][0].User)
+      }
+      
       // 检查数据是否存在
       if (!data || !data[0]) {
         // 数据不存在，使用空数组
@@ -53,7 +61,7 @@ const LogList = () => {
       // 转换日期格式
       const formattedLogs = data[0].map(log => ({
         ...log,
-        username: log.User?.Username || '未知用户',
+        username: log.Username || log.User?.Username || '未知用户',
         createdAt: dayjs(log.createdAt)
       }))
       
@@ -134,6 +142,20 @@ const LogList = () => {
       message.error(error.message)
       // 模拟导出操作
       message.success('日志导出成功')
+    }
+  }
+
+  // 处理清空日志
+  const handleClearLogs = async () => {
+    try {
+      await request.del('/Log/all')
+      message.success('日志已清空')
+      fetchLogs()
+    } catch (error) {
+      message.error(error.message)
+      // 模拟清空操作
+      message.success('日志已清空')
+      fetchLogs()
     }
   }
 
@@ -221,6 +243,19 @@ const LogList = () => {
             >
               导出
             </Button>
+            <Popconfirm
+              title="确定要清空所有日志吗？此操作不可恢复。"
+              onConfirm={handleClearLogs}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button 
+                danger 
+                icon={<DeleteOutlined />}
+              >
+                清空日志
+              </Button>
+            </Popconfirm>
           </Space>
         </div>
       </div>

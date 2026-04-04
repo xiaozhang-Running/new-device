@@ -93,9 +93,6 @@ namespace DeviceWarehouseSystem.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("OriginalQuantity")
-                        .HasColumnType("int");
-
                     b.Property<int>("RemainingQuantity")
                         .HasColumnType("int");
 
@@ -156,10 +153,6 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.Property<int>("EquipmentType")
                         .HasColumnType("int");
-
-                    b.Property<byte[]>("ImageData")
-                        .IsRequired()
-                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("ImageName")
                         .IsRequired()
@@ -359,9 +352,6 @@ namespace DeviceWarehouseSystem.Migrations
                     b.Property<string>("ImageContentType")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<byte[]>("ImageData")
-                        .HasColumnType("varbinary(max)");
-
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -504,9 +494,6 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("ImageData")
-                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("ImageName")
                         .IsRequired()
@@ -1385,13 +1372,21 @@ namespace DeviceWarehouseSystem.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Applicant")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Operator")
+                    b.Property<string>("Department")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Handler")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -1404,10 +1399,6 @@ namespace DeviceWarehouseSystem.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Purpose")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Recipient")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
@@ -1424,6 +1415,10 @@ namespace DeviceWarehouseSystem.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WarehouseKeeper")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -1724,9 +1719,6 @@ namespace DeviceWarehouseSystem.Migrations
                     b.Property<string>("ImageContentType")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<byte[]>("ImageData")
-                        .HasColumnType("varbinary(max)");
-
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -1813,6 +1805,112 @@ namespace DeviceWarehouseSystem.Migrations
                     b.HasIndex(new[] { "UseStatus" }, "IX_SpecialEquipment_UseStatus");
 
                     b.ToTable("SpecialEquipment", (string)null);
+                });
+
+            modelBuilder.Entity("DeviceWarehouseSystem.Models.StockTaking", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Operator")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Remark")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StockTakingNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StockTakingType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StockTakings");
+                });
+
+            modelBuilder.Entity("DeviceWarehouseSystem.Models.StockTakingItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ActualQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Brand")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CheckTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DifferenceQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DifferenceReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Model")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StockTakingId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SystemQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Warehouse")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StockTakingId");
+
+                    b.ToTable("StockTakingItems");
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.User", b =>
@@ -2189,6 +2287,17 @@ namespace DeviceWarehouseSystem.Migrations
                     b.Navigation("SpecialEquipment");
                 });
 
+            modelBuilder.Entity("DeviceWarehouseSystem.Models.StockTakingItem", b =>
+                {
+                    b.HasOne("DeviceWarehouseSystem.Models.StockTaking", "StockTaking")
+                        .WithMany("StockTakingItems")
+                        .HasForeignKey("StockTakingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("StockTaking");
+                });
+
             modelBuilder.Entity("DeviceWarehouseSystem.Models.UserActivityLog", b =>
                 {
                     b.HasOne("DeviceWarehouseSystem.Models.User", "User")
@@ -2275,6 +2384,11 @@ namespace DeviceWarehouseSystem.Migrations
                     b.Navigation("OutboundOrderItems");
 
                     b.Navigation("ScrapEquipments");
+                });
+
+            modelBuilder.Entity("DeviceWarehouseSystem.Models.StockTaking", b =>
+                {
+                    b.Navigation("StockTakingItems");
                 });
 
             modelBuilder.Entity("DeviceWarehouseSystem.Models.User", b =>

@@ -9,8 +9,9 @@ public class ConsumableDTO
     public string? Brand { get; set; }
     public string? ModelSpecification { get; set; }
     public int TotalQuantity { get; set; }
-    public int OriginalQuantity { get; set; }
+
     public int UsedQuantity { get; set; }
+
     public int RemainingQuantity { get; set; }
     public string? Unit { get; set; }
     public string? Company { get; set; }
@@ -29,8 +30,9 @@ public class ConsumableCreateDTO
     public string? Brand { get; set; }
     public string? ModelSpecification { get; set; }
     public int TotalQuantity { get; set; }
-    public int OriginalQuantity { get; set; }
+
     public int UsedQuantity { get; set; }
+
     public int RemainingQuantity { get; set; }
     public string? Unit { get; set; }
     public string? Company { get; set; }
@@ -46,8 +48,9 @@ public class ConsumableUpdateDTO
     public string? Brand { get; set; }
     public string? ModelSpecification { get; set; }
     public int? TotalQuantity { get; set; }
-    public int? OriginalQuantity { get; set; }
+
     public int? UsedQuantity { get; set; }
+
     public int? RemainingQuantity { get; set; }
     public string? Unit { get; set; }
     public string? Company { get; set; }

@@ -210,6 +210,20 @@ public class RawMaterialService : IRawMaterialService
                 return false;
             }
 
+            // 删除关联的入库明细
+            if (_context.RawMaterialInboundItems != null)
+            {
+                var inboundItems = _context.RawMaterialInboundItems.Where(i => i.RawMaterialId == id);
+                _context.RawMaterialInboundItems.RemoveRange(inboundItems);
+            }
+
+            // 删除关联的出库明细
+            if (_context.RawMaterialOutboundItems != null)
+            {
+                var outboundItems = _context.RawMaterialOutboundItems.Where(i => i.RawMaterialId == id);
+                _context.RawMaterialOutboundItems.RemoveRange(outboundItems);
+            }
+
             _context.RawMaterials.Remove(rawMaterial);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();

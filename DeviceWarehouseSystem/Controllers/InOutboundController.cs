@@ -9,10 +9,22 @@ namespace DeviceWarehouseSystem.Controllers
     public class InOutboundController : ControllerBase
     {
         private readonly InOutboundService _inOutboundService;
+        private readonly LogService _logService;
 
-        public InOutboundController(InOutboundService inOutboundService)
+        public InOutboundController(InOutboundService inOutboundService, LogService logService)
         {
             _inOutboundService = inOutboundService;
+            _logService = logService;
+        }
+
+        private int? GetCurrentUserId()
+        {
+            var userIdStr = HttpContext.Items["UserId"]?.ToString();
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                return userId;
+            }
+            return null;
         }
 
         // 项目出库管理
@@ -38,6 +50,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var outbound = await _inOutboundService.CreateProjectOutboundAsync(dto);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "项目出库管理", 
+                        $"创建项目出库单：{dto.OutboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(outbound);
             }
             catch (Exception ex)
@@ -88,7 +109,40 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var outbound = await _inOutboundService.CreateRawMaterialOutboundAsync(dto);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "原材料出库管理", 
+                        $"创建原材料出库单：{outbound.OutboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(outbound);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // DELETE: api/InOutbound/raw-material-outbounds/{id}
+        [HttpDelete("raw-material-outbounds/{id}")]
+        public async Task<ActionResult<bool>> DeleteRawMaterialOutbound(int id)
+        {
+            try
+            {
+                await _inOutboundService.DeleteRawMaterialOutboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "原材料出库管理", 
+                        $"删除原材料出库单：ID={id}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
+                return Ok(true);
             }
             catch (Exception ex)
             {
@@ -127,6 +181,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.CreateProjectInboundAsync(dto);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "项目入库管理", 
+                        $"创建项目入库单：{dto.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -142,6 +205,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 await _inOutboundService.DeleteProjectInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "项目入库管理", 
+                        $"删除项目入库单：ID={id}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(true);
             }
             catch (Exception ex)
@@ -157,6 +229,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.UpdateProjectInboundAsync(id, dto);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "项目入库管理", 
+                        $"更新项目入库单：{dto.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -190,6 +271,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.CreateRawMaterialInboundAsync(dto);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "原材料入库管理", 
+                        $"创建原材料入库单：{dto.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -205,6 +295,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.ConfirmRawMaterialInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "原材料入库管理", 
+                        $"确认原材料入库单：{inbound.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -220,6 +319,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 await _inOutboundService.DeleteRawMaterialInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "原材料入库管理", 
+                        $"删除原材料入库单：ID={id}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(true);
             }
             catch (Exception ex)
@@ -251,6 +359,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.CreateSpecialEquipmentPurchaseInboundAsync(dto);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "专用设备采购入库管理", 
+                        $"创建专用设备采购入库单：{dto.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -284,6 +401,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.CreateGeneralEquipmentPurchaseInboundAsync(dto);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "通用设备采购入库管理", 
+                        $"创建通用设备采购入库单：{dto.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -315,6 +441,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.CreateConsumablePurchaseInboundAsync(dto);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "耗材采购入库管理", 
+                        $"创建耗材采购入库单：{dto.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -330,6 +465,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.ConfirmConsumablePurchaseInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "耗材采购入库管理", 
+                        $"确认耗材采购入库单：{inbound.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -345,6 +489,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 await _inOutboundService.DeleteConsumablePurchaseInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "耗材采购入库管理", 
+                        $"删除耗材采购入库单：ID={id}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(true);
             }
             catch (Exception ex)
@@ -360,6 +513,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.ConfirmSpecialEquipmentPurchaseInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "专用设备采购入库管理", 
+                        $"确认专用设备采购入库单：{inbound.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -375,6 +537,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 await _inOutboundService.DeleteSpecialEquipmentPurchaseInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "专用设备采购入库管理", 
+                        $"删除专用设备采购入库单：ID={id}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(true);
             }
             catch (Exception ex)
@@ -390,6 +561,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 var inbound = await _inOutboundService.ConfirmGeneralEquipmentPurchaseInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "通用设备采购入库管理", 
+                        $"确认通用设备采购入库单：{inbound.InboundNumber}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(inbound);
             }
             catch (Exception ex)
@@ -405,6 +585,15 @@ namespace DeviceWarehouseSystem.Controllers
             try
             {
                 await _inOutboundService.DeleteGeneralEquipmentPurchaseInboundAsync(id);
+                
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    await _logService.LogUserActivityAsync(userId.Value, "通用设备采购入库管理", 
+                        $"删除通用设备采购入库单：ID={id}", 
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+                }
+                
                 return Ok(true);
             }
             catch (Exception ex)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Table, Button, Space, Card, Row, Col, Input, Select, DatePicker, Descriptions, Tag, Tabs, Badge, Modal, Form, InputNumber, message } from 'antd'
+import { Table, Button, Space, Card, Row, Col, Input, Select, DatePicker, Descriptions, Tag, Tabs, Badge, Modal, Form, InputNumber, message, Switch } from 'antd'
 const { TextArea } = Input
 import { SearchOutlined, FilterOutlined, EyeOutlined, ReloadOutlined, DownloadOutlined, EditOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons'
 import { deviceApi } from '../services/api'
@@ -41,6 +41,10 @@ const InventoryManagement = () => {
   const [alertItems, setAlertItems] = useState([])
   const [reportModalVisible, setReportModalVisible] = useState(false)
   const [reportType, setReportType] = useState('turnover')
+  const [alertThreshold, setAlertThreshold] = useState(20) // 预警阈值默认20%
+  const [autoAlertEnabled, setAutoAlertEnabled] = useState(false) // 自动预警开关
+  const [adjustHistory, setAdjustHistory] = useState([]) // 库存调整历史记录
+  const [historyModalVisible, setHistoryModalVisible] = useState(false) // 历史记录模态框
 
   // 模拟数据
   const mockInventory = [
@@ -189,15 +193,18 @@ const InventoryManagement = () => {
         
         // 处理专用设备
         specialEquipments.forEach((equipment, index) => {
+          // UseStatus: 0=未使用, 1=使用中
+          const usedQuantity = equipment.useStatus === 1 || equipment.useStatus === '使用中' ? equipment.quantity : 0
           inventoryData.push({
             id: index + 1,
+            originalId: equipment.id,
             category: '专用设备',
             name: equipment.name,
             brand: equipment.brand || '',
             model: equipment.model || '',
             totalQuantity: equipment.quantity,
-            usedQuantity: equipment.useStatus === '使用中' ? equipment.quantity : 0,
-            remainingQuantity: equipment.useStatus === '使用中' ? 0 : equipment.quantity,
+            usedQuantity: usedQuantity,
+            remainingQuantity: equipment.quantity - usedQuantity,
             unit: equipment.unit || '台',
             warehouse: equipment.warehouse || '主仓库',
             location: equipment.location || '',
@@ -208,15 +215,18 @@ const InventoryManagement = () => {
         
         // 处理通用设备
         generalEquipments.forEach((equipment, index) => {
+          // UseStatus: 0=未使用, 1=使用中
+          const usedQuantity = equipment.useStatus === 1 || equipment.useStatus === '使用中' ? equipment.quantity : 0
           inventoryData.push({
             id: specialEquipments.length + index + 1,
+            originalId: equipment.id,
             category: '通用设备',
             name: equipment.name,
             brand: equipment.brand || '',
             model: equipment.model || '',
             totalQuantity: equipment.quantity,
-            usedQuantity: equipment.useStatus === '使用中' ? equipment.quantity : 0,
-            remainingQuantity: equipment.useStatus === '使用中' ? 0 : equipment.quantity,
+            usedQuantity: usedQuantity,
+            remainingQuantity: equipment.quantity - usedQuantity,
             unit: equipment.unit || '台',
             warehouse: equipment.warehouse || '主仓库',
             location: equipment.location || '',
@@ -229,6 +239,7 @@ const InventoryManagement = () => {
         consumables.forEach((consumable, index) => {
           inventoryData.push({
             id: specialEquipments.length + generalEquipments.length + index + 1,
+            originalId: consumable.id,
             category: '耗材',
             name: consumable.name,
             brand: consumable.brand || '',
@@ -248,6 +259,7 @@ const InventoryManagement = () => {
         rawMaterials.forEach((rawMaterial, index) => {
           inventoryData.push({
             id: specialEquipments.length + generalEquipments.length + consumables.length + index + 1,
+            originalId: rawMaterial.id,
             category: '原材料',
             name: rawMaterial.productName,
             brand: rawMaterial.brand || '',
@@ -381,7 +393,7 @@ const InventoryManagement = () => {
   // 打开库存调整模态框
   const handleAdjustInventory = (item) => {
     setCurrentItem(item)
-    setAdjustForm({
+    adjustForm.setFieldsValue({
       quantity: 0,
       reason: ''
     })
@@ -390,7 +402,7 @@ const InventoryManagement = () => {
   }
 
   // 处理库存调整
-  const handleAdjustSubmit = (values) => {
+  const handleAdjustSubmit = async (values) => {
     const { quantity, reason } = values
     if (!quantity) {
       message.error('请输入调整数量')
@@ -398,42 +410,165 @@ const InventoryManagement = () => {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      const updatedInventory = inventory.map(item => {
-        // 检查是否是相同的物品（通过名称、品牌、型号和类别）
-        if (item.name === currentItem.name && 
-            item.brand === currentItem.brand && 
-            item.model === currentItem.model && 
-            item.category === currentItem.category) {
-          const newQuantity = adjustType === 'increase' 
-            ? item.totalQuantity + quantity 
-            : item.totalQuantity - quantity
+    try {
+      // 找到当前要调整的物品
+      const itemToAdjust = inventory.find(item => 
+        item.name === currentItem.name && 
+        item.brand === currentItem.brand && 
+        item.model === currentItem.model && 
+        item.category === currentItem.category
+      )
+
+      if (!itemToAdjust || !itemToAdjust.originalId) {
+        message.error('找不到要调整的物品')
+        setLoading(false)
+        return
+      }
+
+      const newQuantity = adjustType === 'increase' 
+        ? itemToAdjust.totalQuantity + quantity 
+        : itemToAdjust.totalQuantity - quantity
+      
+      if (newQuantity < 0) {
+        message.error('调整后库存不能为负数')
+        setLoading(false)
+        return
+      }
+
+      // 计算新的剩余数量，确保不小于0
+      const newRemaining = adjustType === 'increase' 
+        ? itemToAdjust.remainingQuantity + quantity 
+        : itemToAdjust.remainingQuantity - quantity
+
+      // 确保剩余数量不小于0，且不大于总数量
+      const finalRemaining = Math.max(0, Math.min(newRemaining, newQuantity))
+      // 计算新的已使用数量
+      const newUsedQuantity = newQuantity - finalRemaining
+
+      // 调用后端API保存调整
+      let success = false
+      
+      switch (itemToAdjust.category) {
+        case '专用设备':
+          // 调用专用设备更新API
+          const specialEquipmentData = {
+            ...itemToAdjust,
+            quantity: newQuantity,
+            name: itemToAdjust.name,
+            brand: itemToAdjust.brand,
+            model: itemToAdjust.model,
+            unit: itemToAdjust.unit,
+            warehouse: itemToAdjust.warehouse,
+            location: itemToAdjust.location,
+            status: itemToAdjust.status
+          }
+          await deviceApi.updateSpecialEquipment(itemToAdjust.originalId, specialEquipmentData)
+          success = true
+          break
           
-          if (newQuantity < 0) {
-            message.error('调整后库存不能为负数')
-            setLoading(false)
-            return item
+        case '通用设备':
+          // 调用通用设备更新API
+          const generalEquipmentData = {
+            ...itemToAdjust,
+            quantity: newQuantity,
+            name: itemToAdjust.name,
+            brand: itemToAdjust.brand,
+            model: itemToAdjust.model,
+            unit: itemToAdjust.unit,
+            warehouse: itemToAdjust.warehouse,
+            location: itemToAdjust.location,
+            status: itemToAdjust.status
           }
-
-          const newRemaining = adjustType === 'increase' 
-            ? item.remainingQuantity + quantity 
-            : item.remainingQuantity - quantity
-
-          return {
-            ...item,
+          await deviceApi.updateGeneralEquipment(itemToAdjust.originalId, generalEquipmentData)
+          success = true
+          break
+          
+        case '耗材':
+          // 调用耗材更新API
+          const consumableData = {
+            ...itemToAdjust,
             totalQuantity: newQuantity,
-            remainingQuantity: newRemaining < 0 ? 0 : newRemaining,
-            lastUpdated: new Date().toISOString().split('T')[0]
+            usedQuantity: newUsedQuantity,
+            remainingQuantity: finalRemaining,
+            name: itemToAdjust.name,
+            brand: itemToAdjust.brand,
+            modelSpecification: itemToAdjust.model,
+            unit: itemToAdjust.unit,
+            location: itemToAdjust.location
           }
-        }
-        return item
-      })
+          await deviceApi.updateConsumable(itemToAdjust.originalId, consumableData)
+          success = true
+          break
+          
+        case '原材料':
+          // 调用原材料更新API
+          const rawMaterialData = {
+            ...itemToAdjust,
+            totalQuantity: newQuantity,
+            usedQuantity: newUsedQuantity,
+            remainingQuantity: finalRemaining,
+            productName: itemToAdjust.name,
+            brand: itemToAdjust.brand,
+            specification: itemToAdjust.model,
+            unit: itemToAdjust.unit,
+            location: itemToAdjust.location
+          }
+          await deviceApi.updateRawMaterial(itemToAdjust.originalId, rawMaterialData)
+          success = true
+          break
+      }
 
-      setInventory(updatedInventory)
-      setAdjustModalVisible(false)
-      message.success('库存调整成功')
+      if (success) {
+        // 记录库存调整历史
+        const historyRecord = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          category: itemToAdjust.category,
+          name: itemToAdjust.name,
+          brand: itemToAdjust.brand,
+          model: itemToAdjust.model,
+          adjustType: adjustType === 'increase' ? '增加' : '减少',
+          quantity: quantity,
+          reason: reason,
+          oldTotalQuantity: itemToAdjust.totalQuantity,
+          newTotalQuantity: newQuantity,
+          oldUsedQuantity: itemToAdjust.usedQuantity,
+          newUsedQuantity: newUsedQuantity,
+          oldRemainingQuantity: itemToAdjust.remainingQuantity,
+          newRemainingQuantity: finalRemaining,
+          operator: currentUser?.username || '未知用户'
+        }
+
+        // 更新历史记录
+        setAdjustHistory(prev => [historyRecord, ...prev])
+
+        // 更新前端库存数据
+        const updatedInventory = inventory.map(item => {
+          if (item.name === currentItem.name && 
+              item.brand === currentItem.brand && 
+              item.model === currentItem.model && 
+              item.category === currentItem.category) {
+            return {
+              ...item,
+              totalQuantity: newQuantity,
+              usedQuantity: newUsedQuantity,
+              remainingQuantity: finalRemaining,
+              lastUpdated: new Date().toISOString().split('T')[0]
+            }
+          }
+          return item
+        })
+
+        setInventory(updatedInventory)
+        setAdjustModalVisible(false)
+        message.success('库存调整成功')
+      }
+    } catch (error) {
+      console.error('库存调整失败:', error)
+      message.error('库存调整失败，请重试')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
   // 汇总视图列
@@ -679,18 +814,30 @@ const InventoryManagement = () => {
     totalQuantity: inventory.reduce((sum, item) => sum + item.totalQuantity, 0),
     usedQuantity: inventory.reduce((sum, item) => sum + item.usedQuantity, 0),
     remainingQuantity: inventory.reduce((sum, item) => sum + item.remainingQuantity, 0),
-    lowStock: inventory.filter(item => (item.remainingQuantity / item.totalQuantity) < 0.2).length,
+    lowStock: inventory.filter(item => item.totalQuantity > 0 && (item.remainingQuantity / item.totalQuantity) < (alertThreshold / 100)).length,
     outOfStock: inventory.filter(item => item.remainingQuantity === 0).length
   }
 
   // 检查库存预警
   const checkInventoryAlerts = () => {
-    const lowStockItems = inventory.filter(item => (item.remainingQuantity / item.totalQuantity) < 0.2)
+    const threshold = alertThreshold / 100
+    const lowStockItems = inventory.filter(item => item.totalQuantity > 0 && (item.remainingQuantity / item.totalQuantity) < threshold)
     const outOfStockItems = inventory.filter(item => item.remainingQuantity === 0)
     const alertItemsList = [...lowStockItems, ...outOfStockItems]
     setAlertItems(alertItemsList)
     setAlertModalVisible(alertItemsList.length > 0)
   }
+
+  // 自动检查库存预警
+  useEffect(() => {
+    if (autoAlertEnabled) {
+      const checkInterval = setInterval(() => {
+        checkInventoryAlerts()
+      }, 3600000) // 每小时检查一次
+      
+      return () => clearInterval(checkInterval)
+    }
+  }, [autoAlertEnabled, inventory, alertThreshold])
 
   // 生成库存报表数据
   const generateReport = (type) => {
@@ -926,6 +1073,9 @@ const InventoryManagement = () => {
               <Button type="primary" onClick={() => setReportModalVisible(true)}>
                 库存报表
               </Button>
+              <Button type="primary" onClick={() => setHistoryModalVisible(true)}>
+                调整历史
+              </Button>
             </>
           )}
         </Space>
@@ -1032,6 +1182,32 @@ const InventoryManagement = () => {
             >
               重置筛选
             </Button>
+          </Col>
+        </Row>
+        
+        {/* 预警设置 */}
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+          <Col span={12}>
+            <Space>
+              <span>库存预警阈值: {alertThreshold}%</span>
+              <InputNumber 
+                min={5} 
+                max={50} 
+                step={5} 
+                value={alertThreshold} 
+                onChange={setAlertThreshold}
+                style={{ width: 100 }}
+              />
+            </Space>
+          </Col>
+          <Col span={12}>
+            <Space style={{ float: 'right' }}>
+              <span>自动预警</span>
+              <Switch 
+                checked={autoAlertEnabled} 
+                onChange={setAutoAlertEnabled}
+              />
+            </Space>
           </Col>
         </Row>
       </Card>
@@ -1386,6 +1562,60 @@ const InventoryManagement = () => {
             />
           )}
         </div>
+      </Modal>
+
+      {/* 库存调整历史记录模态框 */}
+      <Modal
+        title="库存调整历史记录"
+        open={historyModalVisible}
+        onCancel={() => setHistoryModalVisible(false)}
+        width={1200}
+        footer={[
+          <Button key="close" onClick={() => setHistoryModalVisible(false)}>
+            关闭
+          </Button>
+        ]}
+      >
+        <Table 
+          columns={[
+            { 
+              title: '时间', 
+              dataIndex: 'timestamp', 
+              key: 'timestamp',
+              render: (timestamp) => new Date(timestamp).toLocaleString()
+            },
+            { title: '类别', dataIndex: 'category', key: 'category' },
+            { title: '名称', dataIndex: 'name', key: 'name' },
+            { title: '品牌', dataIndex: 'brand', key: 'brand' },
+            { title: '型号', dataIndex: 'model', key: 'model' },
+            { 
+              title: '调整类型', 
+              dataIndex: 'adjustType', 
+              key: 'adjustType',
+              render: (adjustType) => <Tag color={adjustType === '增加' ? 'green' : 'red'}>{adjustType}</Tag>
+            },
+            { title: '调整数量', dataIndex: 'quantity', key: 'quantity' },
+            { title: '调整原因', dataIndex: 'reason', key: 'reason' },
+            { title: '操作人', dataIndex: 'operator', key: 'operator' },
+            { 
+              title: '库存变化', 
+              key: 'change',
+              render: (_, record) => (
+                <div>
+                  <p>总数量: {record.oldTotalQuantity} → {record.newTotalQuantity}</p>
+                  <p>已使用: {record.oldUsedQuantity} → {record.newUsedQuantity}</p>
+                  <p>剩余: {record.oldRemainingQuantity} → {record.newRemainingQuantity}</p>
+                </div>
+              )
+            }
+          ]} 
+          dataSource={adjustHistory} 
+          rowKey="id"
+          pagination={{ 
+            pageSize: 10,
+            showTotal: (total) => `共 ${total} 条记录`
+          }}
+        />
       </Modal>
     </div>
   )

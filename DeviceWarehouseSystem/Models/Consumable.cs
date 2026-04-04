@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 
 namespace DeviceWarehouseSystem.Models;
@@ -14,8 +14,6 @@ public partial class Consumable
     public string? ModelSpecification { get; set; }
 
     public int TotalQuantity { get; set; }
-
-    public int OriginalQuantity { get; set; }
 
     public int UsedQuantity { get; set; }
 

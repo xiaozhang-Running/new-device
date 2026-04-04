@@ -81,6 +81,10 @@ public partial class DeviceWarehouseContext : DbContext
 
     public virtual DbSet<Company>? Companies { get; set; }
 
+    public virtual DbSet<StockTaking>? StockTakings { get; set; }
+
+    public virtual DbSet<StockTakingItem>? StockTakingItems { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // 连接字符串已在 Program.cs 中通过配置文件设置
@@ -426,10 +430,12 @@ public partial class DeviceWarehouseContext : DbContext
 
             entity.HasIndex(e => e.OutboundNumber, "IX_RawMaterialOutbound_OutboundNumber").IsUnique();
 
-            entity.Property(e => e.Operator).HasMaxLength(100);
+            entity.Property(e => e.Applicant).HasMaxLength(100);
+            entity.Property(e => e.Department).HasMaxLength(100);
+            entity.Property(e => e.Handler).HasMaxLength(100);
             entity.Property(e => e.OutboundNumber).HasMaxLength(50);
             entity.Property(e => e.Purpose).HasMaxLength(200);
-            entity.Property(e => e.Recipient).HasMaxLength(200);
+            entity.Property(e => e.WarehouseKeeper).HasMaxLength(100);
             entity.Property(e => e.Remark).HasMaxLength(500);
             entity.Property(e => e.Status).HasMaxLength(50);
         });

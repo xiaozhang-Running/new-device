@@ -46,20 +46,18 @@ const ConsumableForm = ({ consumable, onSave, onCancel }) => {
 
   const handleSubmit = (values) => {
     // 计算数量相关字段
-    let usedQuantity, remainingQuantity, totalQuantity, originalQuantity, status;
+    let usedQuantity, remainingQuantity, totalQuantity, status;
     
     if (consumable && consumable.id) {
       // 编辑模式：使用原始值作为默认值
       usedQuantity = values.usedQuantity !== undefined ? values.usedQuantity : consumable.usedQuantity || 0
       remainingQuantity = values.remainingQuantity !== undefined ? values.remainingQuantity : consumable.remainingQuantity || 0
-      originalQuantity = values.originalQuantity !== undefined ? values.originalQuantity : consumable.originalQuantity || 0
       totalQuantity = values.totalQuantity !== undefined ? values.totalQuantity : (remainingQuantity + usedQuantity)
     } else {
       // 新增模式：使用表单值或默认值
       usedQuantity = values.usedQuantity || 0
       remainingQuantity = values.remainingQuantity || 0
       totalQuantity = remainingQuantity + usedQuantity
-      originalQuantity = values.originalQuantity || totalQuantity
     }
     
     // 根据剩余数量设置状态
@@ -74,7 +72,6 @@ const ConsumableForm = ({ consumable, onSave, onCancel }) => {
     const consumableData = {
       totalQuantity,
       usedQuantity,
-      originalQuantity,
       remainingQuantity,
       status,
       images: images, // 添加图片数组
@@ -133,7 +130,7 @@ const ConsumableForm = ({ consumable, onSave, onCancel }) => {
       </Row>
 
       <Row gutter={16}>
-        <Col span={8}>
+        <Col span={12}>
           <Form.Item
             name="totalQuantity"
             label="总数量"
@@ -142,16 +139,8 @@ const ConsumableForm = ({ consumable, onSave, onCancel }) => {
             <InputNumber placeholder="请输入总数量" style={{ width: '100%' }} />
           </Form.Item>
         </Col>
-        <Col span={8}>
-          <Form.Item
-            name="originalQuantity"
-            label="原始数量"
-            rules={[{ type: 'number', min: 0 }]}
-          >
-            <InputNumber placeholder="请输入原始数量" style={{ width: '100%' }} />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
+
+        <Col span={12}>
           <Form.Item
             name="usedQuantity"
             label="已用数量"

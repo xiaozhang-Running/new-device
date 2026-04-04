@@ -154,7 +154,7 @@ function ProjectOutbound() {
     pageStyle: `
       @page {
         size: A4;
-        margin: 5mm;
+        margin: 10mm;
       }
       @media print {
         body {
@@ -164,12 +164,17 @@ function ProjectOutbound() {
           line-height: 0.9;
           margin: 0 !important;
           padding: 0 !important;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
         }
         .preview-content {
           max-height: none !important;
           overflow: visible !important;
-          margin: 0 !important;
+          margin: 0 auto !important;
           padding: 0 !important;
+          width: 100%;
+          max-width: 210mm;
         }
         table {
           page-break-inside: auto;
@@ -1614,7 +1619,11 @@ function ProjectOutbound() {
         outboundId: outbound.outboundNumber,
         projectName: outbound.projectName,
         projectTime: outbound.projectTime,
+        projectLeader: outbound.projectManager,
         recipient: outbound.recipient,
+        expectedReturnTime: outbound.returnDate,
+        usageType: outbound.outboundType,
+        logisticsMethod: outbound.logisticsMethod,
         outboundDate: outbound.outboundDate ? new Date(outbound.outboundDate).toISOString().split('T')[0] : '',
         status: outbound.isCompleted ? '已完成' : '待确认',
         inboundStatus: outbound.inboundStatus || '未入库', // 使用后端返回的入库状态，默认为未入库
@@ -1813,7 +1822,7 @@ function ProjectOutbound() {
         WarehouseKeeper: values['库管'] || '',
         LogisticsMethod: logisticsMethodNum, // 添加物流方式数字值
         Remark: values.remark || '',
-        OutboundNumber: `PROOUT${Date.now()}`, // 生成出库单号
+        OutboundNumber: values.outboundId, // 使用表单中生成的出库单号
         OutboundDate: new Date().toISOString(), // 添加出库日期
         ProjectOutboundItems: projectOutboundItems
       }
@@ -1925,12 +1934,15 @@ function ProjectOutbound() {
         outboundId: outbound.outboundNumber,
         projectName: outbound.projectName,
         projectTime: outbound.projectTime,
+        projectLeader: outbound.projectManager,
         recipient: outbound.recipient,
+        expectedReturnTime: outbound.returnDate,
+        usageType: outbound.outboundType,
+        logisticsMethod: outbound.logisticsMethod,
         outboundDate: outbound.outboundDate ? new Date(outbound.outboundDate).toISOString().split('T')[0] : '',
         status: outbound.isCompleted ? '已完成' : '待确认',
         inboundStatus: outbound.isCompleted ? '已完成' : '未入库',
         outboundType: outbound.outboundType,
-        logisticsMethod: outbound.logisticsMethod,
         usageLocation: outbound.usageLocation,
         projectManager: outbound.projectManager,
         contactPhone: outbound.contactPhone,
@@ -1985,9 +1997,9 @@ function ProjectOutbound() {
         title="新建项目出库单"
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
-        width={1600}
-        style={{ top: 10, height: '95vh' }}
-        styles={{ body: { height: 'calc(95vh - 100px)', overflow: 'auto' } }}
+        width={1800}
+        style={{ top: 5, height: '98vh' }}
+        styles={{ body: { height: 'calc(98vh - 100px)', overflow: 'auto' } }}
         footer={null}
       >
         <Form 
@@ -2005,7 +2017,7 @@ function ProjectOutbound() {
               <Form.Item 
                 name="outboundId" 
                 label="出库单号" 
-                initialValue={`PROOUT${Date.now()}`}
+                initialValue={`PROOUT-${moment().format('YYYYMMDD')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`}
               >
                 <Input disabled placeholder="系统自动生成" />
               </Form.Item>
@@ -2670,11 +2682,14 @@ function ProjectOutbound() {
             
             {/* 第二行：领用方式、物流方式 */}
             <Row gutter={[16, 16]} style={{ marginBottom: '12px' }}>
-              <Col xs={12} sm={12} md={12}>
+              <Col xs={24} sm={8} md={8}>
                 <p style={{ margin: 0 }}><strong>领用方式:</strong> {previewData.领用方式}</p>
               </Col>
-              <Col xs={12} sm={12} md={12}>
+              <Col xs={24} sm={8} md={8}>
                 <p style={{ margin: 0 }}><strong>物流方式:</strong> {previewData.物流方式}</p>
+              </Col>
+              <Col xs={24} sm={8} md={8}>
+                <p style={{ margin: 0 }}></p>
               </Col>
             </Row>
             
