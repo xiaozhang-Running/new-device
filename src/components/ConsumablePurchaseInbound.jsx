@@ -18,6 +18,7 @@ import {
 import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import { get, post, del } from '../services/request'
 import { useReactToPrint } from 'react-to-print'
+import { API_BASE_URL } from '../config/api.js'
 
 const { Option } = Select
 
@@ -82,7 +83,7 @@ const createConsumablePurchaseInbound = async (data) => {
 // 生成耗材编号
 const generateConsumableId = async (name, brand, model) => {
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api';
+    const baseUrl = API_BASE_URL;
     let url = `${baseUrl}/InOutbound/generate-device-code?deviceName=${encodeURIComponent(name)}&brand=${encodeURIComponent(brand)}&deviceType=3`;
     if (model) {
       url += `&model=${encodeURIComponent(model)}`;

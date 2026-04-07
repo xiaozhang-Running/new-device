@@ -282,6 +282,7 @@ namespace DeviceWarehouseSystem.Controllers
                     if (equipmentImage != null)
                     {
                         relativePath = equipmentImage.ImagePath;
+                        Console.WriteLine($"[ImageController] 找到设备图片，ID: {imageId}, 路径: {relativePath}");
                     }
                 }
                 
@@ -292,6 +293,7 @@ namespace DeviceWarehouseSystem.Controllers
                     if (inOutboundImage != null)
                     {
                         relativePath = inOutboundImage.ImagePath;
+                        Console.WriteLine($"[ImageController] 找到出入库图片，ID: {imageId}, 路径: {relativePath}");
                     }
                 }
                 
@@ -301,9 +303,17 @@ namespace DeviceWarehouseSystem.Controllers
                     var (fileData, fileContentType) = await _fileStorageService.GetFileAsync(relativePath);
                     if (fileData != null)
                     {
-                        Console.WriteLine($"[ImageController] 从文件系统读取图片成功，ID: {imageId}");
+                        Console.WriteLine($"[ImageController] 从文件系统读取图片成功，ID: {imageId}, 路径: {relativePath}");
                         return File(fileData, fileContentType ?? "image/jpeg");
                     }
+                    else
+                    {
+                        Console.WriteLine($"[ImageController] 文件系统中未找到图片，ID: {imageId}, 路径: {relativePath}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[ImageController] 数据库中未找到图片记录，ID: {imageId}");
                 }
                 
                 return NotFound();

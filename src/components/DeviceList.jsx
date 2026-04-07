@@ -5,6 +5,7 @@ import DeviceForm from './DeviceForm'
 import FileUpload from './FileUpload'
 import { deviceApi, imageApi, cacheManager } from '../services/api'
 import { useListData, useImageLoader, useImagePreview } from '../hooks'
+import { getImageUrl } from '../config/api.js'
 
 
 
@@ -226,16 +227,14 @@ const DeviceList = () => {
       .filter(img => img.id && typeof img.id === 'string' && !img.id.startsWith('temp_'))
       .map(img => img.id);
     
-    // 如果用户没有修改图片（images为空），保留所有现有图片
-    if (device.images && device.images.length > 0) {
-      // 删除用户已移除的图片
-      for (const imageId of currentImageIds) {
-        if (!retainedImageIds.includes(imageId)) {
-          try {
-            await imageApi.deleteEquipmentImage(imageId);
-          } catch (error) {
-            console.error('删除图片失败:', error);
-          }
+    // 无论用户是否修改图片，都检查需要删除的图片
+    // 如果images为空，意味着用户删除了所有图片，应该删除所有现有图片
+    for (const imageId of currentImageIds) {
+      if (!retainedImageIds.includes(imageId)) {
+        try {
+          await imageApi.deleteEquipmentImage(imageId);
+        } catch (error) {
+          console.error('删除图片失败:', error);
         }
       }
     }
@@ -267,16 +266,14 @@ const DeviceList = () => {
     
     // 获取最新的图片信息
     const updatedImages = await imageApi.getEquipmentImages(device.id, 1);
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055';
-    const cleanBaseUrl = baseUrl.replace(/\/api$/, '');
     const imageUrl = updatedImages && updatedImages.length > 0 
-      ? `${cleanBaseUrl}/api/Image/data/${updatedImages[0].Id || updatedImages[0].id}` 
+      ? getImageUrl(updatedImages[0].Id || updatedImages[0].id) 
       : '';
     
     // 构建更新的图片数组
     const deviceImages = updatedImages.map(img => ({
       id: img.Id || img.id,
-      url: `${cleanBaseUrl}/api/Image/data/${img.Id || img.id}`
+      url: getImageUrl(img.Id || img.id)
     }));
     
     const updatedDevice = await deviceApi.updateSpecialEquipment(device.id, {
@@ -296,16 +293,16 @@ const DeviceList = () => {
       Description: device.description || ''
     });
 
-    // 刷新数据
-    await refresh();
-    // 刷新图片
-    await refreshImages(device.id);
-    // 更新设备数据中的图片信息
+    // 先更新本地设备数据中的图片信息，确保界面立即反映变化
     updateItem(device.id, {
       image: imageUrl || '',
       imageUrl: imageUrl || '',
       images: deviceImages
     });
+    // 刷新图片
+    await refreshImages(device.id);
+    // 刷新数据，确保与后端同步
+    await refresh();
     message.success('设备更新成功');
   };
 

@@ -832,6 +832,7 @@ namespace DeviceWarehouseSystem.Services
             });
 
             dto.Warehouse = equipment.Warehouse ?? "主仓库";
+            dto.ImageUrl = equipment.ImageUrl;
 
             // 清除相关缓存
             ClearCache("general_equipments");

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Upload, message, Modal, Typography } from 'antd'
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons'
 import { imageApi, cacheManager } from '../services/api'
+import { getImageUrl } from '../config/api.js'
 
 const { Text } = Typography
 
@@ -41,15 +42,12 @@ const ImageUpload = ({ entityId, entityType, type, onImagesUpdated }) => {
       }
       
       if (images && images.length > 0) {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055'
         const loadedImages = []
         
         for (const img of images) {
           const imageId = img.Id || img.id
           if (imageId) {
-            // 确保baseUrl不包含/api，然后构建正确的API路径
-            const cleanBaseUrl = baseUrl.replace(/\/api$/, '')
-            const imageUrl = `${cleanBaseUrl}/api/Image/data/${imageId}`
+            const imageUrl = getImageUrl(imageId)
             const imageName = img.ImageName || img.imageName || `image_${imageId}.jpg`
             
             const file = {
@@ -93,7 +91,6 @@ const ImageUpload = ({ entityId, entityType, type, onImagesUpdated }) => {
       console.log('文件数量:', files.length)
       
       // 当entityId为0时，直接将图片添加到本地状态
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055'
       const newImages = files.map((file, index) => {
         const imageId = `temp_${Date.now()}_${index}`
         const imageUrl = URL.createObjectURL(file)

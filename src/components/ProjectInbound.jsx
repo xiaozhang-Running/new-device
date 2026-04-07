@@ -267,7 +267,6 @@ function ProjectInbound() {
           const normalizeItemFields = (item) => ({
             ...item,
             deviceCode: item.deviceCode || item.DeviceCode || '',
-            snCode: item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || '',
             equipmentId: item.equipmentId || item.EquipmentId || 0,
             equipmentName: item.equipmentName || item.EquipmentName || item.ItemName || item.itemName || '',
             status: item.status || item.Status || item.deviceStatus || item.DeviceStatus || '',
@@ -530,7 +529,6 @@ function ProjectInbound() {
         EquipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0, // 优先使用设备ID，其次使用itemId
         EquipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
         DeviceCode: item.deviceCode || item.DeviceCode || '', // 设备编号
-        SnCode: item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || '', // SN码
         Brand: item.brand || item.Brand || '',
         Model: item.model || item.Model || '',
         Quantity: item.quantity || item.Quantity || 0,
@@ -545,7 +543,6 @@ function ProjectInbound() {
         EquipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0, // 优先使用设备ID，其次使用itemId
         EquipmentName: item.equipmentName || item.EquipmentName || item.itemName || item.ItemName || '',
         DeviceCode: item.deviceCode || item.DeviceCode || '', // 设备编号
-        SnCode: item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || '', // SN码
         Brand: item.brand || item.Brand || '',
         Model: item.model || item.Model || '',
         Quantity: item.quantity || item.Quantity || 0,
@@ -731,7 +728,6 @@ function ProjectInbound() {
           projectInboundId: item.projectInboundId || item.ProjectInboundId || 0,
           EquipmentId: item.equipmentId || item.EquipmentId || item.itemId || item.ItemId || 0,
           EquipmentName: item.equipmentName || item.EquipmentName || item.ItemName || '',
-          SnCode: item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || '', // SN码
           Brand: item.brand || item.Brand || '',
           Model: item.model || item.Model || '',
           Quantity: item.inboundQuantity || 0,
@@ -739,6 +735,7 @@ function ProjectInbound() {
           Status: item.status || item.Status || item.DeviceStatus || '正常',
           ItemType: item.itemType || item.ItemType || (item.isConsumable ? 3 : 1), // 1=专用设备, 2=通用设备, 3=耗材
           DeviceCode: item.deviceCode || item.DeviceCode || '',
+          SerialNumber: item.serialNumber || item.SerialNumber || item.SN || item.sn || '',
           Accessories: item.accessories || item.Accessories || item.accessory || item.Accessory || ''
         }))
       
@@ -1038,19 +1035,7 @@ function ProjectInbound() {
         )
       }
     },
-    {
-      title: <span style={{ fontWeight: 'bold', fontSize: '15px' }}>SN码</span>,
-      dataIndex: 'SnCode',
-      key: 'snCode',
-      width: 120,
-      render: (text, record) => {
-        return (
-          <div style={{ fontSize: '13px', fontFamily: 'monospace' }}>
-            {text || record.snCode || record.SnCode || record.serialNumber || record.SerialNumber || ''}
-          </div>
-        )
-      }
-    },
+
     {
       title: <span style={{ fontWeight: 'bold', fontSize: '15px' }}>品牌</span>,
       dataIndex: 'Brand',
@@ -1315,13 +1300,11 @@ function ProjectInbound() {
       remark: record.remark || '',
       items: inboundItems.map((item, index) => {
         console.log(`处理item ${index}:`, item)
-        // 处理设备编号和SN码
+        // 处理设备编号
         const deviceId = item.deviceCode || item.DeviceCode || item.equipmentId || item.EquipmentId || ''
-        const snCode = item.snCode || item.SnCode || item.serialNumber || item.SerialNumber || item.SN || item.sn || ''
-        console.log(`item ${index} deviceId:`, deviceId, 'snCode:', snCode)
+        console.log(`item ${index} deviceId:`, deviceId)
         console.log(`item ${index} equipmentId:`, item.equipmentId, 'EquipmentId:', item.EquipmentId)
         console.log(`item ${index} deviceCode:`, item.deviceCode, 'DeviceCode:', item.DeviceCode)
-        console.log(`item ${index} snCode:`, item.snCode, 'SnCode:', item.SnCode)
         return {
           id: `${record.id}-${index}`, // 添加唯一ID
           type: item.itemType === 1 ? '专用设备' : item.itemType === 2 ? '通用设备' : '耗材',
@@ -1329,8 +1312,6 @@ function ProjectInbound() {
           deviceId: deviceId,
           deviceCode: item.deviceCode || item.DeviceCode || '',
           equipmentId: item.equipmentId || item.EquipmentId || 0, // 设备ID
-          snCode: snCode,
-          SnCode: item.SnCode || item.snCode || snCode,
           brand: item.brand || item.Brand || '',
           model: item.model || item.Model || '',
           quantity: item.quantity || item.Quantity || 0,
@@ -1372,7 +1353,6 @@ function ProjectInbound() {
           name: item.ItemName || item.EquipmentName || item.equipmentName || '',
           deviceId: item.deviceCode || item.DeviceCode || item.EquipmentId || item.equipmentId || '', // 优先使用设备编号，其次使用设备ID
           equipmentId: item.equipmentId || item.EquipmentId || 0, // 设备ID
-          snCode: item.snCode || item.SnCode || item.SerialNumber || item.serialNumber || item.SN || item.sn || '', // SN码
           brand: item.Brand || item.brand || '',
           model: item.Model || item.model || '',
           quantity: item.isMarkedInbound ? (item.inboundQuantity || 0) : 0,

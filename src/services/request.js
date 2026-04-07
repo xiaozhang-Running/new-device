@@ -1,5 +1,5 @@
 // 统一的请求封装函数
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+import { API_BASE_URL } from '../config/api.js';
 
 // 请求超时时间
 const TIMEOUT = 60000;

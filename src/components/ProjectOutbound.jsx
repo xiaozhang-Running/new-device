@@ -17,6 +17,7 @@ import {
   Drawer,
   Upload
 } from 'antd'
+import { API_BASE_URL, getImageUrl } from '../config/api.js'
 
 const { TextArea } = Input
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
@@ -725,8 +726,8 @@ function ProjectOutbound() {
     // 直接从后端获取图片列表，不依赖OutboundImages字段
     if (fullRecord.id) {
       try {
-        // baseUrl 已经是 http://192.168.10.72:5057/api，所以不需要再添加 /api
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.10.72:5057/api'
+        // baseUrl 已经是完整的API地址，所以不需要再添加 /api
+        const baseUrl = API_BASE_URL
         console.log('尝试获取出入库图片列表，出库单ID:', fullRecord.id)
         
         // 直接使用fetch API获取图片列表，绕过缓存
@@ -749,9 +750,8 @@ function ProjectOutbound() {
               console.log('获取到的图片ID:', imageId)
               
               if (imageId) {
-                // 使用正确的API端点获取图片数据
-                // baseUrl 已经包含 /api，所以只需要添加 /Image/data/${imageId}
-                const imageUrl = `${baseUrl}/Image/data/${imageId}`
+                // 使用getImageUrl函数构建正确的图片URL
+                const imageUrl = getImageUrl(imageId)
                 // 尝试使用fetch API获取图片数据，并带上Authorization token
                 try {
                   const response = await fetch(imageUrl, {
@@ -767,11 +767,11 @@ function ProjectOutbound() {
                     console.log('成功获取图片数据:', dataUrl)
                   } else {
                     console.error('获取图片失败:', response.status)
-                    images.push(imageUrl)
+                    // 当获取图片失败时，不要将错误的URL添加到图片列表中
                   }
                 } catch (error) {
                   console.error('获取图片失败:', error)
-                  images.push(imageUrl)
+                  // 当获取图片失败时，不要将错误的URL添加到图片列表中
                 }
               }
             }
@@ -799,11 +799,16 @@ function ProjectOutbound() {
             }
           }
         }
+        
+        // 如果没有加载到任何图片，添加一个默认的占位图片
+        if (images.length === 0) {
+          console.log('没有加载到任何图片，使用默认占位图')
+        }
       } catch (error) {
         console.error('加载图片失败:', error)
         // 即使失败，如果有原始URL，使用原始URL
         if (imageField) {
-          const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.10.72:5057/api'
+          const baseUrl = API_BASE_URL
           const imageUrls = imageField.split(',').filter(url => url && url.trim())
           for (const url of imageUrls) {
             const fullUrl = url.startsWith('http') ? url : baseUrl + url
@@ -813,7 +818,7 @@ function ProjectOutbound() {
       }
     } else if (imageField) {
       // 如果没有出库单ID，但有原始URL，使用原始URL
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.10.72:5057/api'
+      const baseUrl = API_BASE_URL
       const imageUrls = imageField.split(',').filter(url => url && url.trim())
       for (const url of imageUrls) {
         const fullUrl = url.startsWith('http') ? url : baseUrl + url
@@ -1314,8 +1319,8 @@ function ProjectOutbound() {
           console.log('直接从后端获取的图片列表:', images)
           
           if (images && images.length > 0) {
-            // baseUrl 已经是 http://localhost:5055/api，所以不需要再添加 /api
-            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api'
+            // baseUrl 已经是完整的API地址，所以不需要再添加 /api
+            const baseUrl = API_BASE_URL
             const loadedImages = []
             
             console.log('图片列表中的每个对象:', images)
@@ -1329,8 +1334,8 @@ function ProjectOutbound() {
               console.log('获取到的图片ID:', imageId)
               
               if (imageId) {
-                // baseUrl 已经包含 /api，所以只需要添加 /Image/data/${imageId}
-                const imageUrl = `${baseUrl}/Image/data/${imageId}`
+                // 使用getImageUrl函数构建正确的图片URL
+                const imageUrl = getImageUrl(imageId)
                 // 获取图片名称，支持大小写
                 const imageName = img.imageName || img.ImageName || img.IMAGE_NAME || `image_${imageId}.jpg`
                 console.log('获取到的图片名称:', imageName)
@@ -1360,29 +1365,11 @@ function ProjectOutbound() {
                     console.log('添加到loadedImages的文件:', file)
                   } else {
                     console.error('获取图片失败:', response.status)
-                    // 如果获取失败，创建一个只包含URL的对象
-                    const file = {
-                      name: imageName,
-                      url: imageUrl,
-                      type: 'image/jpeg',
-                      // 为了兼容Upload组件，添加一些必要的属性
-                      uid: `image_${imageId}`,
-                      status: 'done'
-                    }
-                    loadedImages.push(file)
+                    // 当获取图片失败时，不要将错误的URL添加到图片列表中
                   }
                 } catch (error) {
                   console.error('获取图片失败:', error)
-                  // 如果发生错误，创建一个只包含URL的对象
-                  const file = {
-                    name: imageName,
-                    url: imageUrl,
-                    type: 'image/jpeg',
-                    // 为了兼容Upload组件，添加一些必要的属性
-                    uid: `image_${imageId}`,
-                    status: 'done'
-                  }
-                  loadedImages.push(file)
+                  // 当获取图片失败时，不要将错误的URL添加到图片列表中
                 }
               } else {
                 console.log('图片对象没有ID字段:', img)
@@ -1413,7 +1400,7 @@ function ProjectOutbound() {
           if (imageUrls.length > 0) {
             // 尝试从后端获取图片数据
             try {
-              const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api'
+              const baseUrl = API_BASE_URL
               const loadedImages = []
               
               // 尝试获取出入库图片列表
@@ -1463,7 +1450,7 @@ function ProjectOutbound() {
             } catch (error) {
               console.error('加载图片失败:', error)
               // 即使失败，也使用原始URL创建图片对象
-              const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055/api'
+              const baseUrl = API_BASE_URL
               const loadedImages = imageUrls.map(url => {
                 const fullUrl = url.startsWith('http') ? url : baseUrl + url
                 const file = new File([], fullUrl, { type: 'image/jpeg' })

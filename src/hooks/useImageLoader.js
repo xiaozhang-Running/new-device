@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { imageApi, cacheManager } from '../services/api'
+import { getImageUrl } from '../config/api.js'
 
 // 全局已加载设备ID缓存（按设备类型分组）
 const globalLoadedSet = new Map()
@@ -76,14 +77,7 @@ export const useImageLoader = (options) => {
     loadingSetRef.current = loadingSet
   }, [loadingSet])
 
-  /**
-   * 获取图片URL（处理双斜杠问题）
-   */
-  const getImageUrl = useCallback((imageUrl) => {
-    const defaultImg = optionsRef.current.defaultImage || null
-    if (!imageUrl) return defaultImg
-    return imageUrl.replace(/\/api\/api\//g, '/api/') || defaultImg
-  }, [])
+
 
   // 当imagesMap变化时，更新ref
   useEffect(() => {
@@ -105,9 +99,7 @@ export const useImageLoader = (options) => {
    * 构建图片完整URL（静态版本）
    */
   const buildImageUrlStatic = (imageId) => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055'
-    const cleanBaseUrl = baseUrl.replace(/\/api$/, '')
-    return `${cleanBaseUrl}/api/Image/data/${imageId}`
+    return getImageUrl(imageId)
   }
 
   /**
@@ -292,7 +284,6 @@ export const useImageLoader = (options) => {
     loadImages,
     loadImagesBatch,
     getEquipmentImages,
-    getImageUrl,
     buildImageUrl,
     isLoading,
     isLoaded,

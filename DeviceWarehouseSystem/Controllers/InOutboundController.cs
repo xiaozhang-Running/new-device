@@ -86,6 +86,8 @@ namespace DeviceWarehouseSystem.Controllers
             }
         }
 
+
+
         // 原材料出库管理
         // GET: api/InOutbound/raw-material-outbounds
         [HttpGet("raw-material-outbounds")]

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Table, Button, Space, Modal, message, Popconfirm, Input, Select, Card, Row, Col, Descriptions, Tag, Image } from 'antd'
-import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons'
-import * as XLSX from 'xlsx'
+import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, FilterOutlined, EyeOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons'
 import RawMaterialForm from './RawMaterialForm'
 import FileUpload from './FileUpload'
-import { get, post, put, del as deleteRequest } from '../services/request'
+import { put, get, post, del } from '../services/request'
 import { imageApi, cacheManager } from '../services/api'
 import { useListData, useImageLoader, useImagePreview } from '../hooks'
+import { getImageUrl } from '../config/api.js'
+import * as XLSX from 'xlsx'
 
 
 
@@ -167,7 +168,7 @@ const RawMaterialList = () => {
 
   const handleDelete = async (id) => {
     try {
-      await deleteRequest(`/RawMaterials/${id}`)
+      await del(`/RawMaterials/${id}`)
       deleteItem(id)
       message.success('原材料删除成功')
     } catch (error) {
@@ -217,16 +218,14 @@ const RawMaterialList = () => {
       .filter(img => img.id && typeof img.id === 'string' && !img.id.startsWith('temp_'))
       .map(img => img.id);
     
-    // 如果用户没有修改图片（images为空），保留所有现有图片
-    if (rawMaterial.images && rawMaterial.images.length > 0) {
-      // 删除用户已移除的图片
-      for (const imageId of currentImageIds) {
-        if (!retainedImageIds.includes(imageId)) {
-          try {
-            await imageApi.deleteEquipmentImage(imageId);
-          } catch (error) {
-            console.error('删除图片失败:', error);
-          }
+    // 无论用户是否修改图片，都检查需要删除的图片
+    // 如果images为空，意味着用户删除了所有图片，应该删除所有现有图片
+    for (const imageId of currentImageIds) {
+      if (!retainedImageIds.includes(imageId)) {
+        try {
+          await imageApi.deleteEquipmentImage(imageId);
+        } catch (error) {
+          console.error('删除图片失败:', error);
         }
       }
     }
@@ -256,16 +255,14 @@ const RawMaterialList = () => {
     
     // 获取最新的图片信息
     const updatedImages = await imageApi.getEquipmentImages(rawMaterial.id, 4);
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055';
-    const cleanBaseUrl = baseUrl.replace(/\/api$/, '');
     const imageUrl = updatedImages && updatedImages.length > 0 
-      ? `${cleanBaseUrl}/api/Image/data/${updatedImages[0].Id || updatedImages[0].id}` 
+      ? getImageUrl(updatedImages[0].Id || updatedImages[0].id) 
       : '';
     
     // 构建更新的图片数组
     const rawMaterialImages = updatedImages.map(img => ({
       id: img.Id || img.id,
-      url: `${cleanBaseUrl}/api/Image/data/${img.Id || img.id}`
+      url: getImageUrl(img.Id || img.id)
     }));
     
     // 获取当前用户
@@ -285,12 +282,12 @@ const RawMaterialList = () => {
       images: rawMaterialImages
     };
     
-    // 刷新数据
-    await refresh();
+    // 先更新本地原材料数据中的图片信息，确保界面立即反映变化
+    updateItem(rawMaterial.id, processedResult);
     // 刷新图片
     await refreshImages(rawMaterial.id);
-    // 更新原材料数据中的图片信息
-    updateItem(rawMaterial.id, processedResult);
+    // 刷新数据，确保与后端同步
+    await refresh();
     message.success('原材料更新成功');
   };
 
@@ -395,7 +392,7 @@ const RawMaterialList = () => {
 
   const handleClearAll = async () => {
     try {
-      await deleteRequest('/RawMaterials')
+      await del('/RawMaterials')
       setFilteredData([])
       message.success('所有原材料已清空')
     } catch (error) {
