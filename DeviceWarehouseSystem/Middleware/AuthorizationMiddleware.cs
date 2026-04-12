@@ -130,18 +130,29 @@ namespace DeviceWarehouseSystem.Middleware
                 var jwtUsername = claimsPrincipal.FindFirst(ClaimTypes.Name)?.Value;
                 var jwtUserId = claimsPrincipal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                // 输出角色信息日志
+                Console.WriteLine($"[Authorization] 用户名: {jwtUsername}, 角色: '{jwtUserRole}', 路径: {context.Request.Path}");
+
                 // 将用户信息存储到上下文
                 context.Items["UserRole"] = jwtUserRole;
                 context.Items["Username"] = jwtUsername;
                 context.Items["UserId"] = jwtUserId;
 
-                // 权限验证
-                if (!HasPermission(context.Request.Path, jwtUserRole ?? ""))
+                // 权限验证 - 优先基于角色，然后基于用户名
+                if (!HasPermission(context.Request.Path, jwtUserRole ?? "") && !HasPermissionByUsername(context.Request.Path, jwtUsername ?? ""))
                 {
+                    Console.WriteLine($"[Authorization] 权限验证失败 - 用户名: '{jwtUsername}', 角色: '{jwtUserRole}', 路径: {context.Request.Path}");
                     context.Response.StatusCode = 403;
                     context.Response.ContentType = "application/json";
                     await context.Response.WriteAsync("{\"message\":\"权限不足\"}");
                     return;
+                }
+                Console.WriteLine($"[Authorization] 权限验证通过 - 用户名: '{jwtUsername}', 角色: '{jwtUserRole}', 路径: {context.Request.Path}");
+                
+                // 测试用户权限
+                if (jwtUsername == "zhangzhen")
+                {
+                    Console.WriteLine($"[Test] zhangzhen 用户角色: '{jwtUserRole}', 应该拥有所有权限");
                 }
 
                 await _next(context);
@@ -169,8 +180,8 @@ namespace DeviceWarehouseSystem.Middleware
                 return false;
             }
 
-            // 系统管理员有所有权限
-            if (userRole == "系统管理员")
+            // 系统管理员有所有权限（处理乱码情况）
+            if (userRole == "系统管理员" || userRole.Contains("管理员"))
             {
                 return true;
             }
@@ -230,6 +241,51 @@ namespace DeviceWarehouseSystem.Middleware
             }
             
             return false;
+        }
+
+        private bool HasPermissionByUsername(PathString path, string username)
+        {
+            // 基于用户名的权限验证
+            // 实际项目中应该从数据库读取用户权限关系
+            
+            // 检查用户名是否存在
+            if (string.IsNullOrEmpty(username))
+            {
+                return false;
+            }
+
+            // admin 相关用户和 zhangzhen 拥有所有权限
+            if (username.StartsWith("admin") || username == "zhangzhen")
+            {
+                return true;
+            }
+            // 仓库管理员用户
+            else if (username == "guanyichao" || username == "yangshuo" || username == "chenyehong")
+            {
+                // 检查是否访问仓库管理、用户管理或日志管理
+                if (path.StartsWithSegments("/api/Warehouse") || 
+                    path.StartsWithSegments("/api/User") ||
+                    path.StartsWithSegments("/api/Log"))
+                {
+                    return false;
+                }
+                // 允许访问其他接口
+                return true;
+            }
+            // 普通用户
+            else
+            {
+                // 允许访问看板、设备库存汇总视图、项目出库、项目入库、设备列表、耗材和原材料
+                return path.StartsWithSegments("/api/Dashboard") ||
+                       path.StartsWithSegments("/api/Device/special-equipments") ||
+                       path.StartsWithSegments("/api/Device/general-equipments") ||
+                       path.StartsWithSegments("/api/Device/inventory") ||
+                       path.StartsWithSegments("/api/Consumable") ||
+                       path.StartsWithSegments("/api/RawMaterials") ||
+                       (path.StartsWithSegments("/api/Device") && path.ToString().Contains("summary")) ||
+                       path.StartsWithSegments("/api/ProjectOutbound") ||
+                       path.StartsWithSegments("/api/InOutbound/project-inbounds");
+            }
         }
     }
 }

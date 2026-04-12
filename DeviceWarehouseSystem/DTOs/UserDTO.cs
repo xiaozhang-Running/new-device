@@ -33,6 +33,7 @@ namespace DeviceWarehouseSystem.DTOs
         public required string Token { get; set; }
         public required string Username { get; set; }
         public required string Role { get; set; }
+        public int UserId { get; set; }
     }
 
     public class UpdateUserDTO

@@ -219,7 +219,7 @@ export const post = (url, data, options = {}) => {
       url,
       ...options,
       method: 'POST',
-      body: JSON.stringify(data),
+      data: data,
     });
   }
 };

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -22,7 +24,7 @@ namespace DeviceWarehouseSystem.Services
         /// <summary>
         /// 从文件系统读取文件
         /// </summary>
-        Task<(byte[] data, string contentType)> GetFileAsync(string relativePath);
+        Task<(byte[]? data, string? contentType)> GetFileAsync(string relativePath);
         
         /// <summary>
         /// 从文件系统删除文件
@@ -50,12 +52,12 @@ namespace DeviceWarehouseSystem.Services
     /// </summary>
     public class FileStorageResult
     {
-        public string FileName { get; set; }
-        public string RelativePath { get; set; }
-        public string OriginalFileName { get; set; }
+        public string? FileName { get; set; }
+        public string? RelativePath { get; set; }
+        public string? OriginalFileName { get; set; }
         public long FileSize { get; set; }
-        public string ContentType { get; set; }
-        public string Url { get; set; }
+        public string? ContentType { get; set; }
+        public string? Url { get; set; }
     }
 
     /// <summary>
@@ -220,7 +222,7 @@ namespace DeviceWarehouseSystem.Services
         /// <summary>
         /// 从文件系统读取文件
         /// </summary>
-        public async Task<(byte[] data, string contentType)> GetFileAsync(string relativePath)
+        public async Task<(byte[]? data, string? contentType)> GetFileAsync(string relativePath)
         {
             if (string.IsNullOrEmpty(relativePath))
             {

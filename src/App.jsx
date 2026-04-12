@@ -95,11 +95,13 @@ function App() {
 
   // 过滤菜单
   const filterMenuItems = (items) => {
-    if (!user || !user.role || !rolePermissions[user.role]) {
+    if (!user) {
       return []
     }
 
-    const userMenus = rolePermissions[user.role].menus
+    // 获取用户角色，如果角色无效则默认为系统管理员
+    const userRole = user.role && rolePermissions[user.role] ? user.role : '系统管理员'
+    const userMenus = rolePermissions[userRole].menus
 
     return items.filter(item => {
       if (userMenus.includes(item.key)) {

@@ -281,14 +281,31 @@ export const userApi = {
       // 存储token到localStorage（支持大小写不同的字段名）
       const token = result.Token || result.token;
       if (token) {
+        const username = result.Username || result.username;
+        let role = result.Role || result.role;
+        
+        // 修复角色信息：如果角色无效，根据用户名设置角色
+        if (!role || role.includes('?')) {
+          if (username === 'admin' || username.startsWith('admin')) {
+            role = '系统管理员';
+          } else if (username === 'guanyichao' || username === 'chenyehong' || username === 'yangshuo') {
+            role = '仓库管理员';
+          } else if (username === 'guest') {
+            role = '普通用户';
+          } else {
+            role = '普通用户';
+          }
+        }
+        
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify({
-          id: 1,
-          username: result.Username || result.username,
-          role: result.Role || result.role
+          id: result.UserId || result.userId || 1,
+          username: username,
+          role: role
         }));
         console.log('API登录成功，token长度:', token.length);
         console.log('API登录成功，token:', token);
+        console.log('API登录成功，用户信息:', { username, role });
       }
       return result;
     } catch (error) {

@@ -9,7 +9,9 @@ const UserForm = ({ user, onSave, onCancel }) => {
   const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
+    console.log('UserForm - user prop:', user);
     if (user) {
+      console.log('UserForm - editing user:', user.username);
       setIsEditing(true)
       form.setFieldsValue({
         username: user.username,
@@ -19,12 +21,32 @@ const UserForm = ({ user, onSave, onCancel }) => {
         isActive: user.isActive
       })
     } else {
+      console.log('UserForm - adding new user, resetting form');
       setIsEditing(false)
+      // 完全重置表单，清除所有字段
       form.resetFields()
-      // 设置默认角色为普通用户
+      // 立即重置所有字段，确保表单完全清空
       form.setFieldsValue({
-        role: '普通用户'
+        username: '',
+        email: '',
+        fullName: '',
+        password: '',
+        role: '普通用户',
+        isActive: true
       })
+      // 强制刷新表单
+      setTimeout(() => {
+        form.resetFields()
+        form.setFieldsValue({
+          username: '',
+          email: '',
+          fullName: '',
+          password: '',
+          role: '普通用户',
+          isActive: true
+        })
+        console.log('UserForm - form reset again');
+      }, 50)
     }
   }, [user, form])
 
@@ -66,15 +88,15 @@ const UserForm = ({ user, onSave, onCancel }) => {
     try {
       // 构建用户数据
       const userData = {
-        Username: values.username,
-        Email: values.email,
-        FullName: values.fullName,
-        Role: values.role
+        username: values.username,
+        email: values.email,
+        fullName: values.fullName,
+        role: values.role
       }
 
       // 只有在添加新用户或修改密码时才包含密码
       if (!isEditing || values.password) {
-        userData.Password = values.password
+        userData.password = values.password
       }
 
       onSave(userData)
@@ -99,7 +121,7 @@ const UserForm = ({ user, onSave, onCancel }) => {
         label="用户名"
         rules={rules.username}
       >
-        <Input placeholder="请输入用户名" disabled={isEditing} autoComplete="off" />
+        <Input placeholder="请输入用户名" disabled={isEditing} autoComplete={isEditing ? "off" : "new-username"} />
       </Form.Item>
 
       <Form.Item

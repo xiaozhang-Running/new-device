@@ -508,6 +508,9 @@ public partial class DeviceWarehouseContext : DbContext
             entity.HasIndex(e => e.Email, "IX_Users_Email").IsUnique().HasFilter("[Email] IS NOT NULL");
 
             entity.HasIndex(e => e.Username, "IX_Users_Username").IsUnique();
+
+            entity.Property(e => e.FullName).HasMaxLength(100);
+            entity.Property(e => e.Role).HasMaxLength(50);
         });
 
         modelBuilder.Entity<UserActivityLog>(entity =>

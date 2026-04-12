@@ -8,6 +8,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 using DeviceWarehouseSystem.Models;
 using DeviceWarehouseSystem.DTOs;
 
@@ -36,22 +37,68 @@ namespace DeviceWarehouseSystem.Services
             var user = _context.Users.FirstOrDefault(u => u.Username == loginDTO.Username);
             if (user == null)
             {
-                throw new Exception("用户不存在");
-            }
-            if (user.PasswordHash != loginDTO.Password)
-            {
                 // 记录登录失败日志
-            await _logService.LogUserActivityAsync(
-                user.Id, 
-                "登录失败", 
-                $"用户 {loginDTO.Username} 登录失败：密码错误",
-                loginDTO?.IpAddress,
-                loginDTO?.UserAgent
-            );
-                throw new Exception("密码错误");
+                await _logService.LogUserActivityAsync(
+                    0, 
+                    "登录失败", 
+                    $"用户 {loginDTO.Username} 登录失败：用户不存在",
+                    loginDTO?.IpAddress,
+                    loginDTO?.UserAgent
+                );
+                throw new Exception("用户不存在或密码错误");
             }
 
-            // 更新最后登录时间
+            // 检查用户是否被锁定
+            if (user.IsLockedOut)
+            {
+                throw new Exception("账号已被锁定，请联系管理员");
+            }
+
+            // 检查用户是否激活
+            if (!user.IsActive)
+            {
+                throw new Exception("账号未激活，请联系管理员");
+            }
+
+            // 验证密码
+            bool isPasswordValid = VerifyPassword(loginDTO.Password, user.PasswordHash);
+            if (!isPasswordValid)
+            {
+                // 增加登录失败次数
+                user.FailedLoginAttempts = user.FailedLoginAttempts + 1;
+                
+                // 超过5次登录失败，锁定账号
+                if (user.FailedLoginAttempts >= 5)
+                {
+                    user.IsLockedOut = true;
+                    user.LockoutEnd = DateTime.Now.AddHours(1); // 锁定1小时
+                    await _logService.LogUserActivityAsync(
+                        user.Id, 
+                        "账号锁定", 
+                        $"用户 {loginDTO.Username} 因多次登录失败被锁定",
+                        loginDTO?.IpAddress,
+                        loginDTO?.UserAgent
+                    );
+                    throw new Exception("账号已被锁定，请1小时后再试");
+                }
+                
+                // 记录登录失败日志
+                await _logService.LogUserActivityAsync(
+                    user.Id, 
+                    "登录失败", 
+                    $"用户 {loginDTO.Username} 登录失败：密码错误，失败次数：{user.FailedLoginAttempts}",
+                    loginDTO?.IpAddress,
+                    loginDTO?.UserAgent
+                );
+                
+                _context.Entry(user).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                await _context.SaveChangesAsync();
+                
+                throw new Exception("用户不存在或密码错误");
+            }
+
+            // 登录成功，重置登录失败次数
+            user.FailedLoginAttempts = 0;
             user.LastLoginAt = DateTime.Now;
             _context.Entry(user).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
             await _context.SaveChangesAsync();
@@ -72,7 +119,8 @@ namespace DeviceWarehouseSystem.Services
             {
                 Token = token,
                 Username = user.Username,
-                Role = user.Role ?? "User"
+                Role = user.Role ?? "User",
+                UserId = user.Id
             };
         }
 
@@ -88,7 +136,7 @@ namespace DeviceWarehouseSystem.Services
             var user = new User
             {
                 Username = registerDTO.Username,
-                PasswordHash = registerDTO.Password, // 实际项目中应该加密密码
+                PasswordHash = HashPassword(registerDTO.Password), // 加密密码
                 Role = registerDTO.Role,
                 Email = registerDTO.Email,
                 FullName = registerDTO.FullName ?? registerDTO.Username, // 使用传入的FullName，如果为空则使用Username
@@ -121,6 +169,22 @@ namespace DeviceWarehouseSystem.Services
             };
         }
 
+        // 密码加密
+        private string HashPassword(string password)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(bytes);
+            }
+        }
+
+        // 验证密码
+        private bool VerifyPassword(string password, string hashedPassword)
+        {
+            return HashPassword(password) == hashedPassword;
+        }
+
         private string GenerateJwtToken(User user)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
@@ -141,7 +205,7 @@ namespace DeviceWarehouseSystem.Services
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Role, user.Role ?? "User"),
+                new Claim(ClaimTypes.Role, string.IsNullOrEmpty(user.Role) ? "用户" : user.Role),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
 

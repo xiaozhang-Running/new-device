@@ -37,13 +37,16 @@ export default defineConfig({
     // 启用代码分割
     rollupOptions: {
       output: {
-        manualChunks: {
-          // 将第三方库分离到单独的 chunk
-          vendor: ['react', 'react-dom', 'antd'],
-          // 将图表库分离
-          charts: ['echarts'],
-          // 将工具库分离
-          utils: ['axios', 'dayjs', 'moment']
+        manualChunks: (id) => {
+          if (id.includes('node_modules/react') || id.includes('node_modules/antd')) {
+            return 'vendor';
+          }
+          if (id.includes('node_modules/echarts')) {
+            return 'charts';
+          }
+          if (id.includes('node_modules/axios') || id.includes('node_modules/dayjs') || id.includes('node_modules/moment')) {
+            return 'utils';
+          }
         }
       }
     },

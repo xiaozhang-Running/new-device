@@ -75,8 +75,13 @@ const UserList = () => {
 
   // 处理添加用户
   const handleAddUser = () => {
-    setEditingUser(null)
-    setIsModalVisible(true)
+    // 先关闭模态框，确保状态重置
+    setIsModalVisible(false)
+    // 延迟打开模态框，确保状态更新
+    setTimeout(() => {
+      setEditingUser(null)
+      setIsModalVisible(true)
+    }, 100)
   }
 
   // 处理编辑用户
@@ -149,8 +154,12 @@ const UserList = () => {
         message.success('用户添加成功')
       }
       setIsModalVisible(false)
+      // 重置 editingUser，确保下次添加用户时表单为空
+      setEditingUser(null)
     } catch (error) {
       message.error('保存用户失败')
+      // 即使失败也重置 editingUser
+      setEditingUser(null)
     }
   }
 
@@ -346,6 +355,7 @@ const UserList = () => {
         width={600}
       >
         <UserForm 
+          key={editingUser ? editingUser.id : Date.now()} 
           user={editingUser} 
           onSave={handleUserSave} 
           onCancel={() => setIsModalVisible(false)} 
